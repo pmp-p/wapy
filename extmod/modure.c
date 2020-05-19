@@ -95,6 +95,7 @@ MP_DEFINE_CONST_FUN_OBJ_1(match_groups_obj, match_groups);
 #endif
 
 #if MICROPY_PY_URE_MATCH_SPAN_START_END
+
 #if NO_NLR
 STATIC int match_span_helper(size_t n_args, const mp_obj_t *args, mp_obj_t span[2]) {
 #else
@@ -147,7 +148,7 @@ STATIC mp_obj_t match_start(size_t n_args, const mp_obj_t *args) {
         return MP_OBJ_NULL;
     }
 #else
-    match_span_helper(n_args, args, span)
+    match_span_helper(n_args, args, span);
 #endif
     return span[0];
 }
@@ -160,7 +161,7 @@ STATIC mp_obj_t match_end(size_t n_args, const mp_obj_t *args) {
         return MP_OBJ_NULL;
     }
 #else
-    match_span_helper(n_args, args, span)
+    match_span_helper(n_args, args, span);
 #endif
     return span[1];
 }

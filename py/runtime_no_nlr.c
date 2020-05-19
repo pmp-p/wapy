@@ -620,13 +620,13 @@ generic_binary_op:
     }
 
 unsupported_op:
-    if (MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE) {
+    #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
         mp_raise_TypeError(MP_ERROR_TEXT("unsupported type for operator"));
-    } else {
+    #else
         return mp_raise_o(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
             MP_ERROR_TEXT("unsupported types for %q: '%s', '%s'"),
             mp_binary_op_method_name[op], mp_obj_get_type_str(lhs), mp_obj_get_type_str(rhs)));
-    }
+    #endif
 
 zero_division:
     mp_raise_msg(&mp_type_ZeroDivisionError, MP_ERROR_TEXT("divide by zero"));

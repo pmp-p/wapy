@@ -218,7 +218,7 @@ void mp_warning(const char *category, const char *msg, ...);
 #define mp_raise_type(extype) { return mp_raise_o(mp_obj_new_exception(extype)); }
 #define mp_raise_type_or_return(extype, retval) { mp_raise_o(mp_obj_new_exception(extype)); return retval; }
 #define mp_raise_ValueError(v) { return mp_raise_ValueError_o(v); }
-#define mp_raise_msg(extype, mpt) { return mp_raise_msg_o( mp_obj_new_exception(extype), mpt ); }
+#define mp_raise_msg(extype, mpt) { return mp_raise_o( mp_obj_new_exception_msg(extype, mpt)); }
 #define mp_raise_TypeError(mpt) { return mp_raise_TypeError_o(mpt); }
 #define mp_raise_TypeError_or_return(mpt, retval) { mp_raise_TypeError_o(mpt); return retval; }
 #define mp_raise_NotImplementedError(mpt) { return mp_raise_NotImplementedError_o(mpt); }
