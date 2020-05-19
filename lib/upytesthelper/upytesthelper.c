@@ -87,7 +87,42 @@ void upytest_output(const char *str, mp_uint_t len) {
     }
     mp_hal_stdout_tx_strn_cooked(str, len);
 }
+#if NO_NLR
+void upytest_execute_test(const char *src) {
+    // To provide clean room for each test, interpreter and heap are
+    // reinitialized before running each.
+    gc_init(heap_start, heap_end);
+    mp_init();
+    mp_obj_list_init(mp_sys_path, 0);
+    mp_obj_list_init(mp_sys_argv, 0);
 
+    mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
+    qstr source_name = lex->source_name;
+    mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
+    mp_obj_t module_fun = mp_compile(&parse_tree, source_name, false);
+    if (module_fun != MP_OBJ_NULL) {
+        mp_call_function_0(module_fun);
+    }
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        mp_obj_t exc = MP_OBJ_FROM_PTR(MP_STATE_THREAD(active_exception));
+        if (mp_obj_is_subclass_fast(mp_obj_get_type(exc), &mp_type_SystemExit)) {
+            // Assume that sys.exit() is called to skip the test. That can be always true, we should
+#pragma message "TODO: set up convention to use specific exit code as skip indicator."
+            tinytest_set_test_skipped_();
+            goto end;
+        }
+        mp_obj_print_exception(&mp_plat_print, exc);
+        tt_abort_msg("Uncaught exception\n");
+    }
+
+    if (upytest_is_failed()) {
+        tinytest_set_test_failed_();
+    }
+
+end:
+    mp_deinit();
+}
+#else
 void upytest_execute_test(const char *src) {
     // To provide clean room for each test, interpreter and heap are
     // reinitialized before running each.
@@ -124,3 +159,4 @@ void upytest_execute_test(const char *src) {
 end:
     mp_deinit();
 }
+#endif

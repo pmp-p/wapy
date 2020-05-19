@@ -53,8 +53,11 @@ struct ssl_args {
 };
 
 STATIC const mp_obj_type_t ussl_socket_type;
-
+#if NO_NLR
+STATIC mp_obj_t ussl_socket_new(mp_obj_t sock, struct ssl_args *args) {
+#else
 STATIC mp_obj_ssl_socket_t *ussl_socket_new(mp_obj_t sock, struct ssl_args *args) {
+#endif
     #if MICROPY_PY_USSL_FINALISER
     mp_obj_ssl_socket_t *o = m_new_obj_with_finaliser(mp_obj_ssl_socket_t);
     #else
@@ -86,6 +89,11 @@ STATIC mp_obj_ssl_socket_t *ussl_socket_new(mp_obj_t sock, struct ssl_args *args
         }
 
         data = (const byte *)mp_obj_str_get_data(args->cert.u_obj, &len);
+        #if NO_NLR
+        if (data == NULL) {
+            return MP_OBJ_NULL;
+        }
+        #endif
         res = ssl_obj_memory_load(o->ssl_ctx, SSL_OBJ_X509_CERT, data, len, NULL);
         if (res != SSL_OK) {
             mp_raise_ValueError(MP_ERROR_TEXT("invalid cert"));
@@ -114,8 +122,11 @@ STATIC mp_obj_ssl_socket_t *ussl_socket_new(mp_obj_t sock, struct ssl_args *args
         }
 
     }
-
+#if NO_NLR
+    return MP_OBJ_FROM_PTR(o);
+#else
     return o;
+#endif
 }
 
 STATIC void ussl_socket_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
@@ -259,8 +270,11 @@ STATIC mp_obj_t mod_ssl_wrap_socket(size_t n_args, const mp_obj_t *pos_args, mp_
     struct ssl_args args;
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args,
         MP_ARRAY_SIZE(allowed_args), allowed_args, (mp_arg_val_t *)&args);
-
+#if NO_NLR
+    return ussl_socket_new(sock, &args);
+#else
     return MP_OBJ_FROM_PTR(ussl_socket_new(sock, &args));
+#endif
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(mod_ssl_wrap_socket_obj, 1, mod_ssl_wrap_socket);
 

@@ -116,7 +116,7 @@ STATIC mp_obj_t mp_sys_exit(size_t n_args, const mp_obj_t *args) {
     } else {
         exc = mp_obj_new_exception_arg1(&mp_type_SystemExit, args[0]);
     }
-    nlr_raise(exc);
+    mp_raise_or_return(exc);
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_sys_exit_obj, 0, 1, mp_sys_exit);
 
@@ -124,7 +124,13 @@ STATIC mp_obj_t mp_sys_print_exception(size_t n_args, const mp_obj_t *args) {
     #if MICROPY_PY_IO && MICROPY_PY_SYS_STDFILES
     void *stream_obj = &mp_sys_stdout_obj;
     if (n_args > 1) {
+#if NO_NLR
+        if (mp_get_stream_raise(args[1], MP_STREAM_OP_WRITE) == NULL) {
+            return MP_OBJ_NULL;
+        }
+#else
         mp_get_stream_raise(args[1], MP_STREAM_OP_WRITE);
+#endif
         stream_obj = MP_OBJ_TO_PTR(args[1]);
     }
 

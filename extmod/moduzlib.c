@@ -58,10 +58,15 @@ STATIC int read_src_stream(TINF_DATA *data) {
     byte c;
     mp_uint_t out_sz = stream->read(self->src_stream, &c, 1, &err);
     if (out_sz == MP_STREAM_ERROR) {
-        mp_raise_OSError(err);
+#if NO_NLR
+#pragma message "TODO deal with raising exception"
+#endif
+        mp_raise_OSError_or_return(err,-1);
+        return -1;
     }
     if (out_sz == 0) {
-        mp_raise_type(&mp_type_EOFError);
+        mp_raise_type_or_return(&mp_type_EOFError, -1);
+        return -1;
     }
     return c;
 }
@@ -201,7 +206,7 @@ STATIC mp_obj_t mod_uzlib_decompress(size_t n_args, const mp_obj_t *args) {
     return res;
 
 error:
-    nlr_raise(mp_obj_new_exception_arg1(&mp_type_ValueError, MP_OBJ_NEW_SMALL_INT(st)));
+    mp_raise_or_return_value(mp_obj_new_exception_arg1(&mp_type_ValueError, MP_OBJ_NEW_SMALL_INT(st)), MP_OBJ_NULL);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_uzlib_decompress_obj, 1, 3, mod_uzlib_decompress);
 

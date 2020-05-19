@@ -86,7 +86,7 @@ STATIC mp_obj_t mp_obj_tuple_make_new(const mp_obj_type_t *type_in, size_t n_arg
 
             mp_obj_t iterable = mp_getiter(args[0], NULL);
             mp_obj_t item;
-            while ((item = mp_iternext(iterable)) != MP_OBJ_STOP_ITERATION) {
+            while ((item = mp_iternext(iterable)) != MP_OBJ_NULL) {
                 if (len >= alloc) {
                     items = m_renew(mp_obj_t, items, alloc, alloc * 2);
                     alloc *= 2;
@@ -94,6 +94,11 @@ STATIC mp_obj_t mp_obj_tuple_make_new(const mp_obj_type_t *type_in, size_t n_arg
                 items[len++] = item;
             }
 
+#if NO_NLR
+            if (mp_iternext_had_exc()) {
+                return MP_OBJ_NULL;
+            }
+#endif
             mp_obj_t tuple = mp_obj_new_tuple(len, items);
             m_del(mp_obj_t, items, alloc);
 
@@ -193,6 +198,12 @@ mp_obj_t mp_obj_tuple_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
         }
         #endif
         size_t index_value = mp_get_index(self->base.type, self->len, index, false);
+#if NO_NLR
+        if (index_value == (size_t)-1) {
+            // exception
+            return MP_OBJ_NULL;
+        }
+#endif
         return self->items[index_value];
     } else {
         return MP_OBJ_NULL; // op not supported
@@ -240,6 +251,11 @@ mp_obj_t mp_obj_new_tuple(size_t n, const mp_obj_t *items) {
         return mp_const_empty_tuple;
     }
     mp_obj_tuple_t *o = m_new_obj_var(mp_obj_tuple_t, mp_obj_t, n);
+#if NO_NLR
+    if (o == NULL) {
+        return MP_OBJ_NULL;
+    }
+#endif
     o->base.type = &mp_type_tuple;
     o->len = n;
     if (items) {

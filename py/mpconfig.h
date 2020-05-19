@@ -339,9 +339,11 @@
 #define MICROPY_EMIT_XTENSAWIN (0)
 #endif
 
+#if NO_NLR
+#else
 // Convenience definition for whether any native emitter is enabled
 #define MICROPY_EMIT_NATIVE (MICROPY_EMIT_X64 || MICROPY_EMIT_X86 || MICROPY_EMIT_THUMB || MICROPY_EMIT_ARM || MICROPY_EMIT_XTENSA || MICROPY_EMIT_XTENSAWIN)
-
+#endif
 // Select prelude-as-bytes-object for certain emitters
 #define MICROPY_EMIT_NATIVE_PRELUDE_AS_BYTES_OBJ (MICROPY_EMIT_XTENSAWIN)
 
@@ -439,7 +441,12 @@
 
 // Whether to enable debugging versions of MP_OBJ_NULL/STOP_ITERATION/SENTINEL
 #ifndef MICROPY_DEBUG_MP_OBJ_SENTINELS
+#if NO_NLR
+// Note: this is currently required for no NLR, to distinguish MP_OBJ_NULL (exception) from MP_OBJ_STOP_ITERATION
+#define MICROPY_DEBUG_MP_OBJ_SENTINELS (1)
+#else
 #define MICROPY_DEBUG_MP_OBJ_SENTINELS (0)
+#endif
 #endif
 
 // Whether to enable a simple VM stack overflow check

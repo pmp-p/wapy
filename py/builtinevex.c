@@ -58,6 +58,12 @@ STATIC mp_obj_t code_execute(mp_obj_code_t *self, mp_obj_dict_t *globals, mp_obj
     }
 
     // execute code
+#if NO_NLR
+    mp_obj_t ret = mp_call_function_0(self->module_fun);
+    mp_globals_set(old_globals);
+    mp_locals_set(old_locals);
+    return ret;
+#else
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
         mp_obj_t ret = mp_call_function_0(self->module_fun);
@@ -71,6 +77,7 @@ STATIC mp_obj_t code_execute(mp_obj_code_t *self, mp_obj_dict_t *globals, mp_obj
         mp_locals_set(old_locals);
         nlr_jump(nlr.ret_val);
     }
+#endif
 }
 
 STATIC mp_obj_t mp_builtin_compile(size_t n_args, const mp_obj_t *args) {
@@ -106,6 +113,11 @@ STATIC mp_obj_t mp_builtin_compile(size_t n_args, const mp_obj_t *args) {
     mp_obj_code_t *code = m_new_obj(mp_obj_code_t);
     code->base.type = &mp_type_code;
     code->module_fun = mp_parse_compile_execute(lex, parse_input_kind, NULL, NULL);
+#if NO_NLR
+    if (code->module_fun == MP_OBJ_NULL) {
+        return MP_OBJ_NULL;
+    }
+#endif
     return MP_OBJ_FROM_PTR(code);
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_builtin_compile_obj, 3, 6, mp_builtin_compile);
@@ -149,7 +161,11 @@ STATIC mp_obj_t eval_exec_helper(size_t n_args, const mp_obj_t *args, mp_parse_i
     } else {
         lex = mp_lexer_new_from_str_len(MP_QSTR__lt_string_gt_, bufinfo.buf, bufinfo.len, 0);
     }
-
+#if NO_NLR
+    if (lex == NULL) {
+        return MP_OBJ_NULL;
+    }
+#endif
     return mp_parse_compile_execute(lex, parse_input_kind, globals, locals);
 }
 

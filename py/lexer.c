@@ -360,7 +360,12 @@ STATIC void parse_string_literal(mp_lexer_t *lex, bool is_raw) {
                             // 3MB of text; even gzip-compressed and with minimal structure, it'll take
                             // roughly half a meg of storage. This form of Unicode escape may be added
                             // later on, but it's definitely not a priority right now. -- CJA 20140607
+#if NO_NLR
+                            mp_raise_NotImplementedError_o("unicode name escapes");
+#pragma message "TODO: can we just safely break and expect caller to handle exception?"
+#else
                             mp_raise_NotImplementedError(MP_ERROR_TEXT("unicode name escapes"));
+#endif
                             break;
                         default:
                             if (c >= '0' && c <= '7') {
@@ -690,6 +695,11 @@ void mp_lexer_to_next(mp_lexer_t *lex) {
 mp_lexer_t *mp_lexer_new(qstr src_name, mp_reader_t reader) {
     mp_lexer_t *lex = m_new_obj(mp_lexer_t);
 
+#if NO_NLR
+    if (lex == NULL) {
+        return NULL;
+    }
+#endif
     lex->source_name = src_name;
     lex->reader = reader;
     lex->line = 1;
@@ -699,6 +709,11 @@ mp_lexer_t *mp_lexer_new(qstr src_name, mp_reader_t reader) {
     lex->alloc_indent_level = MICROPY_ALLOC_LEXER_INDENT_INIT;
     lex->num_indent_level = 1;
     lex->indent_level = m_new(uint16_t, lex->alloc_indent_level);
+#if NO_NLR
+    if (lex->indent_level == NULL) {
+        return NULL;
+    }
+#endif
     vstr_init(&lex->vstr, 32);
 
     // store sentinel for first indentation level
@@ -720,6 +735,11 @@ mp_lexer_t *mp_lexer_new(qstr src_name, mp_reader_t reader) {
         lex->tok_kind = MP_TOKEN_INDENT;
     }
 
+#if NO_NLR
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        return NULL;
+    }
+#endif
     return lex;
 }
 
@@ -734,6 +754,11 @@ mp_lexer_t *mp_lexer_new_from_str_len(qstr src_name, const char *str, size_t len
 mp_lexer_t *mp_lexer_new_from_file(const char *filename) {
     mp_reader_t reader;
     mp_reader_new_file(&reader, filename);
+#if NO_NLR
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        return NULL;
+    }
+#endif
     return mp_lexer_new(qstr_from_str(filename), reader);
 }
 

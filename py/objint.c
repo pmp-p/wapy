@@ -134,6 +134,36 @@ STATIC mp_fp_as_int_class_t mp_classify_fp_as_int(mp_float_t val) {
 #undef MP_FLOAT_SIGN_SHIFT_I32
 #undef MP_FLOAT_EXP_SHIFT_I32
 
+#if NO_NLR
+mp_obj_t mp_obj_new_int_from_float(mp_float_t val) {
+
+    int cl = fpclassify((float)val);
+    if (cl == FP_INFINITE) {
+        mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("can't convert inf to int"));
+    } else if (cl == FP_NAN) {
+        mp_raise_ValueError(MP_ERROR_TEXT("can't convert NaN to int"));
+    } else {
+        mp_fp_as_int_class_t icl = mp_classify_fp_as_int(val);
+        if (icl == MP_FP_CLASS_FIT_SMALLINT) {
+            return MP_OBJ_NEW_SMALL_INT((mp_int_t)val);
+        #if MICROPY_LONGINT_IMPL == MICROPY_LONGINT_IMPL_MPZ
+        } else {
+            mp_obj_int_t *o = mp_obj_int_new_mpz();
+            mpz_set_from_float(&o->mpz, val);
+            return MP_OBJ_FROM_PTR(o);
+        }
+        #else
+        #if MICROPY_LONGINT_IMPL == MICROPY_LONGINT_IMPL_LONGLONG
+        } else if (icl == MP_FP_CLASS_FIT_LONGINT) {
+            return mp_obj_new_int_from_ll((long long)val);
+        #endif
+        } else {
+            mp_raise_ValueError(MP_ERROR_TEXT("float too big"));
+        }
+        #endif
+    }
+}
+#else // NO_NLR
 mp_obj_t mp_obj_new_int_from_float(mp_float_t val) {
     mp_float_union_t u = {val};
     // IEEE-754: if biased exponent is all 1 bits...
@@ -165,6 +195,7 @@ mp_obj_t mp_obj_new_int_from_float(mp_float_t val) {
         #endif
     }
 }
+#endif // NO_NLR
 
 #endif
 

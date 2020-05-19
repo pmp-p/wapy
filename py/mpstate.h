@@ -257,8 +257,12 @@ typedef struct _mp_state_thread_t {
     mp_obj_dict_t *dict_locals;
     mp_obj_dict_t *dict_globals;
 
+#if NO_NLR
+#pragma message "VM GC context is here"
+    mp_obj_base_t *active_exception;
+#else
     nlr_buf_t *nlr_top;
-
+#endif
     #if MICROPY_PY_SYS_SETTRACE
     mp_obj_t prof_trace_callback;
     bool prof_callback_is_executing;

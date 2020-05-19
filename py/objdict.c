@@ -24,6 +24,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#if NO_NLR
+#error "wrong file: use _no_nlr.c file"
+#endif
 
 #include <string.h>
 #include <assert.h>
@@ -212,7 +215,11 @@ STATIC mp_obj_t dict_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
 
 STATIC void mp_ensure_not_fixed(const mp_obj_dict_t *dict) {
     if (dict->map.is_fixed) {
+#if NO_NLR
+        mp_raise_o( mp_obj_new_exception(&mp_type_TypeError));
+#else
         mp_raise_TypeError(NULL);
+#endif
     }
 }
 

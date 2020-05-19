@@ -30,7 +30,9 @@
 #include "py/obj.h"
 #include "py/persistentcode.h"
 #include "py/stream.h"
-
+#if NO_NLR
+#pragma message "these must correspond to the respective enum in nativeglue.h"
+#endif
 typedef enum {
     MP_F_CONST_NONE_OBJ = 0,
     MP_F_CONST_FALSE_OBJ,
@@ -67,6 +69,11 @@ typedef enum {
     MP_F_NLR_PUSH,
     MP_F_NLR_POP,
     MP_F_NATIVE_RAISE,
+#if NO_NLR
+    MP_F_NATIVE_IS_EXC,
+    MP_F_NATIVE_GET_EXC,
+    MP_F_NATIVE_CLR_EXC,
+#endif
     MP_F_IMPORT_NAME,
     MP_F_IMPORT_FROM,
     MP_F_IMPORT_ALL,
@@ -121,6 +128,11 @@ typedef struct _mp_fun_table_t {
     unsigned int (*nlr_push)(nlr_buf_t *);
     void (*nlr_pop)(void);
     void (*raise)(mp_obj_t o);
+#if NO_NLR
+    mp_obj_t (*mp_native_is_exc)(void);
+    mp_obj_t (*mp_native_get_exc)(void);
+    void (*mp_native_clr_exc)(void);
+#endif
     mp_obj_t (*import_name)(qstr name, mp_obj_t fromlist, mp_obj_t level);
     mp_obj_t (*import_from)(mp_obj_t module, qstr name);
     void (*import_all)(mp_obj_t module);

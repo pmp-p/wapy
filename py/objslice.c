@@ -105,6 +105,11 @@ const mp_obj_type_t mp_type_slice = {
 
 mp_obj_t mp_obj_new_slice(mp_obj_t ostart, mp_obj_t ostop, mp_obj_t ostep) {
     mp_obj_slice_t *o = m_new_obj(mp_obj_slice_t);
+#if NO_NLR
+    if (o == NULL) {
+        return MP_OBJ_NULL;
+    }
+#endif
     o->base.type = &mp_type_slice;
     o->start = ostart;
     o->stop = ostop;
@@ -124,7 +129,13 @@ void mp_obj_slice_indices(mp_obj_t self_in, mp_int_t length, mp_bound_slice_t *r
     } else {
         step = mp_obj_get_int(self->step);
         if (step == 0) {
+#if NO_NLR
+#pragma message "NEED REVIEW: no return value here in no_nlr"
+            mp_raise_o(mp_obj_new_exception_msg(&mp_type_ValueError, MP_ERROR_TEXT("slice step can't be zero")));
+            return;
+#else
             mp_raise_ValueError(MP_ERROR_TEXT("slice step can't be zero"));
+#endif
         }
     }
 

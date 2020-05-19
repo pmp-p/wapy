@@ -35,7 +35,13 @@
 #if MICROPY_PY_UJSON
 
 STATIC mp_obj_t mod_ujson_dump(mp_obj_t obj, mp_obj_t stream) {
+#if NO_NLR
+    if (mp_get_stream_raise(stream, MP_STREAM_OP_WRITE) == NULL) {
+        return MP_OBJ_NULL;
+    }
+#else
     mp_get_stream_raise(stream, MP_STREAM_OP_WRITE);
+#endif
     mp_print_t print = {MP_OBJ_TO_PTR(stream), mp_stream_write_adaptor};
     mp_obj_print_helper(&print, obj, PRINT_JSON);
     return mp_const_none;
@@ -79,7 +85,12 @@ typedef struct _ujson_stream_t {
 STATIC byte ujson_stream_next(ujson_stream_t *s) {
     mp_uint_t ret = s->read(s->stream_obj, &s->cur, 1, &s->errcode);
     if (s->errcode != 0) {
+#if NO_NLR
+#pragma message "TODO deal with raising exception"
+        mp_raise_OSError_or_return(s->errcode, 0xff);
+#else
         mp_raise_OSError(s->errcode);
+#endif
     }
     if (ret == 0) {
         s->cur = S_EOF;

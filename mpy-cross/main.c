@@ -47,11 +47,21 @@ mp_uint_t mp_verbose_flag = 0;
 // Make it larger on a 64 bit machine, because pointers are larger.
 long heap_size = 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 
-STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
+#if __EMSCRIPTEN__
+#include "emscripten.h"
+
+STATIC void stderr_print_strn(void *env, const char *str, mp_uint_t len) {
+EM_ASM{
+    console.error("ERROR");
+}
+}
+#else
+STATIC void stderr_print_strn(void *env, const char *str, mp_uint_t len) {
     (void)env;
     ssize_t dummy = write(STDERR_FILENO, str, len);
     (void)dummy;
 }
+#endif
 
 STATIC const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
 
@@ -345,6 +355,6 @@ uint mp_import_stat(const char *path) {
 }
 
 void nlr_jump_fail(void *val) {
-    fprintf(stderr, "FATAL: uncaught NLR %p\n", val);
+    printf("FATAL: uncaught NLR %p\n", val);
     exit(1);
 }

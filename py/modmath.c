@@ -35,7 +35,11 @@
 // And by defining our own we can ensure it uses the correct const format.
 #define MP_PI MICROPY_FLOAT_CONST(3.14159265358979323846)
 
+#if NO_NLR
+STATIC mp_obj_t math_error(void) {
+#else
 STATIC NORETURN void math_error(void) {
+#endif
     mp_raise_ValueError(MP_ERROR_TEXT("math domain error"));
 }
 
@@ -43,6 +47,9 @@ STATIC mp_obj_t math_generic_1(mp_obj_t x_obj, mp_float_t (*f)(mp_float_t)) {
     mp_float_t x = mp_obj_get_float(x_obj);
     mp_float_t ans = f(x);
     if ((isnan(ans) && !isnan(x)) || (isinf(ans) && !isinf(x))) {
+#if NO_NLR
+        return
+#endif
         math_error();
     }
     return mp_obj_new_float(ans);
@@ -53,6 +60,9 @@ STATIC mp_obj_t math_generic_2(mp_obj_t x_obj, mp_obj_t y_obj, mp_float_t (*f)(m
     mp_float_t y = mp_obj_get_float(y_obj);
     mp_float_t ans = f(x, y);
     if ((isnan(ans) && !isnan(x) && !isnan(y)) || (isinf(ans) && !isinf(x))) {
+#if NO_NLR
+        return
+#endif
         math_error();
     }
     return mp_obj_new_float(ans);
@@ -146,7 +156,7 @@ STATIC mp_float_t MICROPY_FLOAT_C_FUN(fabs_func)(mp_float_t x) {
 }
 MATH_FUN_1(fabs, fabs_func)
 // floor(x)
-MATH_FUN_1_TO_INT(floor, floor) // TODO: delegate to x.__floor__() if x is not a float
+MATH_FUN_1_TO_INT(floor, floor) //TODO: delegate to x.__floor__() if x is not a float
 // fmod(x, y)
 MATH_FUN_2(fmod, fmod)
 // isfinite(x)
@@ -188,6 +198,9 @@ STATIC mp_obj_t mp_math_isclose(size_t n_args, const mp_obj_t *pos_args, mp_map_
         ? (mp_float_t)1e-9 : mp_obj_get_float(args[ARG_rel_tol].u_obj);
     const mp_float_t abs_tol = mp_obj_get_float(args[ARG_abs_tol].u_obj);
     if (rel_tol < (mp_float_t)0.0 || abs_tol < (mp_float_t)0.0) {
+#if NO_NLR
+        return
+#endif
         math_error();
     }
     if (a == b) {
@@ -213,6 +226,9 @@ MP_DEFINE_CONST_FUN_OBJ_KW(mp_math_isclose_obj, 2, mp_math_isclose);
 STATIC mp_obj_t mp_math_log(size_t n_args, const mp_obj_t *args) {
     mp_float_t x = mp_obj_get_float(args[0]);
     if (x <= (mp_float_t)0.0) {
+#if NO_NLR
+        return
+#endif
         math_error();
     }
     mp_float_t l = MICROPY_FLOAT_C_FUN(log)(x);
@@ -221,6 +237,9 @@ STATIC mp_obj_t mp_math_log(size_t n_args, const mp_obj_t *args) {
     } else {
         mp_float_t base = mp_obj_get_float(args[1]);
         if (base <= (mp_float_t)0.0) {
+#if NO_NLR
+            return
+#endif
             math_error();
         } else if (base == (mp_float_t)1.0) {
             mp_raise_msg(&mp_type_ZeroDivisionError, MP_ERROR_TEXT("divide by zero"));
