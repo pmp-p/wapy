@@ -156,7 +156,12 @@ STATIC void mp_map_rehash(mp_map_t *map) {
     map->table = new_table;
     for (size_t i = 0; i < old_alloc; i++) {
         if (old_table[i].key != MP_OBJ_NULL && old_table[i].key != MP_OBJ_SENTINEL) {
-            mp_map_lookup(map, old_table[i].key, MP_MAP_LOOKUP_ADD_IF_NOT_FOUND)->value = old_table[i].value;
+            mp_map_elem_t lookup = mp_map_lookup(map, old_table[i].key, MP_MAP_LOOKUP_ADD_IF_NOT_FOUND);
+            if (lookup==NULL) {
+                //FIXME: maybe exception
+                return -1;
+            }
+            lookup->value = old_table[i].value;
         }
     }
     m_del(mp_map_elem_t, old_table, old_alloc);

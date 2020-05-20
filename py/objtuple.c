@@ -60,7 +60,7 @@ void mp_obj_tuple_print(const mp_print_t *print, mp_obj_t o_in, mp_print_kind_t 
         mp_print_str(print, ")");
     }
 }
-
+#include <stdlib.h>
 STATIC mp_obj_t mp_obj_tuple_make_new(const mp_obj_type_t *type_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     (void)type_in;
 
@@ -87,6 +87,9 @@ STATIC mp_obj_t mp_obj_tuple_make_new(const mp_obj_type_t *type_in, size_t n_arg
             mp_obj_t iterable = mp_getiter(args[0], NULL);
             mp_obj_t item;
             while ((item = mp_iternext(iterable)) != MP_OBJ_NULL) {
+#if NO_NLR
+                if ( item == MP_OBJ_STOP_ITERATION) goto done;
+#endif
                 if (len >= alloc) {
                     items = m_renew(mp_obj_t, items, alloc, alloc * 2);
                     alloc *= 2;
@@ -98,6 +101,7 @@ STATIC mp_obj_t mp_obj_tuple_make_new(const mp_obj_type_t *type_in, size_t n_arg
             if (mp_iternext_had_exc()) {
                 return MP_OBJ_NULL;
             }
+done:;
 #endif
             mp_obj_t tuple = mp_obj_new_tuple(len, items);
             m_del(mp_obj_t, items, alloc);
