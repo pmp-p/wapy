@@ -51,7 +51,11 @@ bool mp_seq_get_fast_slice_indexes(mp_uint_t len, mp_obj_t slice, mp_bound_slice
 #endif
 
     mp_obj_slice_indices(slice, len, indexes);
-
+#if NO_NLR
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        return -1;
+    }
+#endif
     // If the index is negative then stop points to the last item, not after it
     if (indexes->step < 0) {
         indexes->stop++;

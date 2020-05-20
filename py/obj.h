@@ -935,12 +935,8 @@ typedef struct _mp_obj_slice_t {
     mp_obj_t stop;
     mp_obj_t step;
 } mp_obj_slice_t;
-#if NO_NLR
-mp_obj_t
-#else
-void
-#endif
-mp_obj_slice_indices(mp_obj_t self_in, mp_int_t length, mp_bound_slice_t *result);
+
+void mp_obj_slice_indices(mp_obj_t self_in, mp_int_t length, mp_bound_slice_t *result);
 
 // functions
 
