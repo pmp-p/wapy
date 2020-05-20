@@ -35,7 +35,7 @@
 #undef MICROPY_ENABLE_SCHEDULER
 #endif
 #define MICROPY_ENABLE_SCHEDULER (0)
-
+#define MICROPY_PY_GENERATOR_PEND_THROW (0)
 #define MICROPY_ENABLE_PYSTACK (1)
 
 // Options to control how MicroPython is built for this port,
