@@ -182,10 +182,10 @@ const byte *str_index_to_ptr(const mp_obj_type_t *type, const byte *self_data, s
 excepthandler:
 #if NO_NLR
                 mp_raise_msg_o(&mp_type_IndexError, MP_ERROR_TEXT("string index out of range"));
-                return NULL;
 #else
                 mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("string index out of range"));
 #endif
+    return NULL;
 }
 
 STATIC mp_obj_t str_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
@@ -209,6 +209,10 @@ STATIC mp_obj_t str_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
             const byte *pstart, *pstop;
             if (ostart != mp_const_none) {
                 pstart = str_index_to_ptr(type, self_data, self_len, ostart, true);
+#if NO_NLR
+                if (pstart==NULL)
+                    return MP_OBJ_NULL;
+#endif
             } else {
                 pstart = self_data;
             }
@@ -216,6 +220,11 @@ STATIC mp_obj_t str_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value) {
                 // pstop will point just after the stop character. This depends on
                 // the \0 at the end of the string.
                 pstop = str_index_to_ptr(type, self_data, self_len, ostop, true);
+#if NO_NLR
+                if (pstop==NULL)
+                    return MP_OBJ_NULL;
+#endif
+
             } else {
                 pstop = self_data + self_len;
             }

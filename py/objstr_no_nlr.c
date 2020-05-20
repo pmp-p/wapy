@@ -962,9 +962,10 @@ STATIC mp_obj_t terse_str_format_value_error(void) {
 }
 #else
 // define to nothing to improve coverage
+/*
 static inline mp_obj_t terse_str_format_value_error(void) {
     return MP_OBJ_NULL;
-}
+}*/
 #endif
 
 STATIC vstr_t mp_obj_str_format_helper(const char *str, const char *top, int *arg_i, size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
@@ -1658,7 +1659,7 @@ not_enough_args:
                 #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
                     return terse_str_format_value_error();
                 #else
-                    mp_raise_o(mp_obj_new_exception_msg_varg(&mp_type_ValueError,
+                    return mp_raise_o(mp_obj_new_exception_msg_varg(&mp_type_ValueError,
                         MP_ERROR_TEXT("unsupported format character '%c' (0x%x) at index %d"),
                         *str, *str, str - start_str));
                 #endif

@@ -670,9 +670,7 @@ mp_obj_t mp_obj_subscr(mp_obj_t base, mp_obj_t index, mp_obj_t value) {
     const mp_obj_type_t *type = mp_obj_get_type(base);
     if (type->subscr != NULL) {
         mp_obj_t ret = type->subscr(base, index, value);
-        if (ret != MP_OBJ_NULL) {
-            return ret;
-        }
+
 #if NO_NLR
         // MP_OBJ_NULL return can mean either unsupported or exception
         if (MP_STATE_THREAD(active_exception) != NULL) {
@@ -680,6 +678,9 @@ mp_obj_t mp_obj_subscr(mp_obj_t base, mp_obj_t index, mp_obj_t value) {
         }
 #pragma message "TODO: call base classes here ?"
 #endif // NO_NLR
+        if (ret != MP_OBJ_NULL) {
+            return ret;
+        }
         // TODO: call base classes here?
     }
     if (value == MP_OBJ_NULL) {
