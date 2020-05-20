@@ -336,9 +336,14 @@ STATIC mp_obj_t dict_popitem(mp_obj_t self_in) {
         return MP_OBJ_NULL;
     }
     size_t cur = 0;
+    #if MICROPY_PY_COLLECTIONS_ORDEREDDICT
+    if (self->map.is_ordered) {
+        cur = self->map.used - 1;
+    }
+    #endif
     mp_map_elem_t *next = dict_iter_next(self, &cur);
     if (next == NULL) {
-        return mp_raise_msg_o(&mp_type_KeyError, "popitem(): dictionary is empty");
+        mp_raise_msg(&mp_type_KeyError, "popitem(): dictionary is empty");
     }
     self->map.used--;
     mp_obj_t items[] = {next->key, next->value};
