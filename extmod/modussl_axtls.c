@@ -53,6 +53,7 @@ struct ssl_args {
 };
 
 STATIC const mp_obj_type_t ussl_socket_type;
+
 #if NO_NLR
 STATIC mp_obj_t ussl_socket_new(mp_obj_t sock, struct ssl_args *args) {
 #else
@@ -122,6 +123,7 @@ STATIC mp_obj_ssl_socket_t *ussl_socket_new(mp_obj_t sock, struct ssl_args *args
         }
 
     }
+
 #if NO_NLR
     return MP_OBJ_FROM_PTR(o);
 #else
@@ -270,6 +272,7 @@ STATIC mp_obj_t mod_ssl_wrap_socket(size_t n_args, const mp_obj_t *pos_args, mp_
     struct ssl_args args;
     mp_arg_parse_all(n_args - 1, pos_args + 1, kw_args,
         MP_ARRAY_SIZE(allowed_args), allowed_args, (mp_arg_val_t *)&args);
+
 #if NO_NLR
     return ussl_socket_new(sock, &args);
 #else
