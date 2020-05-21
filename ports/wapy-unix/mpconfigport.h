@@ -25,6 +25,7 @@
  */
 #ifndef NO_NLR
 #define NO_NLR (1)
+#define MICROPY_PY_OS_DUPTERM       (0)
 #endif
 
 #ifdef MICROPY_EMIT_NATIVE
@@ -78,6 +79,7 @@
 // check stdout a chance to pass, etc.
 #define MICROPY_DEBUG_PRINTER       (&mp_stderr_print)
 #define MICROPY_READER_POSIX        (1)
+
 #define MICROPY_USE_READLINE_HISTORY (1)
 #define MICROPY_HELPER_REPL         (1)
 #define MICROPY_REPL_EMACS_KEYS     (1)
@@ -105,8 +107,18 @@
 #endif
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_DESCRIPTORS      (1)
+
 #pragma message "MICROPY_PY_BUILTINS_STR_UNICODE (0) has more failing tests"
 #define MICROPY_PY_BUILTINS_STR_UNICODE (1)
+#if MICROPY_PY_BUILTINS_STR_UNICODE
+    #define MICROPY_PY_BUILTINS_STR_UNICODE_CHECK (1)
+#else
+    #define MICROPY_PY_BUILTINS_STR_UNICODE_CHECK (0)
+    #if NO_NLR
+        #error "unsupported native storage must be utf8"
+    #endif
+#endif
+
 #define MICROPY_PY_BUILTINS_STR_CENTER (1)
 #define MICROPY_PY_BUILTINS_STR_PARTITION (1)
 #define MICROPY_PY_BUILTINS_STR_SPLITLINES (1)

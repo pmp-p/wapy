@@ -131,7 +131,7 @@ STATIC void str_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t
         mp_str_print_quoted(print, str_data, str_len, is_bytes);
     }
 }
-
+#include <stdlib.h>
 mp_obj_t mp_obj_str_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     #if MICROPY_CPYTHON_COMPAT
     if (n_kw != 0) {
