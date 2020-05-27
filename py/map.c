@@ -143,6 +143,7 @@ STATIC int mp_map_rehash(mp_map_t *map) {
 }
 
 #else
+#error "please use no_nlr"
 STATIC void mp_map_rehash(mp_map_t *map) {
     size_t old_alloc = map->alloc;
     size_t new_alloc = get_hash_alloc_greater_or_equal_to(map->alloc + 1);

@@ -64,7 +64,75 @@ STATIC void stderr_print_strn(void *env, const char *str, mp_uint_t len) {
 #endif
 
 STATIC const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
+#if NO_NLR
 
+
+STATIC void stderr_print_strn2(void *env, const char *str, size_t len) {
+    (void)env;
+    fprintf(stderr,str);
+}
+
+const mp_print_t mp_stderr_print2 = {NULL, stderr_print_strn2};
+
+int uncaught_exception_handler(void) {
+    mp_obj_base_t *exc = MP_STATE_THREAD(active_exception);
+    // check for SystemExit
+    if (mp_obj_is_subclass_fast(MP_OBJ_FROM_PTR(exc->type), MP_OBJ_FROM_PTR(&mp_type_SystemExit))) {
+        #if __EMSCRIPTEN__
+                EM_ASM({console.log("91:SystemExit");});
+        #endif
+        return 1;
+    }
+    MP_STATE_THREAD(active_exception) = NULL;
+    // Report all other exceptions
+    mp_obj_print_exception(&mp_stderr_print2, MP_OBJ_FROM_PTR(exc));
+    return 0;
+}
+
+STATIC int compile_and_save(const char *file, const char *output_file, const char *source_file) {
+    mp_lexer_t *lex = mp_lexer_new_from_file(file);
+    if (lex == NULL) {
+        uncaught_exception_handler();
+        return 1;
+    } else {
+        qstr source_name;
+        if (source_file == NULL) {
+            source_name = lex->source_name;
+        } else {
+            source_name = qstr_from_str(source_file);
+        }
+
+        #if MICROPY_PY___FILE__
+        mp_store_global(MP_QSTR___file__, MP_OBJ_NEW_QSTR(source_name));
+        #endif
+
+        mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
+        mp_raw_code_t *rc = mp_compile_to_raw_code(&parse_tree, source_name, false);
+
+        if ( rc != MP_OBJ_NULL) {
+            vstr_t vstr;
+            vstr_init(&vstr, 16);
+            if (output_file == NULL) {
+                vstr_add_str(&vstr, file);
+                vstr_cut_tail_bytes(&vstr, 2);
+                vstr_add_str(&vstr, "mpy");
+            } else {
+                vstr_add_str(&vstr, output_file);
+            }
+            mp_raw_code_save_file(rc, vstr_null_terminated_str(&vstr));
+            vstr_clear(&vstr);
+#pragma message "//TODO: MP_STATE_VM(mp_pending_exception)"
+            return 0;
+        }
+
+    }
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        uncaught_exception_handler();
+    }
+    return 1;
+}
+
+#else
 STATIC int compile_and_save(const char *file, const char *output_file, const char *source_file) {
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
@@ -104,6 +172,7 @@ STATIC int compile_and_save(const char *file, const char *output_file, const cha
         return 1;
     }
 }
+#endif
 
 STATIC int usage(char **argv) {
     printf(
@@ -212,7 +281,7 @@ MP_NOINLINE int main_(int argc, char **argv) {
     #else
     (void)emit_opt;
     #endif
-
+#if MICROPY_DYNAMIC_COMPILER
     // set default compiler configuration
     mp_dynamic_compiler.small_int_bits = 31;
     mp_dynamic_compiler.opt_cache_map_lookup_in_bytecode = 0;
@@ -230,7 +299,7 @@ MP_NOINLINE int main_(int argc, char **argv) {
     mp_dynamic_compiler.native_arch = MP_NATIVE_ARCH_NONE;
     mp_dynamic_compiler.nlr_buf_num_regs = 0;
     #endif
-
+#endif
     const char *input_file = NULL;
     const char *output_file = NULL;
     const char *source_file = NULL;
@@ -266,6 +335,7 @@ MP_NOINLINE int main_(int argc, char **argv) {
                 }
                 a += 1;
                 source_file = argv[a];
+#if MICROPY_DYNAMIC_COMPILER
             } else if (strncmp(argv[a], "-msmall-int-bits=", sizeof("-msmall-int-bits=") - 1) == 0) {
                 char *end;
                 mp_dynamic_compiler.small_int_bits =
@@ -314,6 +384,12 @@ MP_NOINLINE int main_(int argc, char **argv) {
                 } else {
                     return usage(argv);
                 }
+#else
+            } else if (strcmp(argv[a], "-mno-cache-lookup-bc") == 0) {
+
+            } else if (strcmp(argv[a], "-mcache-lookup-bc") == 0) {
+
+#endif
             } else {
                 return usage(argv);
             }
