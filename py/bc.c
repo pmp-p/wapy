@@ -42,7 +42,7 @@
 
 
 
-#if !MICROPY_PERSISTENT_CODE
+#if !MICROPY_PERSISTENT_CODE ||  MICROPY_EMIT_WASM
 
 mp_uint_t mp_decode_uint(const byte **ptr) {
     mp_uint_t unum = 0;

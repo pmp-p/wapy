@@ -407,7 +407,14 @@ MP_NOINLINE int main_(int argc, char **argv) {
         exit(1);
     }
 
-    int ret = compile_and_save(input_file, output_file, source_file);
+    char pytmpfile[1024];
+
+    sprintf(pytmpfile, "future-fstrings-show %s > /tmp/mpy-cross.py", input_file);
+    system(pytmpfile);
+    sprintf(pytmpfile, "/tmp/mpy-cross.py");
+
+    //int ret = compile_and_save(input_file, output_file, source_file);
+    int ret = compile_and_save(pytmpfile, output_file, source_file);
 
     #if MICROPY_PY_MICROPYTHON_MEM_INFO
     if (mp_verbose_flag) {

@@ -258,7 +258,7 @@ typedef struct _mp_state_thread_t {
     mp_obj_dict_t *dict_globals;
 
 #if NO_NLR
-#pragma message "VM GC context is here"
+//#pragma message "VM GC context is here"
     mp_obj_base_t *active_exception;
 #else
     nlr_buf_t *nlr_top;

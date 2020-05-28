@@ -9,7 +9,7 @@ include $(TOP)/py/py.mk
 ARCH = $(shell uname -m)
 ifneq ("$(ARCH)", "ppc64")
 ifneq ("$(ARCH)", "ppc64le")
-	CROSS_COMPILE ?= powerpc64le-linux-
+	CROSS_COMPILE ?= powerpc64le-linux-gnu-
 endif
 endif
 
@@ -52,7 +52,7 @@ $(BUILD)/_frozen_mpy.c: frozentest.mpy $(BUILD)/genhdr/qstrdefs.generated.h
 
 $(BUILD)/firmware.elf: $(OBJ) powerpc.lds
 	$(ECHO) "LINK $@"
-	$(Q)$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(Q)$(LD) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
 	$(Q)$(SIZE) $@
 
 $(BUILD)/firmware.bin: $(BUILD)/firmware.elf

@@ -362,7 +362,7 @@ STATIC mp_obj_t re_sub_helper(mp_obj_t self_in, size_t n_args, const mp_obj_t *a
                     }
 
                     if (match_no >= (unsigned int)match->num_matches) {
-                        mp_raise_or_return(
+                        mp_raise_or_return_value(
                             mp_obj_new_exception_arg1(&mp_type_IndexError, MP_OBJ_NEW_SMALL_INT(match_no)),
                             MP_OBJ_NULL
                         );

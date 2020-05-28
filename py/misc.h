@@ -196,7 +196,7 @@ char *vstr_null_terminated_str(vstr_t *vstr);
 void vstr_add_byte(vstr_t *vstr, byte v);
 void vstr_add_char(vstr_t *vstr, unichar chr);
 #if NO_NLR
-#pragma message "BEWARE: non void return is problematic with function pointers"
+//#pragma message "BEWARE: non void return is problematic with function pointers"
 int vstr_add_str(vstr_t *vstr, const char *str);
 int vstr_add_strn(vstr_t *vstr, const char *str, size_t len);
 #else

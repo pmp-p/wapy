@@ -43,3 +43,17 @@ user.props
 # Generated rst files
 ######################
 genrst/
+
+
+lib/asf4/
+lib/axtls/
+lib/berkeley-db-1.xx/
+lib/btstack/
+lib/libffi/
+lib/lwip/
+lib/mbedtls/
+lib/mynewt-nimble/
+lib/nrfx/
+lib/nxp_driver/
+lib/stm32lib/
+lib/tinyusb/
