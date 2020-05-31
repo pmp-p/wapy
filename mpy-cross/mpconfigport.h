@@ -30,7 +30,7 @@
 #undef NO_NLR
 #endif
 #define NO_NLR (1)
-
+#define MICROPY_PY_FUNCTION_ATTRS (1)
 // options to control how MicroPython is built
 
 #define MICROPY_ALLOC_PATH_MAX      (PATH_MAX)
@@ -56,7 +56,7 @@
 #define MICROPY_COMP_TRIPLE_TUPLE_ASSIGN (1)
 #define MICROPY_COMP_RETURN_IF_EXPR (1)
 
-#define MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE (1)
+#define MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE (0)
 
 #define MICROPY_READER_POSIX        (1)
 #define MICROPY_ENABLE_RUNTIME      (0)

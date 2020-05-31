@@ -164,19 +164,41 @@ STATIC const mp_obj_type_t mp_type_fun_native;
 qstr mp_obj_fun_get_name(mp_const_obj_t fun_in) {
     const mp_obj_fun_bc_t *fun = MP_OBJ_TO_PTR(fun_in);
     #if MICROPY_EMIT_NATIVE || MICROPY_EMIT_WASM
-    if (fun->base.type == &mp_type_fun_native || fun->base.type == &mp_type_native_gen_wrap) {
-        // TODO native functions don't have name stored
-        return MP_QSTR_;
-    }
     #else
-        #if defined(__EMSCRIPTEN__)
-    #error "wasm : need MICROPY_EMIT_NATIVE || MICROPY_EMIT_WASM for detect native fun"
-        #endif
+        #error "MICROPY_EMIT_NATIVE || MICROPY_EMIT_WASM required"
     #endif
+    if (fun->base.type == &mp_type_fun_native || fun->base.type == &mp_type_native_gen_wrap) {
+        #pragma message "// TODO native functions don't have name stored"
+    } else {
 
-    const byte *bc = fun->bytecode;
-    MP_BC_PRELUDE_SIG_DECODE(bc);
-    return mp_obj_code_get_name(bc);
+        if (fun->base.type == &mp_type_fun_bc ) {
+            const byte *bc = fun->bytecode;
+            MP_BC_PRELUDE_SIG_DECODE(bc);
+            #pragma message "REVIEW: can that one return a NULL ?"
+            return mp_obj_code_get_name(bc);
+        }
+
+        #if MICROPY_PY_FUNCTION_ATTRS
+
+#define STRIP_PREFIX strlen("mp_builtin_")
+        //PMPP
+        if (
+            (fun->base.type ==  &mp_type_fun_builtin_0) ||
+            (fun->base.type ==  &mp_type_fun_builtin_1) ||
+            (fun->base.type ==  &mp_type_fun_builtin_2) ||
+            (fun->base.type ==  &mp_type_fun_builtin_3)
+            ) {
+            mp_obj_fun_builtin_fixed_t *fn = (mp_obj_fun_builtin_fixed_t *)fun;
+            return qstr_from_str( &fn->name[STRIP_PREFIX] );
+        }
+
+        if ( fun->base.type == &mp_type_fun_builtin_var) {
+            mp_obj_fun_builtin_var_t *fn = (mp_obj_fun_builtin_var_t *)fun;
+            return qstr_from_str( &fn->name[STRIP_PREFIX] );
+        }
+        #endif
+    }
+    return MP_QSTR_;
 }
 
 #if MICROPY_CPYTHON_COMPAT
@@ -267,6 +289,7 @@ mp_code_state_t *mp_obj_fun_bc_prepare_codestate(mp_obj_t self_in, size_t n_args
     return code_state;
 }
 #endif
+
 
 STATIC mp_obj_t fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     if (MP_STACK_CHECK()) {
@@ -577,3 +600,74 @@ mp_obj_t mp_obj_new_fun_asm(size_t n_args, const void *fun_data, mp_uint_t type_
 }
 
 #endif // MICROPY_EMIT_INLINE_ASM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+STATIC mp_obj_t fun_bc_call_pre(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+    if (MP_STACK_CHECK()) {
+        return MP_OBJ_NULL;
+    }
+
+    mp_obj_fun_bc_t *self = MP_OBJ_TO_PTR(self_in);
+
+    size_t n_state, state_size;
+    DECODE_CODESTATE_SIZE(self->bytecode, n_state, state_size);
+
+    // allocate state for locals and stack
+    mp_code_state_t *code_state = NULL;
+    code_state = mp_pystack_alloc(sizeof(mp_code_state_t) + state_size);
+
+    if (INIT_CODESTATE(code_state, self, n_state, n_args, n_kw, args) == MP_OBJ_NULL) {
+        // exception
+        mp_pystack_free(code_state);
+        return MP_OBJ_NULL;
+    }
+
+    // execute the byte code with the correct globals context
+    mp_globals_set(self->globals);
+    return code_state;
+}
+
+// mp_vm_return_kind_t vm_return_kind = mp_execute_bytecode(code_state, MP_OBJ_NULL);
+
+
+STATIC mp_obj_t fun_bc_call_past(mp_code_state_t *code_state, mp_vm_return_kind_t vm_return_kind, mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+
+    mp_globals_set(code_state->old_globals);
+
+    mp_obj_t result;
+    if (vm_return_kind == MP_VM_RETURN_NORMAL) {
+        // return value is in *sp
+        result = *code_state->sp;
+    } else {
+        // must be an exception because normal functions can't yield
+        assert(vm_return_kind == MP_VM_RETURN_EXCEPTION);
+        // returned exception is in state[0]
+        result = code_state->state[0];
+    }
+
+    mp_pystack_free(code_state);
+
+    if (vm_return_kind == MP_VM_RETURN_NORMAL) {
+        return result;
+    } else { // MP_VM_RETURN_EXCEPTION
+        return mp_raise_o(result);
+    }
+}
+
+*/
+

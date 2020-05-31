@@ -41,8 +41,8 @@ void *mp_pystack_alloc(size_t n_bytes);
 // pointer to the block that was allocated first and it and all subsequently
 // allocated blocks will be freed.
 static inline void mp_pystack_free(void *ptr) {
-    assert((uint8_t *)ptr >= MP_STATE_THREAD(pystack_start));
-    assert((uint8_t *)ptr <= MP_STATE_THREAD(pystack_cur));
+    assert((PYSTACK_T *)ptr >= MP_STATE_THREAD(pystack_start));
+    assert((PYSTACK_T *)ptr <= MP_STATE_THREAD(pystack_cur));
     #if MP_PYSTACK_DEBUG
     size_t n_bytes_to_free = MP_STATE_THREAD(pystack_cur) - (uint8_t *)ptr;
     size_t n_bytes = *(size_t *)(MP_STATE_THREAD(pystack_cur) - MICROPY_PYSTACK_ALIGN);
@@ -55,7 +55,7 @@ static inline void mp_pystack_free(void *ptr) {
         assert(0);
     }
     #endif
-    MP_STATE_THREAD(pystack_cur) = (uint8_t *)ptr;
+    MP_STATE_THREAD(pystack_cur) = (PYSTACK_T *)ptr;
 }
 
 static inline void mp_pystack_realloc(void *ptr, size_t n_bytes) {

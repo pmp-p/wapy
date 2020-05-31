@@ -39,7 +39,7 @@
 // Nibbles in magic number are: BB BB BB BB BB BO VV QU
 #define MP_BC_FORMAT(op) ((0x000003a4 >> (2 * ((op) >> 4))) & 3)
 
-// Load, Store, Delete, Import, Make, Build, Unpack, Call, Jump, Exception, For, sTack, Return, Yield, Op
+// Load, Store, Delete, Import, Make, Build, Unpack, Call, Jump, Exception, For, Stack, Return, Yield, Op
 #define MP_BC_BASE_RESERVED                 (0x00) // ----------------
 #define MP_BC_BASE_QSTR_O                   (0x10) // LLLLLLSSSDDII---
 #define MP_BC_BASE_VINT_E                   (0x20) // MMLLLLSSDDBBBBBB
