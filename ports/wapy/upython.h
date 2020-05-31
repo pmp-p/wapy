@@ -32,11 +32,14 @@ int do_code(const char *src,  int is_file);
 
 #define PATHLIST_SEP_CHAR ':'
 
+#if WAPY
 
-#if MICROPY_ENABLE_GC
-static char heap[32*1024*1024];
+    #if MICROPY_ENABLE_GC
+        static char heap[32*1024*1024];
+    #endif
+static int repl_started = -100;
+
 #endif
-
 
 #define REPL_INPUT_SIZE 16384
 #define REPL_INPUT_MAX REPL_INPUT_SIZE-1
@@ -52,7 +55,7 @@ static char heap[32*1024*1024];
 
 
 int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...);
-static int repl_started = -100;
+
 
 extern int SHOW_OS_LOOP;
 extern int show_os_loop(int state);

@@ -175,22 +175,19 @@ void ctx_get_next(int copy) {
     mp_new_interpreter(&mpi_ctx, ctx, ctx_current, 0);
     ctx_next = ctx;
 
-    if ( (ctx_current>2) && !CTX.code_state)
-        clog(" ======== no code_state for slot %i->%i ============", ctx_current, ctx_next);
-
-    NEXT.code_state = CTX.code_state ;
-
     if (copy) {
+        if ( (ctx_current>2) && !CTX.code_state)
+            clog(" ======== no code_state for slot %i->%i ============", ctx_current, ctx_next);
+
         NEXT.self_in = CTX.self_in;
         NEXT.self_fun = CTX.self_fun;
         NEXT.ip = CTX.ip;
         NEXT.sp = CTX.sp;
-        //NEXT.code_state = CTX.code_state ;
+        NEXT.code_state = CTX.code_state ;
         NEXT.exc_stack = CTX.exc_stack;
         NEXT.n_args = CTX.n_args;
         NEXT.n_kw = CTX.n_kw;
         NEXT.args = CTX.args;
-
 
 //?
         NEXT.n_state = CTX.n_state;

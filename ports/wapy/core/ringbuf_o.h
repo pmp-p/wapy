@@ -8,7 +8,7 @@
 #ifndef RINGBUF_O_H
 #define RINGBUF_O_H
 
-#ifndef __EMSCRIPTEN__
+#if __ARDUINO__
 #include "Arduino.h"
 #endif
 
@@ -45,7 +45,9 @@
         #define RB_ATOMIC_START
         #define RB_ATOMIC_END
     #else
-    #error ("This library only supports AVR and ESP8266 Boards.")
+        #if __ARDUINO__
+            #error ("This library only supports AVR and ESP8266 Boards.")
+        #endif
     #endif
 
 #endif

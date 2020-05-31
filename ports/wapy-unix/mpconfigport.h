@@ -25,8 +25,11 @@
  */
 #ifndef NO_NLR
 #define NO_NLR (1)
-#define MICROPY_PY_OS_DUPTERM       (0)
 #endif
+
+#define MICROPY_PY_OS_DUPTERM       (0)
+#define MICROPY_EMIT_WASM (1)
+
 
 #ifdef MICROPY_EMIT_NATIVE
     #undef MICROPY_EMIT_NATIVE

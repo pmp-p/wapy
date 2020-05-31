@@ -16,7 +16,7 @@
     #define EMSCRIPTEN_KEEPALIVE
 #endif
 
-#include "upython.h"
+#include "../wapy/upython.h"
 
 #include <time.h>
 

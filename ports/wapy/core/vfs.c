@@ -13,7 +13,7 @@
 #include "lib/utils/pyexec.h"
 #include "py/mphal.h"
 
-#include "upython.h"
+#include "../upython.h"
 
 
 #if !MICROPY_VFS

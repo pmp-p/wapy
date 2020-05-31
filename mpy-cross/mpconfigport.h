@@ -31,6 +31,7 @@
 #endif
 #define NO_NLR (1)
 #define MICROPY_PY_FUNCTION_ATTRS (1)
+#define MICROPY_EMIT_WASM (1)
 // options to control how MicroPython is built
 
 #define MICROPY_ALLOC_PATH_MAX      (PATH_MAX)

@@ -113,7 +113,7 @@ LD_SHARED += -fno-exceptions -fno-rtti
 
 
 #Debugging/Optimization
-WASM_FLAGS += -O0 -g4 --source-map-base http://localhost:8000/
+WASM_FLAGS += -O3 -g0 --source-map-base http://localhost:8000/
 LD_SHARED += -O0 -g4 --source-map-base http://localhost:8000/
 
 
@@ -142,10 +142,10 @@ include ../wapy/wapy.mk
 
 
 SRC_C = \
-	core/vfs.c \
-	core/ringbuf_b.c \
-        core/ringbuf_o.c \
-	core/file.wapy.c \
+	../wapy/core/vfs.c \
+	../wapy/core/ringbuf_b.c \
+        ../wapy/core/ringbuf_o.c \
+	../wapy/core/file.wapy.c \
 	mod/modos.c \
 	mod/modtime.c \
 	mod/moduos_vfs.c \
@@ -238,7 +238,7 @@ COPT += -s ALLOW_MEMORY_GROWTH=0  -s TOTAL_STACK=16777216
 COPT += -s TOTAL_MEMORY=640MB
 #COPT += -s TOTAL_MEMORY=768MB #yes
 
-WASM_FLAGS += -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1 -s EXPORT_ALL=1
+WASM_FLAGS += -s LZ4=1 -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1 -s EXPORT_ALL=1
 #only valid for fastcomp -s BINARYEN_TRAP_MODE=\"clamp\"
 
 

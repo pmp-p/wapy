@@ -17,6 +17,7 @@
 
 #undef NO_NLR
 #define NO_NLR (1)
+#define WAPY (1)
 
 
 #define False false

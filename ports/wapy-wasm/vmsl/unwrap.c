@@ -279,9 +279,9 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
 
     exception_handler:
         // exception occurred
-        assert(MP_STATE_THREAD(active_exception) != NULL);
 #if VMTRACE
-    clog("      508:loop exit on EX! CTX.ip=%i CTX.code_state->ip=%i", CTX.ip , CTX.code_state->ip );
+    assert(MP_STATE_THREAD(active_exception) != NULL);
+    clog("      508:loop[%i] exit on EX!", ctx_current );
 #endif
         // clear exception because we caught it
         mp_obj_base_t *the_exc = MP_STATE_THREAD(active_exception);

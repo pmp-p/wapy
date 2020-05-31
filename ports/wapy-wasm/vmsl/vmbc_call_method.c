@@ -5,7 +5,7 @@ VM_ENTRY(MP_BC_CALL_METHOD): {
     // unum & 0xff == n_positional
     // (unum >> 8) & 0xff == n_keyword
     CTX.sp -= (unum & 0xff) + ((unum >> 7) & 0x1fe) + 1;
-    int native = 0;
+
     #if MICROPY_STACKLESS
     if (mp_obj_get_type(*CTX.sp) == &mp_type_fun_bc) {
         CTX.code_state->ip = CTX.ip;
@@ -53,6 +53,7 @@ VM_ENTRY(MP_BC_CALL_METHOD): {
 
 
 
+
 //57: DO NOT USE LINE 57 FOR SUB
 
 
@@ -64,18 +65,15 @@ VM_ENTRY(MP_BC_CALL_METHOD): {
 
 
 
-
-
-    if (native) {
-        GOSUB(def_mp_call_function_n_kw, "BC_CALL_METHOD(native)" );
-    } else {
-#pragma message "TODO FIXME sometimes mp_obj_fun_get_name() leads to out of bound access eg on .popitem() "
-/*
+    if (mp_obj_get_type(*CTX.sp) == &mp_type_fun_bc) {
         qstr FUN_QSTR = mp_obj_fun_get_name( NEXT.self_in );
         if (FUN_QSTR != MP_QSTR_ ) {
             GOSUB(def_mp_call_function_n_kw, qstr_str(FUN_QSTR) );
-        } else*/
+        } else {
             GOSUB(def_mp_call_function_n_kw, "BC_CALL_METHOD(?name?)" );
+        }
+    } else {
+        GOSUB(def_mp_call_function_n_kw, "BC_CALL_METHOD(native)" );
     }
 
     VM_SET_TOP(SUBVAL);

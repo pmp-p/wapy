@@ -19,10 +19,10 @@
 
 static char *stack_top;
 
-#include "upython.h"
+#include "../wapy/upython.h"
 
-#include "core/ringbuf_o.h"
-#include "core/ringbuf_b.h"
+#include "../wapy/core/ringbuf_o.h"
+#include "../wapy/core/ringbuf_b.h"
 
 //static
 struct wPyInterpreterState i_main ;

@@ -981,7 +981,6 @@ too_short:
 
 mp_obj_t mp_load_attr(mp_obj_t base, qstr attr) {
     DEBUG_OP_printf("load attr %p.%s\n", base, qstr_str(attr));
-    clog("981:load attr %p.%s\n", base, qstr_str(attr));
     // use load_method
     mp_obj_t dest[2];
     if (mp_load_method(base, attr, dest) == MP_OBJ_NULL) {
@@ -1135,7 +1134,6 @@ mp_obj_t mp_load_method_maybe(mp_obj_t obj, qstr attr, mp_obj_t *dest) {
     #if MICROPY_PY_FUNCTION_ATTRS //PMPP
       else if (attr == MP_QSTR___name__) {
         if ( type->name  ==  MP_QSTR_function) {
-            clog("1114: search for __name__ in fun");
             dest[0] = MP_OBJ_NEW_QSTR(mp_obj_fun_get_name(obj));
         }
     }

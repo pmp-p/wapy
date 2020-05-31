@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "core/fdfile.h"
+#include "../wapy/core/fdfile.h"
 
 #include "py/compile.h"
 #include "py/emitglue.h"
@@ -40,6 +40,7 @@
 #include "py/builtin.h"
 #include "py/stackctrl.h"
 #include "py/gc.h"
+
 
 
 /* full shared
@@ -154,7 +155,10 @@ VM support:
 pywasm: Support WASI(WebAssembly System Interface)
     https://github.com/mohanson/pywasm/issues/25
 
-
+webuse:
+    https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
+    https://makitweb.com/how-to-detect-browser-window-active-or-not-javascript/
+    https://codepen.io/jonathan/full/sxgJl
 */
 
 
@@ -870,31 +874,26 @@ def_PyRun_SimpleString: {
 
 def_mp_call_function_n_kw: {
     const mp_obj_type_t *type = mp_obj_get_type(CTX.self_in);
-
-    RETVAL = MP_OBJ_NULL;
+/*
+#if VMTRACE
+        if (ctx_current>3) {
+            if (!CTX.code_state)
+                clog("8433: WARNING code_state[%i] is NULL", ctx_current);
+        }
+#endif
+*/
 
     if (type->call != NULL) {
-#if VMTRACE
-    if (ctx_current>3) {
-        if (!CTX.code_state)
-            clog("8433: WARNING code_state[%i] is NULL", ctx_current);
-    }
-#endif
         if ( (int)*type->call == (int)&fun_bc_call ) {
-#if 0
-             RETVAL = fun_bc_call(CTX.self_in, CTX.n_args, CTX.n_kw, CTX.args);
-#else
             ctx_get_next(CTX_COPY);
                 GOSUB(def_func_bc_call, "mp_call_function_n_kw");
                 RETVAL = SUBVAL; //CTX.sub_value;
-#endif
         } else {
 #if VMTRACE
-    clog("      899: native call");
+clog("      899: native call");
 #endif
             RETVAL = type->call(CTX.self_in, CTX.n_args, CTX.n_kw, CTX.args);
         }
-
 
     } else {
         clog("919:def_mp_call_function_n_kw ex!");
@@ -903,6 +902,7 @@ def_mp_call_function_n_kw: {
                 &mp_type_TypeError,"'%s' object isn't callable", mp_obj_get_type_str(CTX.self_in)
             )
         );
+        RETVAL = MP_OBJ_NULL;
     }
 
     RETURN;
