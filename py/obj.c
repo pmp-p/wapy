@@ -96,24 +96,32 @@ const mp_obj_type_t *mp_obj_get_type(mp_const_obj_t o_in) {
 }
 
 const char *mp_obj_get_type_str(mp_const_obj_t o_in) {
+    if (o_in == MP_OBJ_NULL) {
+        return MP_QSTR_;
+    }
     return qstr_str(mp_obj_get_type(o_in)->name);
 }
 
 void mp_obj_print_helper(const mp_print_t *print, mp_obj_t o_in, mp_print_kind_t kind) {
     // There can be data structures nested too deep, or just recursive
 #if NO_NLR
+    if (o_in == MP_OBJ_NULL) {
+        return;
+    }
+
     if (MP_STACK_CHECK()) {
         return;
     }
 #else
     MP_STACK_CHECK();
-#endif
+
     #ifndef NDEBUG
     if (o_in == MP_OBJ_NULL) {
         mp_print_str(print, "(nil)");
         return;
     }
     #endif
+#endif
     const mp_obj_type_t *type = mp_obj_get_type(o_in);
     if (type->print != NULL) {
         type->print((mp_print_t *)print, o_in, kind);

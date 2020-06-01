@@ -113,7 +113,7 @@ LD_SHARED += -fno-exceptions -fno-rtti
 
 
 #Debugging/Optimization
-WASM_FLAGS += -O3 -g0 --source-map-base http://localhost:8000/
+WASM_FLAGS += -O0 -g4 --source-map-base http://localhost:8000/
 LD_SHARED += -O0 -g4 --source-map-base http://localhost:8000/
 
 
