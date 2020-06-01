@@ -97,7 +97,7 @@ const mp_obj_type_t *mp_obj_get_type(mp_const_obj_t o_in) {
 
 const char *mp_obj_get_type_str(mp_const_obj_t o_in) {
     if (o_in == MP_OBJ_NULL) {
-        return MP_QSTR_;
+        return "";
     }
     return qstr_str(mp_obj_get_type(o_in)->name);
 }

@@ -156,7 +156,7 @@ case __LINE__:; } while (0)
 #define End };
 
 
-#define STRINGIFY(a) #a
+#define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
 // static int enumerator=0;

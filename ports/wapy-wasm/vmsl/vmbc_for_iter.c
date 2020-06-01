@@ -1,8 +1,13 @@
 VM_ENTRY(MP_BC_FOR_ITER): {
     VM_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
+#if VMTRACE
+    if (CTX.code_state == NULL)
+        fprintf(stderr,"HORREUR MALHEUR\n");
+#endif
+
     CTX.code_state->sp = CTX.sp;
 
-    ctx_get_next(CTX_NEW);
+    ctx_get_next(CTX_COPY);
     NEXT.return_value = MP_OBJ_NULL;;
     NEXT.send_value = mp_const_none;
     NEXT.throw_value = MP_OBJ_NULL;
@@ -78,7 +83,7 @@ clog("<<< BC_FOR_ITER:mp_call_method_n_kw_return\n");
     } else {
         VM_PUSH(RETVAL); // push the next iteration value
     }
-    ctx_free();
+    ctx_abort();
     continue;
 }
 

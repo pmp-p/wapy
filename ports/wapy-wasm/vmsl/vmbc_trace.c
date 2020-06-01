@@ -8,11 +8,9 @@
         #endif
         size_t bc = CTX.code_state->ip - bytecode_start;
         #if MICROPY_PERSISTENT_CODE
-        qstr block_name = ipval[0] | (ipval[1] << 8);
         qstr source_file = ipval[2] | (ipval[3] << 8);
         ipval += 4;
         #else
-        qstr block_name = mp_decode_uint_value(ipval);
         ipval = mp_decode_uint_skip(ipval);
         qstr source_file = mp_decode_uint_value(ipval);
         ipval = mp_decode_uint_skip(ipval);

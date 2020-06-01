@@ -37,7 +37,6 @@ CTX.vm_return_kind =  vm_ret_kind;\
 CTX.switch_break_for = 1;\
 break; }
 
-#define RAISE(o) do { MP_STATE_THREAD(active_exception) = MP_OBJ_TO_PTR(o); goto exception_handler; } while (0)
 
 #define RAISE_IF_NULL(arg) RAISE_IF(arg == MP_OBJ_NULL)
 #define THE_EXC the_exc

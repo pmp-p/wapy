@@ -28,7 +28,9 @@
 #endif
 
 #define MICROPY_PY_OS_DUPTERM       (0)
+#define MICROPY_PY_FUNCTION_ATTRS (1)
 #define MICROPY_EMIT_WASM (1)
+#define MICROPY_PY_BUILTINS_NEXT2 (1)
 
 
 #ifdef MICROPY_EMIT_NATIVE

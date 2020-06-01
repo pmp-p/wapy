@@ -1,4 +1,4 @@
-#define STRINGIFY(a) #a
+#define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
 #define STRINGIFY2(a, b) a ## b
@@ -176,7 +176,7 @@ void ctx_get_next(int copy) {
     ctx_next = ctx;
 
     if (copy) {
-        if ( (ctx_current>2) && !CTX.code_state)
+        if ((ctx_current > 2) && (CTX.code_state == NULL))
             clog(" ======== no code_state for slot %i->%i ============", ctx_current, ctx_next);
 
         NEXT.self_in = CTX.self_in;
