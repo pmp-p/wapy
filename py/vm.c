@@ -37,6 +37,9 @@
 #include "py/profile.h"
 
 // *FORMAT-OFF*
+#if WAPY
+#include "../wapy/upython.h"
+#endif
 
 #if 0
 #define TRACE(ip) printf("sp=%d ", (int)(sp - &code_state->state[0] + 1)); mp_bytecode_print2(ip, 1, code_state->fun_bc->const_table);
@@ -244,7 +247,6 @@ mp_vm_return_kind_t mp_execute_bytecode(mp_code_state_t *code_state, volatile mp
     #define TEST_TOP()
 #endif
 
-
 #if MICROPY_STACKLESS
 run_code_state: ;
 #endif
@@ -272,6 +274,34 @@ FRAME_SETUP();
     // of any exceptions.  Otherwise it's possible that the VM never gives up the GIL.
     volatile int gil_divisor = MICROPY_PY_THREAD_GIL_VM_DIVISOR;
     #endif
+
+#if WAPY
+if (VMFLAGS_IF>0) {
+    const byte *ip = code_state->fun_bc->bytecode;
+    MP_BC_PRELUDE_SIG_DECODE(ip);
+    MP_BC_PRELUDE_SIZE_DECODE(ip);
+    const byte *bytecode_start = ip + n_info + n_cell;
+    #if !MICROPY_PERSISTENT_CODE
+    // so bytecode is aligned
+    bytecode_start = MP_ALIGN(bytecode_start, sizeof(mp_uint_t));
+    #endif
+    size_t bc = code_state->ip - bytecode_start;
+    #if MICROPY_PERSISTENT_CODE
+    qstr block_name = ip[0] | (ip[1] << 8);
+    qstr source_file = ip[2] | (ip[3] << 8);
+    ip += 4;
+    #else
+    qstr block_name = mp_decode_uint_value(ip);
+    ip = mp_decode_uint_skip(ip);
+    qstr source_file = mp_decode_uint_value(ip);
+    ip = mp_decode_uint_skip(ip);
+    #endif
+    size_t source_line = mp_bytecode_get_source_line(ip, bc);
+    clog("247:vm.c NOINT %s:%i but VMFLAGS_IF set", source_file, source_line);
+}
+#else
+    #pragma message "no wapy vm check"
+#endif
 
     // outer exception handling loop
     for (;;) {

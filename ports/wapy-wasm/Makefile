@@ -268,14 +268,13 @@ libs: lib-static lib-shared
 LD_PROG += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_shm_get_ptr','_repl_run', '_show_os_loop']"
 
 
-PF=
+PF= -s FORCE_FILESYSTEM=1 --use-preload-plugins -lSDL2 -lvorbis
 #PF += --preload-file ../../../demos/libSDL2.wasm@/lib/libSDL2.so 
 #PF += --preload-file ../../../rom.wasm/stupyde/@/assets/packages/stupyde
-
-PF += --preload-file ../../../demos/libtest.wasm@/lib/libtest.so --use-preload-plugins -lSDL2 -lvorbis
-PF += --preload-file ../../../demos/assets/resources/hello.bmp@/hello.bmp
+#PF += --preload-file ../../../demos/samples/libtest.wasm@/lib/libtest.so 
+#PF += --preload-file ../../../demos/assets/resources/hello.bmp@/hello.bmp
 #PF += --preload-file ../../../sources.py/python3@/assets/python3
-PF += --preload-file ../../../sources.wasm/site_wapy.py@/assets/site_wapy.py
+#PF += --preload-file ../../../sources.wasm/site_wapy.py@/assets/site_wapy.py
 
 ifdef SHARED
 #============
@@ -294,7 +293,7 @@ endif
 
 
 ifdef STATIC
-# ============ was SERIOUSLY BROKEN until clang 11 ==========
+# ============ static + pic was SERIOUSLY BROKEN until clang 11 ==========
 # but this is the good one
 LD_PROG += $(CFLAGS) $(WASM_FLAGS) -s MAIN_MODULE=1 -s EXPORT_ALL=1
 LD_LIB += $(WASM_FLAGS)

@@ -334,7 +334,15 @@ def main():
             if os.path.isdir(file_["srcpath"]):
                 add(file_["mode"], file_["srcpath"], file_["dstpath"])
             else:
-                new_data_files.append(file_)
+                should_ignore(file_["srcpath"], is_file=1)
+                if process_filter:
+                    newfile = {**file_}
+                    newfile["srcpath"] = process_filter
+                    new_data_files.append(newfile)
+                    print(newfile, file=sys.stderr)
+                else:
+                    new_data_files.append(file_)
+
     data_files = [file_ for file_ in new_data_files if not os.path.isdir(file_["srcpath"])]
     if len(data_files) == 0:
         print("Nothing to do!", file=sys.stderr)

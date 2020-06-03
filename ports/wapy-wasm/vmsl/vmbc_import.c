@@ -55,9 +55,9 @@ VM_ENTRY(MP_BC_IMPORT_NAME): {
         RAISE_IF_NULL( RETVAL );
     // TODO:CTX
 
-    if ( !strcmp(qstr_str(CTX.qst),"syscall") ) {
+    if ( !strcmp(qstr_str(CTX.qst),"aio_suspend") ) {
         //clog("    BC_IMPORT_NAME(%d:%d) import %s->pause", ctx_current, CTX.sub_id, qstr_str(CTX.qst) );
-        BRANCH(VM_syscall, VMOP_PAUSE, VM_DISPATCH_loop, "BC_IMPORT_NAME(syscall)");
+        BRANCH(VM_syscall, VMOP_PAUSE, VM_DISPATCH_loop, "BC_IMPORT_NAME(aio_suspend)");
     }
 
     continue;

@@ -25,14 +25,16 @@
  */
 
 // options to control how WAPY is built
-#define MICROPY_ROM_TEXT_COMPRESSION (0)
-#ifdef NO_NLR
-#undef NO_NLR
-#endif
+
 #define NO_NLR (1)
-#define MICROPY_PY_FUNCTION_ATTRS (1)
-#define MICROPY_EMIT_WASM (1)
-#define MICROPY_PY_BUILTINS_NEXT2 (1)
+#if NO_NLR
+    #define MICROPY_ROM_TEXT_COMPRESSION (0)
+    #define MICROPY_PY_FUNCTION_ATTRS (1)
+    #define MICROPY_EMIT_WASM (1)
+    #define MICROPY_PY_BUILTINS_NEXT2 (1)
+    #define MICROPY_PY_FSTRING (1)
+#endif
+
 // options to control how MicroPython is built
 
 #define MICROPY_ALLOC_PATH_MAX      (PATH_MAX)

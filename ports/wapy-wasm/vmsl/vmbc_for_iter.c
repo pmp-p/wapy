@@ -1,9 +1,6 @@
 VM_ENTRY(MP_BC_FOR_ITER): {
+    FRAME_UPDATE();
     VM_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
-#if VMTRACE
-    if (CTX.code_state == NULL)
-        fprintf(stderr,"HORREUR MALHEUR\n");
-#endif
 
     CTX.code_state->sp = CTX.sp;
 
@@ -17,15 +14,14 @@ VM_ENTRY(MP_BC_FOR_ITER): {
     } else {
         NEXT.self_in = MP_OBJ_FROM_PTR(&CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 1]);
     }
-// =============  mp_obj_t value = mpsl_iternext_allow_raise(obj); ===============
-
+// =============  mp_obj_t value = mp_iternext_allow_raise(obj); ===============
+// unwrap from runtime_no_nlr.c:1259
     const mp_obj_type_t *type = mp_obj_get_type(NEXT.self_in);
 
     if (type->iternext != NULL) {
 
-
         clog(">>>  BC_FOR_ITER:gen_instance_iternext\n"  );
-            RETVAL = type->iternext(NEXT.self_in);
+        RETVAL = type->iternext(NEXT.self_in);
 
         if ( (void*)*type->iternext == &gen_instance_iternext ) {
             clog(">>> BC_FOR_ITER:type->iternext\n"  );
@@ -75,8 +71,9 @@ clog("<<< BC_FOR_ITER:mp_call_method_n_kw_return\n");
                     "'%s' object isn't an iterator", mp_obj_get_type_str(NEXT.self_in)));
         }
     }
+// runtime_no_nlr.c:1280
+//========================== end mp_iternext_allow_raise(mp_obj_t o_in)  ==================
 
-//========================== end mpsl_iternext_allow_raise(mp_obj_t o_in)  ==================
     if (RETVAL == MP_OBJ_STOP_ITERATION) {
         CTX.sp -= MP_OBJ_ITER_BUF_NSLOTS; // pop the exhausted iterator
         CTX.ip += CTX.ulab; // jump to after for-block

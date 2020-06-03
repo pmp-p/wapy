@@ -175,6 +175,9 @@ void ctx_get_next(int copy) {
     mp_new_interpreter(&mpi_ctx, ctx, ctx_current, 0);
     ctx_next = ctx;
 
+    // always pass the interpreter state along coro call tree, even if null.
+    NEXT.code_state = CTX.code_state ;
+
     if (copy) {
         if ((ctx_current > 2) && (CTX.code_state == NULL))
             clog(" ======== no code_state for slot %i->%i ============", ctx_current, ctx_next);
@@ -183,12 +186,10 @@ void ctx_get_next(int copy) {
         NEXT.self_fun = CTX.self_fun;
         NEXT.ip = CTX.ip;
         NEXT.sp = CTX.sp;
-        NEXT.code_state = CTX.code_state ;
         NEXT.exc_stack = CTX.exc_stack;
         NEXT.n_args = CTX.n_args;
         NEXT.n_kw = CTX.n_kw;
         NEXT.args = CTX.args;
-
 //?
         NEXT.n_state = CTX.n_state;
         NEXT.state_size = CTX.state_size;

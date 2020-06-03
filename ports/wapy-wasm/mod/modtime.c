@@ -97,8 +97,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_ns_obj, mod_time_time_ns);
 
 STATIC
 mp_obj_t mod_time_sleep(mp_obj_t arg) {
-    //NO SYNC SLEEPon wasm, use asyncio
-    printf("mod_time_sleep");
+    //NO SYNC SLEEP on wasm, use asyncio
+    printf("\nmod_time_sleep\n");
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_time_sleep_obj, mod_time_sleep);
@@ -106,16 +106,16 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_time_sleep_obj, mod_time_sleep);
 
 STATIC
 mp_obj_t mod_time_sleep_ms(mp_obj_t arg) {
-    //NO SYNC SLEEPon wasm, use asyncio
-    printf("mod_time_sleep_ms");
+    //NO SYNC SLEEP on wasm, use asyncio
+    printf("\nmod_time_sleep_ms\n");
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_time_sleep_ms_obj, mod_time_sleep_ms);
 
 STATIC
 mp_obj_t mod_time_sleep_us(mp_obj_t arg) {
-    //NO SYNC SLEEPon wasm, use asyncio
-    printf("mod_time_sleep_us");
+    //NO SYNC SLEEP on wasm, use asyncio
+    printf("\nmod_time_sleep_us\n");
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_time_sleep_us_obj, mod_time_sleep_us);

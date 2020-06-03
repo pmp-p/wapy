@@ -361,8 +361,8 @@ void Py_Init() {
 
 
 static bool def_PyRun_SimpleString_is_repl = false ;
-
-
+static int async_loop = 1;
+static int async_state;
 
 
 extern int emscripten_GetProcAddress(const char * name);
@@ -571,21 +571,14 @@ main_loop_or_step(void) {
             while ( mpi_ctx[ctx_current].childcare ) {
                 ctx_current = (int)mpi_ctx[ctx_current].childcare;
             }
-/*
-            CTX.code_state = mp_pystack_alloc(sizeof(mp_code_state_t) + CTX.state_size);
 
-            if ( mp_setup_code_state( CTX.code_state, 0, 0, MP_OBJ_NULL) == MP_OBJ_NULL) {
-                clog("550: ERROR setting codestate");
-            } else
-            */
-                fprintf(stdout,"running __main__ on pid=%d\n", ctx_current);
+            fprintf(stdout,"running __main__ on pid=%d\n", ctx_current);
 
             return;
         } // no continuation -> syscall
 
         if (VMOP==VMOP_INIT) {
             puts("VMOP_INIT");
-            //PyRun_SimpleString("print('REPL_INIT')");
 
             VMOP = VMOP_WARMUP;
             show_os_loop(1);
@@ -595,19 +588,17 @@ main_loop_or_step(void) {
                 "import sys;"
                 "import embed;"
                 "import builtins;"
-                "import stupyde.fixes;"
                 "sys.path.extend(['/assets','/assets/packages']);"
-                "sys.modules['syscall']=sys;"
-                "builtins.embed = embed;"
-//                "embed.STI();"
+                "import site_wapy;"
                 "#\n"
             );
+            return;
         }
     } else {
         //syscall = 2 cycles , pause = 1,
         if (VMOP>= VMOP_PAUSE) {
             VMOP--;
-            //return;
+            return;
         }
 
         if ( (ENTRY_POINT != JMP_NONE)  && !JUMPED_IN) {
@@ -634,34 +625,68 @@ main_loop_or_step(void) {
     }
 
 
-
-
+// this block is the async loop , no preemption should be allowed here.
 
     if (io_stdin[0]) {
+        int ex=-1;
+        async_state = VMFLAGS_IF;
+        // CLI
+        VMFLAGS_IF = 0;
 
         //is it async top level ? let python access shared mem and rewrite code
         if (endswith(io_stdin, "#async-tl")) {
             cdbg("#async-tl -> aio.asyncify()");
             PyRun_SimpleString("print('aio.asyncify N/I')");
+            ex=0;
             IO_CODE_DONE;
         } else {
             if (endswith(io_stdin, "#aio.step\n")) {
                 //TODO: maybe somehow consumme kbd data for async inputs ?
                 //expect script to be properly async programmed and run them full speed via C stack ?
-                //PyRun_IO_CODE();
+
+                if (async_loop) {
+                    if ( (async_loop = PyRun_IO_CODE()) ) {
+                        ex=0;
+                    } else {
+                        fprintf(stdout, "ERROR[%s]\n", io_stdin);
+                        // ex check
+                        ex=1;
+                    }
+                }
                 IO_CODE_DONE;
             }
+
         }
 
-        if (io_stdin[0]) {
+        if (ex>=0) {
+            if (MP_STATE_THREAD(active_exception) != NULL) {
+                clog("646: uncaught exception")
+                //mp_hal_set_interrupt_char(-1);
+                mp_handle_pending(false);
+                //handle_uncaught_exception();
+                if (uncaught_exception_handler()) {
+                    clog("651:SystemExit");
+                } else {
+                    clog("653: exception done");
+                }
+                async_loop = 0;
+            }
+        }
+        // STI
+        VMFLAGS_IF = async_state;
+    }
+/*
+    // preemption block for repl and scripts.
+
+    if (io_stdin[0]) {
         //then it is toplevel or it's sync top level ( tranpiled by aio on the heap)
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
             JUMP( def_PyRun_SimpleString, "main_loop_or_step");
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
             // mark done
-        }
         IO_CODE_DONE;
     }
+*/
 
     //now flush kbd port
     char *keybuf;

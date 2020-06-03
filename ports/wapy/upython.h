@@ -56,7 +56,7 @@ static int repl_started = -100;
 
 int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...);
 
-
+extern int VMFLAGS_IF;
 extern int SHOW_OS_LOOP;
 extern int show_os_loop(int state);
 

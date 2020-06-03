@@ -14,6 +14,7 @@
 
 
 #define MICROPY_ROM_TEXT_COMPRESSION (0)
+#define MICROPY_PY_FSTRING          (1)
 
 #undef NO_NLR
 #define NO_NLR (1)

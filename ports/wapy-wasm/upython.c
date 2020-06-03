@@ -50,6 +50,20 @@ show_os_loop(int state) {
     return (last>0);
 }
 
+EMSCRIPTEN_KEEPALIVE int
+state_os_loop(int state) {
+    static int last_state = -666;
+
+    if (!state) {
+        last_state = SHOW_OS_LOOP;
+        SHOW_OS_LOOP = 0;
+    } else {
+        if (last_state != -666)
+            SHOW_OS_LOOP = last_state;
+        last_state = -666;
+    }
+    return last_state;
+}
 
 // ----
 
@@ -127,11 +141,10 @@ gc_collect(void) {
 
 int
 do_str(const char *src, mp_parse_input_kind_t input_kind) {
-    //int ret = 0;
     mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), False);
 
     if (lex == NULL) {
-        fprintf(stdout,"134:NULL LEXER->handle_uncaught_exception\nn%s\n", src);
+        fprintf(stdout,"148:NULL LEXER->handle_uncaught_exception\nn%s\n", src);
         return 0;
     }
     {
@@ -141,11 +154,17 @@ do_str(const char *src, mp_parse_input_kind_t input_kind) {
         mp_obj_t module_fun = mp_compile(&parse_tree, source_name, false);
         if (module_fun != MP_OBJ_NULL) {
             mp_obj_t ret = mp_call_function_0(module_fun);
-            if (ret != MP_OBJ_NULL && MP_STATE_VM(mp_pending_exception) != MP_OBJ_NULL) {
-                mp_obj_t obj = MP_STATE_VM(mp_pending_exception);
-                MP_STATE_VM(mp_pending_exception) = MP_OBJ_NULL;
-                mp_raise_o(obj);
+            if (ret != MP_OBJ_NULL) {
+                if (MP_STATE_VM(mp_pending_exception) != MP_OBJ_NULL) {
+                    mp_obj_t obj = MP_STATE_VM(mp_pending_exception);
+                    MP_STATE_VM(mp_pending_exception) = MP_OBJ_NULL;
+                    mp_raise_o(obj);
+
+                } else  {
+                    return 1; //success
+                }
             }
+
         } else {
             // uncaught exception
             fprintf(stdout,"150:NULL FUNCTION\n");
@@ -157,12 +176,10 @@ do_str(const char *src, mp_parse_input_kind_t input_kind) {
     return 0;
 }
 
-
-
 #include "wasm_mphal.c"
 
-void PyRun_IO_CODE() {
-    do_str(i_main.shm_stdio, MP_PARSE_FILE_INPUT);
+int PyRun_IO_CODE() {
+    return do_str(i_main.shm_stdio, MP_PARSE_FILE_INPUT);
 }
 
 int
