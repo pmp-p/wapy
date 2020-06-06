@@ -354,6 +354,8 @@ struct _mp_bluetooth_btstack_root_pointers_t;
 #define MICROPY_PORT_ROOT_POINTERS \
     const char *readline_hist[50]; \
     void *mmap_region_head; \
+    void *PyOS_InputHook; \
+    int coro_call_counter; \
     MICROPY_BLUETOOTH_ROOT_POINTERS \
 
 // We need to provide a declaration/definition of alloca()

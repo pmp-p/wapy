@@ -1,16 +1,16 @@
 //
 // core/main.c
 // core/vfs.c
-//
-#define HEAP_SIZE 128 * 1024 * 1024
-#define MP_IO_SHM_SIZE 32768
 
-#define MP_IO_SIZE 1024
-#define MP_IO_ADDR (MP_IO_SHM_SIZE - MP_IO_SIZE)
+#define HEAP_SIZE 64 * 1024 * 1024
 
+// TODO: use a circular buffer for everything io related
+#define MP_IO_SHM_SIZE 65535
 
-#define IO_KBD 0
-#define IO_KBD_SIZE MP_IO_SIZE
+#define MP_IO_SIZE 512
+
+#define IO_KBD ( MP_IO_SHM_SIZE - (1 * MP_IO_SIZE) )
+
 
 #if MICROPY_ENABLE_PYSTACK
     #define MP_STACK_SIZE 16384
@@ -31,6 +31,24 @@ struct wPyThreadState i_state ;
 
 RBB_T( out_rbb, 4096);
 
+// GC boundaries
+
+
+// The address of the top of the stack when we first saw it
+// This approximates a pointer to the bottom of the stack, but
+// may not necessarily _be_ the exact bottom. This is set by
+// the entry point of the application
+static void *stack_initial = NULL;
+// Pointer to the end of the stack
+static uintptr_t stack_max = (uintptr_t)NULL;
+// The current stack pointer
+static uintptr_t stack_ptr_val = (uintptr_t)NULL;
+// The amount of stack remaining
+static ptrdiff_t stack_left = 0;
+
+// Maximum stack size of 248k
+// This limit is arbitrary, but is what works for me under Node.js when compiled with emscripten
+static size_t stack_limit = 1024 * 248 * 1;
 
 
 EMSCRIPTEN_KEEPALIVE int
@@ -79,7 +97,7 @@ shm_get_ptr(int major,int minor) {
     // keyboards
     if (major==IO_KBD) {
         if (minor==0)
-            return &i_main.shm_stdio[MP_IO_ADDR];
+            return &i_main.shm_stdio[IO_KBD];
     }
     return NULL;
 }
@@ -130,14 +148,191 @@ wPy_Initialize() {
 }
 
 
+#if !MICROPY_ENABLE_FINALISER
+#error requires MICROPY_ENABLE_FINALISER (1)
+#endif
+
+//extern void gc_collect(void);
+#undef gc_collect
+
+#if  0 // gc
 void
 gc_collect(void) {
     void *dummy;
+    gc_dump_info();
     gc_collect_start();
     clog("122: noop: gc_collect\n");
-    gc_collect_root((void*)stack_top, ((mp_uint_t)(void*)(&dummy + 1) - (mp_uint_t)stack_top) / sizeof(mp_uint_t));
+    gc_collect_root(
+        (void*)stack_top,
+        ((mp_uint_t)(void*)(&dummy + 1) - (mp_uint_t)stack_top) / sizeof(mp_uint_t)
+    );
     gc_collect_end();
 }
+
+#else
+#include <setjmp.h>
+typedef jmp_buf gc_helper_regs_t;
+
+#if MICROPY_PY_THREAD && !MICROPY_PY_THREAD_GIL
+#define GC_ENTER() mp_thread_mutex_lock(&MP_STATE_MEM(gc_mutex), 1)
+#define GC_EXIT() mp_thread_mutex_unlock(&MP_STATE_MEM(gc_mutex))
+#else
+#define GC_ENTER()
+#define GC_EXIT()
+#endif
+
+#define TRACE_MARK(block, ptr, i, total) clog("gc_mark(%p) %lu/%i", ptr, i, total)
+
+#define AT_HEAD (1)
+#define AT_TAIL (2)
+#define AT_MARK (3)
+
+// ptr should be of type void*
+#define VERIFY_PTR(ptr) ( \
+    ((uintptr_t)(ptr) & (MICROPY_BYTES_PER_GC_BLOCK - 1)) == 0          /* must be aligned on a block */ \
+    && ptr >= (void *)MP_STATE_MEM(gc_pool_start)        /* must be above start of pool */ \
+    && ptr < (void *)MP_STATE_MEM(gc_pool_end)           /* must be below end of pool */ \
+    )
+
+
+#define BLOCKS_PER_ATB (4)
+
+#define BLOCK_SHIFT(block) (2 * ((block) & (BLOCKS_PER_ATB - 1)))
+
+#define BLOCK_FROM_PTR(ptr) (((byte *)(ptr) - MP_STATE_MEM(gc_pool_start)) / MICROPY_BYTES_PER_GC_BLOCK)
+#define PTR_FROM_BLOCK(block) (((block) * MICROPY_BYTES_PER_GC_BLOCK + (uintptr_t)MP_STATE_MEM(gc_pool_start)))
+
+#define ATB_GET_KIND(block) ((MP_STATE_MEM(gc_alloc_table_start)[(block) / BLOCKS_PER_ATB] >> BLOCK_SHIFT(block)) & 3)
+#define ATB_HEAD_TO_MARK(block) do { \
+ MP_STATE_MEM(gc_alloc_table_start)[(block) / BLOCKS_PER_ATB] |= (AT_MARK << BLOCK_SHIFT(block));\
+} while (0)
+
+// Take the given block as the topmost block on the stack. Check all it's
+// children: mark the unmarked child blocks and put those newly marked
+// blocks on the stack. When all children have been checked, pop off the
+// topmost block on the stack and repeat with that one.
+
+//extern void gc_mark_subtree(size_t block);
+
+STATIC void gc_mark_subtree1(size_t block) {
+    // Start with the block passed in the argument.
+    size_t sp = 0;
+    for (;;) {
+        // work out number of consecutive blocks in the chain starting with this one
+        size_t n_blocks = 0;
+        do {
+            n_blocks += 1;
+        } while (ATB_GET_KIND(block + n_blocks) == AT_TAIL);
+
+        // check this block's children
+        void **ptrs = (void **)PTR_FROM_BLOCK(block);
+        for (size_t i = n_blocks * MICROPY_BYTES_PER_GC_BLOCK / sizeof(void *); i > 0; i--, ptrs++) {
+            void *ptr = *ptrs;
+            if (VERIFY_PTR(ptr)) {
+                // Mark and push this pointer
+                size_t childblock = BLOCK_FROM_PTR(ptr);
+                if (ATB_GET_KIND(childblock) == AT_HEAD) {
+                    // an unmarked head, mark it, and push it on gc stack
+                    //TRACE_MARK(childblock, ptr);
+                    ATB_HEAD_TO_MARK(childblock);
+                    if (sp < MICROPY_ALLOC_GC_STACK_SIZE) {
+                        MP_STATE_MEM(gc_stack)[sp++] = childblock;
+                    } else {
+                        MP_STATE_MEM(gc_stack_overflow) = 1;
+                    }
+                }
+            }
+        }
+
+        // Are there any blocks on the stack?
+        if (sp == 0) {
+            break; // No, stack is empty, we're done.
+        }
+
+        // pop the next block off the stack
+        block = MP_STATE_MEM(gc_stack)[--sp];
+    }
+}
+
+void gc_collect_root1(void **ptrs, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        void *ptr = ptrs[i];
+        if (VERIFY_PTR(ptr)) {
+            size_t block = BLOCK_FROM_PTR(ptr);
+            if (ATB_GET_KIND(block) == AT_HEAD) {
+                // An unmarked head: mark it, and mark all its children
+                //TRACE_MARK(block, ptr, i, len);
+                ATB_HEAD_TO_MARK(block);
+                gc_mark_subtree1(block);
+            }
+        }
+    }
+}
+
+void gc_collect_start1(void) {
+    GC_ENTER();
+    MP_STATE_MEM(gc_lock_depth)++;
+    #if MICROPY_GC_ALLOC_THRESHOLD
+    MP_STATE_MEM(gc_alloc_amount) = 0;
+    #endif
+    MP_STATE_MEM(gc_stack_overflow) = 0;
+
+    // Trace root pointers.  This relies on the root pointers being organised
+    // correctly in the mp_state_ctx structure.  We scan nlr_top, dict_locals,
+    // dict_globals, then the root pointer section of mp_state_vm.
+    void **ptrs = (void **)(void *)&mp_state_ctx;
+    size_t root_start = offsetof(mp_state_ctx_t, thread.dict_locals);
+    size_t root_end = offsetof(mp_state_ctx_t, vm.qstr_last_chunk);
+    gc_collect_root(ptrs + root_start / sizeof(void *), (root_end - root_start) / sizeof(void *));
+
+    #if MICROPY_ENABLE_PYSTACK
+    // Trace root pointers from the Python stack.
+    ptrs = (void **)(void *)MP_STATE_THREAD(pystack_start);
+    gc_collect_root(ptrs, (MP_STATE_THREAD(pystack_cur) - MP_STATE_THREAD(pystack_start)) / sizeof(void *));
+    #endif
+}
+
+void
+gc_collect(void) {
+
+    gc_dump_info();
+    gc_helper_regs_t regs;
+
+    setjmp(regs);
+    // GC stack (and regs because we captured them)
+
+    clog("gc_collect_start");
+
+    gc_collect_start1();
+
+
+
+    void **ptrs = (void **)(void *)&regs;
+
+    size_t top = (uintptr_t)MP_STATE_THREAD(stack_top);
+    size_t bottom = (uintptr_t)&regs ;
+
+    size_t len  = (bottom - top) / sizeof(uintptr_t)  ;
+
+    clog("gc_collect top=%p bottom=%zu, %lu vs %lu", top,bottom,len, stack_limit);
+    clog("gc_collect top=%p bottom=%zu, %lu vs %lu", top,bottom,len, stack_limit);
+
+//343
+    gc_collect_root1( ptrs , len );
+//343
+
+    #if MICROPY_PY_THREAD
+    mp_thread_gc_others();
+    #endif
+    #if MICROPY_EMIT_NATIVE
+    mp_unix_mark_exec();
+    #endif
+
+    clog("gc_collect_end");
+    gc_collect_end();
+}
+
+#endif // gc
 
 int
 do_str(const char *src, mp_parse_input_kind_t input_kind) {

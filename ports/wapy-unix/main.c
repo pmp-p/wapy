@@ -202,8 +202,36 @@ STATIC int do_repl(void) {
 
     input_restart:
         vstr_reset(&line);
+#if MICROPY_UNIXSCHEDULE
+        const char sched[] = "__module__ = __import__('sys').modules.get('micropython',None);__module__ and __module__.scheduler()";
+        const char *sched_ptr = &sched[0];
+        mp_parse_input_kind_t parse_input_kind = MP_PARSE_SINGLE_INPUT;
+        // req prompt first pass
+        int ret=-3;
+
+        for (;;) {
+            ret = readline_select( &line, "~~> ", ret);
+            //fail
+            if (ret==-2) {
+                mp_hal_stdout_tx_str("stdin select error\n");
+                //maybe resume with normal readline
+                ret = readline(&line, ">>> ");
+            }
+            if (ret==-1) {
+                //mp_hal_stdio_mode_orig();
+                execute_from_lexer( LEX_SRC_STR, sched_ptr, parse_input_kind, false);
+                //mp_hal_stdio_mode_raw();
+            }
+
+            //got data
+            if (ret>=0) {
+                break;
+            }
+        }
+#else
         int ret = readline(&line, ">>> ");
         mp_parse_input_kind_t parse_input_kind = MP_PARSE_SINGLE_INPUT;
+#endif
 
         if (ret == CHAR_CTRL_C) {
             // cancel input

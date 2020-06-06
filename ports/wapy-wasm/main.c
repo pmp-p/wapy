@@ -116,11 +116,18 @@ hyperdivision/async-wasm
     https://github.com/hyperdivision/async-wasm/blob/master/index.js
 
 
-wasm:
+wasm/gc/continuations:
     https://github.com/WebAssembly/exception-handling/blob/master/proposals/Exceptions.md
     https://emscripten.org/docs/porting/guidelines/function_pointer_issues.html
     https://github.com/emscripten-core/emscripten/issues/8268#
     http://troubles.md/wasm-is-not-a-stack-machine/
+    https://github.com/WebAssembly/design/issues/1252
+    https://github.com/WebAssembly/design/issues/919#issuecomment-348000242
+
+
+    https://bitbucket.org/pypy/stmgc/src/default/
+
+    https://github.com/WebAssembly/design/issues/1345#issuecomment-638228041
 
 Protothreads
     http://dunkels.com/adam/pt/
@@ -143,8 +150,7 @@ ASYNC:
     https://www.python.org/dev/peps/pep-0525/
     https://www.pythonsheets.com/notes/python-asyncio.html
 
-GC:
-    https://bitbucket.org/pypy/stmgc/src/default/
+
 
 
 VM support:
@@ -321,6 +327,8 @@ int handle_uncaught_exception(void);
 
 #define io_stdin i_main.shm_stdio
 
+// to use kb buffer space for scripts
+// if (strlen(io_stdin)>=IO_KBD){ io_stdin[IO_KBD]  = 0;
 #define IO_CODE_DONE { io_stdin[0] = 0; }
 
 #if MICROPY_PY_THREAD_GIL && MICROPY_PY_THREAD_GIL_VM_DIVISOR
@@ -348,12 +356,14 @@ void Py_Init() {
 
     EM_ASM( {
         window.plink.shm = $0;
-        window.plink.io_port_kbd = $1;
-        window.PyRun_SimpleString_MAXSIZE = $2;
-        console.log("window.plink.shm=" + window.plink.shm);
-        console.log("window.plink.io_port_kbd=" + window.plink.io_port_kbd);
+        window.PyRun_SimpleString_MAXSIZE = $1;
+
+        window.plink.io_port_kbd = $2;
+        window.plink.MP_IO_SIZE = $3;
+        console.log("window.plink.shm=" + window.plink.shm+" +"+ window.PyRun_SimpleString_MAXSIZE);
+        console.log("window.plink.io_port_kbd=" + window.plink.io_port_kbd+" +"+ window.plink.MP_IO_SIZE);
         window.setTimeout( init_repl_begin , 1000 );
-    }, shm_ptr(), shm_get_ptr(0,0), MP_IO_SHM_SIZE );
+    }, shm_ptr(), IO_KBD, &io_stdin[IO_KBD], MP_IO_SIZE);
 
     IO_CODE_DONE;
 
@@ -548,6 +558,10 @@ main_loop_or_step(void) {
 
             Py_Init();
 
+            stack_initial = __builtin_frame_address(0); // could also use alloca(0)
+            stack_max = (uintptr_t)stack_initial - stack_limit;
+
+
             VMOP = VMOP_INIT;
 
             entry_point[0]=JMP_NONE;
@@ -592,6 +606,9 @@ main_loop_or_step(void) {
                 "import site_wapy;"
                 "#\n"
             );
+            emscripten_cancel_main_loop();
+            emscripten_set_main_loop( main_loop_or_step, 0, 1);
+
             return;
         }
     } else {
@@ -675,22 +692,27 @@ main_loop_or_step(void) {
         // STI
         VMFLAGS_IF = async_state;
     }
-/*
-    // preemption block for repl and scripts.
+
+// All I/O IS WRONG and should use a circular buffer.
+
 
     if (io_stdin[0]) {
-        //then it is toplevel or it's sync top level ( tranpiled by aio on the heap)
-/// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-            JUMP( def_PyRun_SimpleString, "main_loop_or_step");
-/// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-            // mark done
+    //then it is toplevel or it's sync top level ( tranpiled by aio on the heap)
+        def_PyRun_SimpleString_is_repl = true;
+/// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
+        JUMP( def_PyRun_SimpleString, "main_loop_or_step_repl");
+/// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
+        // mark done
         IO_CODE_DONE;
+        pyexec_repl_repl_restart(0);
+        def_PyRun_SimpleString_is_repl = false;
     }
-*/
+
+
 
     //now flush kbd port
     char *keybuf;
-    keybuf = shm_get_ptr( IO_KBD, 0);
+    keybuf =  shm_get_ptr( IO_KBD, 0);
     // only when scripting interface is idle and repl ready
     while (!KPANIC && repl_started) {
         // should give a way here to discard repl events feeding  "await input()" instead
@@ -705,18 +727,9 @@ main_loop_or_step(void) {
         } else break;
     }
 
+    // always reset io buffer no matter what since io_stdin can overwrite it in script mode
+    keybuf[0]=0;
 
-    if (io_stdin[0]) {
-    //then it is toplevel or it's sync top level ( tranpiled by aio on the heap)
-        def_PyRun_SimpleString_is_repl = true;
-/// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-        JUMP( def_PyRun_SimpleString, "main_loop_or_step_repl");
-/// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-        // mark done
-        IO_CODE_DONE;
-        pyexec_repl_repl_restart(0);
-        def_PyRun_SimpleString_is_repl = false;
-    }
 
     if (VMOP==VM_HCF) {
 VM_stackmess:
