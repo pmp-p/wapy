@@ -36,7 +36,6 @@
 #include "py/objlist.h"
 #include "py/objexcept.h"
 
-#define PYSTACK_T uint8_t
 // This file contains structures defining the state of the MicroPython
 // memory system, runtime and virtual machine.  The state is a global
 // variable, but in the future it is hoped that the state can become local.
@@ -244,9 +243,9 @@ typedef struct _mp_state_thread_t {
     #endif
 
     #if MICROPY_ENABLE_PYSTACK
-    PYSTACK_T *pystack_start;
-    PYSTACK_T *pystack_end;
-    PYSTACK_T *pystack_cur;
+    uint8_t *pystack_start;
+    uint8_t *pystack_end;
+    uint8_t *pystack_cur;
     #endif
 
     ////////////////////////////////////////////////////////////
@@ -259,11 +258,11 @@ typedef struct _mp_state_thread_t {
     mp_obj_dict_t *dict_globals;
 
 #if NO_NLR
-//#pragma message "VM GC context is here"
     mp_obj_base_t *active_exception;
 #else
     nlr_buf_t *nlr_top;
 #endif
+
     #if MICROPY_PY_SYS_SETTRACE
     mp_obj_t prof_trace_callback;
     bool prof_callback_is_executing;

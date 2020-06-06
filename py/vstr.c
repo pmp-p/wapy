@@ -73,7 +73,6 @@ void vstr_init_print(vstr_t *vstr, size_t alloc, mp_print_t *print) {
 void vstr_init_print(vstr_t *vstr, size_t alloc, mp_print_t *print) {
     vstr_init(vstr, alloc);
     print->data = vstr;
-
     print->print_strn = (mp_print_strn_t)vstr_add_strn;
 }
 #endif

@@ -129,6 +129,12 @@ wasm/gc/continuations:
 
     https://github.com/WebAssembly/design/issues/1345#issuecomment-638228041
 
+    finalizers: thx stinos !
+        https://github.com/micropython/micropython/issues/1878
+
+    WAPY implements C3:
+        https://github.com/WebAssembly/WASI/issues/276
+
 Protothreads
     http://dunkels.com/adam/pt/
     http://dunkels.com/adam/download/graham-pt.h
@@ -165,6 +171,11 @@ webuse:
     https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
     https://makitweb.com/how-to-detect-browser-window-active-or-not-javascript/
     https://codepen.io/jonathan/full/sxgJl
+
+
+couldclose:
+    https://github.com/micropython/micropython/issues/3313
+
 */
 
 
