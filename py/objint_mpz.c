@@ -435,7 +435,7 @@ mp_int_t mp_obj_int_get_checked(mp_const_obj_t self_in) {
         } else {
             // overflow
 #if NO_NLR
-            mp_raise_msg_o(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting long int to machine word"));
+            mp_raise_msg_o(&mp_type_OverflowError, MP_ERROR_TEXT("438:overflow converting long int to machine word"));
             return 0; // TODO callers must handle exceptions
 #else
             mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting long int to machine word"));
@@ -459,7 +459,7 @@ mp_uint_t mp_obj_int_get_uint_checked(mp_const_obj_t self_in) {
     }
 
 #if NO_NLR
-    mp_raise_msg_o(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting long int to machine word"));
+    mp_raise_msg_o(&mp_type_OverflowError, MP_ERROR_TEXT("462:overflow converting long int to machine word"));
     return 0; // TODO callers must handle exceptions
 #else
     mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting long int to machine word"));

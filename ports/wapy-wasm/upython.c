@@ -13,8 +13,8 @@
 
 
 #if MICROPY_ENABLE_PYSTACK
-    #define MP_STACK_SIZE 16384
-    static mp_obj_t pystack[MP_STACK_SIZE];
+#define MP_STACK_SIZE 16384
+static mp_obj_t pystack[MP_STACK_SIZE];
 #endif
 
 static char *stack_top;
@@ -25,47 +25,29 @@ static char *stack_top;
 #include "../wapy/core/ringbuf_b.h"
 
 //static
-struct wPyInterpreterState i_main ;
+struct wPyInterpreterState i_main;
 //static
-struct wPyThreadState i_state ;
+struct wPyThreadState i_state;
 
-RBB_T( out_rbb, 4096);
+RBB_T(out_rbb, 16384);
 
-// GC boundaries
-
-
-// The address of the top of the stack when we first saw it
-// This approximates a pointer to the bottom of the stack, but
-// may not necessarily _be_ the exact bottom. This is set by
-// the entry point of the application
-static void *stack_initial = NULL;
-// Pointer to the end of the stack
-static uintptr_t stack_max = (uintptr_t)NULL;
-// The current stack pointer
-static uintptr_t stack_ptr_val = (uintptr_t)NULL;
-// The amount of stack remaining
-static ptrdiff_t stack_left = 0;
-
-// Maximum stack size of 248k
-// This limit is arbitrary, but is what works for me under Node.js when compiled with emscripten
-static size_t stack_limit = 1024 * 248 * 1;
 
 
 EMSCRIPTEN_KEEPALIVE int
 show_os_loop(int state) {
     int last = SHOW_OS_LOOP;
-    if (state>=0) {
+    if (state >= 0) {
         SHOW_OS_LOOP = state;
-        if (state>0) {
+        if (state > 0) {
             //fprintf(stdout,"------------- showing os loop --------------\n");
-            fprintf(stdout,"------------- showing os loop / starting repl --------------\n");
+            fprintf(stdout, "------------- showing os loop / starting repl --------------\n");
             repl_started = 1;
         } else {
-            if (last!=state)
-                fprintf(stdout,"------------- hiding os loop --------------\n");
+            if (last != state)
+                fprintf(stdout, "------------- hiding os loop --------------\n");
         }
     }
-    return (last>0);
+    return (last > 0);
 }
 
 EMSCRIPTEN_KEEPALIVE int
@@ -87,16 +69,16 @@ state_os_loop(int state) {
 
 
 // should check null
-char*
+char *
 shm_ptr() {
     return &i_main.shm_stdio[0];
 }
 
-char*
-shm_get_ptr(int major,int minor) {
+char *
+shm_get_ptr(int major, int minor) {
     // keyboards
-    if (major==IO_KBD) {
-        if (minor==0)
+    if (major == IO_KBD) {
+        if (minor == 0)
             return &i_main.shm_stdio[IO_KBD];
     }
     return NULL;
@@ -104,15 +86,15 @@ shm_get_ptr(int major,int minor) {
 
 
 
-char*
+char *
 wPy_NewInterpreter() {
-    i_main.shm_stdio = (char *)malloc(MP_IO_SHM_SIZE);
+    i_main.shm_stdio = (char *) malloc(MP_IO_SHM_SIZE);
     if (!i_main.shm_stdio)
         fprintf(stdout, "74:shm_stdio malloc failed\n");
-    i_main.shm_stdio[0] = 0 ;
-    for (int i=0;i<MP_IO_SHM_SIZE;i++)
-        i_main.shm_stdio[i]=0;
-    i_state.interp = & i_main;
+    i_main.shm_stdio[0] = 0;
+    for (int i = 0; i < MP_IO_SHM_SIZE; i++)
+        i_main.shm_stdio[i] = 0;
+    i_state.interp = &i_main;
     pyexec_event_repl_init();
     return shm_ptr();
 }
@@ -120,10 +102,10 @@ wPy_NewInterpreter() {
 void
 wPy_Initialize() {
     int stack_dummy;
-    stack_top = (char*)&stack_dummy;
+    stack_top = (char *) &stack_dummy;
 
 #if MICROPY_ENABLE_GC
-    char *heap = (char*)malloc(HEAP_SIZE * sizeof(char));
+    char *heap = (char *) malloc(HEAP_SIZE * sizeof(char));
     gc_init(heap, heap + HEAP_SIZE);
 #endif
 
@@ -133,13 +115,13 @@ wPy_Initialize() {
 
     mp_init();
 
-    #if MICROPY_EMIT_NATIVE
+#if MICROPY_EMIT_NATIVE
     // Set default emitter options
     MP_STATE_VM(default_emit_opt) = emit_opt;
-    #else
+#else
 #pragma message "          ------------- (void)emit_opt; ?????????????????????"
     //(void)emit_opt;
-    #endif
+#endif
 
 
     mp_obj_list_init(mp_sys_path, 0);
@@ -154,10 +136,10 @@ wPy_Initialize() {
 #error requires MICROPY_ENABLE_FINALISER (1)
 #endif
 
-//extern void gc_collect(void);
+
 #undef gc_collect
 
-#if  0 // gc
+#if  0                          // TODO remove those gc bits was for experimenting
 
 
 #if MICROPY_PY_THREAD && !MICROPY_PY_THREAD_GIL
@@ -201,7 +183,8 @@ wPy_Initialize() {
 
 //extern void gc_mark_subtree(size_t block);
 
-STATIC void gc_mark_subtree1(size_t block) {
+STATIC void
+gc_mark_subtree1(size_t block) {
     // Start with the block passed in the argument.
     size_t sp = 0;
     for (;;) {
@@ -212,7 +195,7 @@ STATIC void gc_mark_subtree1(size_t block) {
         } while (ATB_GET_KIND(block + n_blocks) == AT_TAIL);
 
         // check this block's children
-        void **ptrs = (void **)PTR_FROM_BLOCK(block);
+        void **ptrs = (void **) PTR_FROM_BLOCK(block);
         for (size_t i = n_blocks * MICROPY_BYTES_PER_GC_BLOCK / sizeof(void *); i > 0; i--, ptrs++) {
             void *ptr = *ptrs;
             if (VERIFY_PTR(ptr)) {
@@ -233,15 +216,15 @@ STATIC void gc_mark_subtree1(size_t block) {
 
         // Are there any blocks on the stack?
         if (sp == 0) {
-            break; // No, stack is empty, we're done.
+            break;              // No, stack is empty, we're done.
         }
-
         // pop the next block off the stack
         block = MP_STATE_MEM(gc_stack)[--sp];
     }
 }
 
-void gc_collect_root1(void **ptrs, size_t len) {
+void
+gc_collect_root1(void **ptrs, size_t len) {
     for (size_t i = 0; i < len; i++) {
         void *ptr = ptrs[i];
         if (VERIFY_PTR(ptr)) {
@@ -256,27 +239,28 @@ void gc_collect_root1(void **ptrs, size_t len) {
     }
 }
 
-void gc_collect_start1(void) {
+void
+gc_collect_start1(void) {
     GC_ENTER();
     MP_STATE_MEM(gc_lock_depth)++;
-    #if MICROPY_GC_ALLOC_THRESHOLD
+#if MICROPY_GC_ALLOC_THRESHOLD
     MP_STATE_MEM(gc_alloc_amount) = 0;
-    #endif
+#endif
     MP_STATE_MEM(gc_stack_overflow) = 0;
 
     // Trace root pointers.  This relies on the root pointers being organised
     // correctly in the mp_state_ctx structure.  We scan nlr_top, dict_locals,
     // dict_globals, then the root pointer section of mp_state_vm.
-    void **ptrs = (void **)(void *)&mp_state_ctx;
+    void **ptrs = (void **) (void *) &mp_state_ctx;
     size_t root_start = offsetof(mp_state_ctx_t, thread.dict_locals);
     size_t root_end = offsetof(mp_state_ctx_t, vm.qstr_last_chunk);
     gc_collect_root(ptrs + root_start / sizeof(void *), (root_end - root_start) / sizeof(void *));
 
-    #if MICROPY_ENABLE_PYSTACK
+#if MICROPY_ENABLE_PYSTACK
     // Trace root pointers from the Python stack.
-    ptrs = (void **)(void *)MP_STATE_THREAD(pystack_start);
+    ptrs = (void **) (void *) MP_STATE_THREAD(pystack_start);
     gc_collect_root(ptrs, (MP_STATE_THREAD(pystack_cur) - MP_STATE_THREAD(pystack_start)) / sizeof(void *));
-    #endif
+#endif
 }
 
 
@@ -293,12 +277,32 @@ typedef jmp_buf gc_helper_regs_t;
 #undef gc_collect
 
 
+// GC boundaries
+
+
+// The address of the top of the stack when we first saw it
+// This approximates a pointer to the bottom of the stack, but
+// may not necessarily _be_ the exact bottom. This is set by
+// the entry point of the application
+static void *stack_initial = NULL;
+// Pointer to the end of the stack
+static uintptr_t stack_max = (uintptr_t) NULL;
+// The current stack pointer
+static uintptr_t stack_ptr_val = (uintptr_t) NULL;
+// The amount of stack remaining
+static ptrdiff_t stack_left = 0;
+
+// Maximum stack size of 248k
+// This limit is arbitrary, but is what works for me under Node.js when compiled with emscripten
+static size_t stack_limit = 1024 * 248 * 1;
+
+
 void
 gc_collect(void) {
 
     gc_dump_info();
     gc_helper_regs_t regs;
-
+    stack_ptr_val = (uintptr_t) __builtin_frame_address(0);
     setjmp(regs);
     // GC stack (and regs because we captured them)
 
@@ -306,28 +310,28 @@ gc_collect(void) {
 
     gc_collect_start();
 
+    uintptr_t stack_ptr = (uintptr_t) __builtin_frame_address(0);
 
+    void **ptrs = (void **) (void *) &regs;
 
-    void **ptrs = (void **)(void *)&regs;
+    //size_t top = (uintptr_t)MP_STATE_THREAD(stack_top);
+    size_t bottom = (uintptr_t) & regs;
 
-    size_t bottom = (uintptr_t)MP_STATE_THREAD(stack_top);
-    size_t top = (uintptr_t)&regs ;
+    size_t len = ((uintptr_t) stack_initial - bottom) / sizeof(uintptr_t);
 
-    size_t len  = (top - bottom) / sizeof(uintptr_t)  ;
-
-    clog("gc_collect stack_initial=%p max=%zu", stack_initial, stack_max);
-    clog("gc_collect top=%p bottom=%zu, %lu vs %lu", top,bottom, len, stack_limit);
+    clog("gc_collect stack_initial=%p ptr=%zu max=%zu", stack_initial, stack_ptr, stack_max);
+    clog("gc_collect top=%p bottom=%zu, %lu vs %lu", ptrs, bottom, len, stack_limit);
 
 //343
-    gc_collect_root( ptrs , len );
+    gc_collect_root(ptrs, len);
 //343
 
-    #if MICROPY_PY_THREAD
+#if MICROPY_PY_THREAD
     mp_thread_gc_others();
-    #endif
-    #if MICROPY_EMIT_NATIVE
+#endif
+#if MICROPY_EMIT_NATIVE
     mp_unix_mark_exec();
-    #endif
+#endif
 
     clog("gc_collect_end");
     gc_collect_end();
@@ -336,15 +340,15 @@ gc_collect(void) {
 #endif // gc
 
 int
-do_str(const char *src, mp_parse_input_kind_t input_kind) {
+pyeval(const char *src, mp_parse_input_kind_t input_kind) {
     mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), False);
 
     if (lex == NULL) {
-        fprintf(stdout,"148:NULL LEXER->handle_uncaught_exception\nn%s\n", src);
+        fprintf(stdout, "148:NULL LEXER->handle_uncaught_exception\nn%s\n", src);
         return 0;
     }
     {
-        #if MICROPY_ENABLE_COMPILER
+#if MICROPY_ENABLE_COMPILER
         qstr source_name = lex->source_name;
         mp_parse_tree_t parse_tree = mp_parse(lex, input_kind);
         mp_obj_t module_fun = mp_compile(&parse_tree, source_name, false);
@@ -356,46 +360,49 @@ do_str(const char *src, mp_parse_input_kind_t input_kind) {
                     MP_STATE_VM(mp_pending_exception) = MP_OBJ_NULL;
                     mp_raise_o(obj);
 
-                } else  {
-                    return 1; //success
+                } else {
+                    return 1;   //success
                 }
             }
 
         } else {
             // uncaught exception
-            fprintf(stdout,"150:NULL FUNCTION\n");
+            fprintf(stdout, "150:NULL FUNCTION\n");
         }
-        #else
-            #pragma message "compiler is disabled, no repl"
-        #endif
+#else
+    #pragma message "compiler is disabled, no repl"
+#endif
     }
     return 0;
 }
 
 #include "wasm_mphal.c"
 
-int PyRun_IO_CODE() {
-    return do_str(i_main.shm_stdio, MP_PARSE_FILE_INPUT);
+int
+PyRun_IO_CODE() {
+    return pyeval(i_main.shm_stdio, MP_PARSE_FILE_INPUT);
 }
 
 int
-PyRun_SimpleString(const char* command) {
-    strcpy( i_main.shm_stdio , command);
-    int retval = do_str(i_main.shm_stdio, MP_PARSE_FILE_INPUT);
-    i_main.shm_stdio[0] = 0;
+PyRun_SimpleString(const char *command) {
+    int retval = 0;
+    if (command) {
+        retval = pyeval(command, MP_PARSE_FILE_INPUT);
+    } else {
+        if (i_main.shm_stdio[0]) {
+            retval = pyeval(i_main.shm_stdio, MP_PARSE_FILE_INPUT);
+            i_main.shm_stdio[0] = 0;
+        }
+    }
     return retval;
 }
 
 
-
 EMSCRIPTEN_KEEPALIVE int
 repl_run(int warmup) {
-    if (warmup==1)
+    if (warmup == 1)
         return MP_IO_SHM_SIZE;
     //wPy_NewInterpreter();
     repl_started = MP_IO_SHM_SIZE;
     return 1;
 }
-
-
-

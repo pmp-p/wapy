@@ -85,8 +85,6 @@ static void* entry_point[MAX_BRANCHING];
 static void* exit_point[MAX_BRANCHING];
 
 
-static void* crash_point = JMP_NONE;
-
 //need global interrupt state marker ( @syscall / @awaited  ) to choose which VM to enter
 // this is different from ctx interrupts ctx_if ( if used )
 
@@ -100,6 +98,9 @@ static struct mp_registers mpi_ctx[SYS_MAX_RECURSION];
 
 #define CTX_STATE CTX.vmloop_state
 #define NEXT_STATE NEXT.vmloop_state
+
+
+static void* crash_point = JMP_NONE;
 
 void *crash(const char *panic){
     clog("%s", panic);

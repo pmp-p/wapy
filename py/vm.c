@@ -297,7 +297,7 @@ if (VMFLAGS_IF>0) {
     ip = mp_decode_uint_skip(ip);
     #endif
     size_t source_line = mp_bytecode_get_source_line(ip, bc);
-    clog("247:vm.c NOINT %s:%i but VMFLAGS_IF set", source_file, source_line);
+    cdbg("247:vm.c NOINT %s:%lu but VMFLAGS_IF set", qstr_str(source_file), source_line);
 }
 #else
     #pragma message "no wapy vm check"

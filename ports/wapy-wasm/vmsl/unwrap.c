@@ -1,4 +1,5 @@
-#define VMTRACE (1)
+#define VMTRACE (0)
+#define DEBUG_BC (0)
 
 
 #if !MICROPY_ENABLE_PYSTACK
@@ -20,9 +21,10 @@
  goto exception_handler; } while (0)
 
     #define RAISE_IF(arg) if (arg) { clog("%i@%s:exit on ex!", __LINE__, __FILE__); goto exception_handler; }
+
 #else
-    #define VM_TRACE_QSTR(opc)
-    #define VM_TRACE(opc)
+    #define VM_TRACE_QSTR(opc, opv)
+    #define VM_TRACE(opc, opv)
 
     #define RAISE(o) do { \
  MP_STATE_THREAD(active_exception) = MP_OBJ_TO_PTR(o);\
@@ -39,8 +41,8 @@ break; }
 
 
 #define RAISE_IF_NULL(arg) RAISE_IF(arg == MP_OBJ_NULL)
-#define THE_EXC the_exc
-
+//#define THE_EXC the_exc
+mp_obj_base_t * the_exc ;
 //-----------------------------------------
 
 
@@ -279,11 +281,11 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
     exception_handler:
         // exception occurred
 #if VMTRACE
-    assert(MP_STATE_THREAD(active_exception) != NULL);
+    assert( (MP_STATE_THREAD(active_exception)) != NULL);
     clog("      508:loop[%i] exit on EX!", ctx_current );
 #endif
         // clear exception because we caught it
-        mp_obj_base_t *the_exc = MP_STATE_THREAD(active_exception);
+        the_exc = (mp_obj_base_t *)MP_STATE_THREAD(active_exception);
         MP_STATE_THREAD(active_exception) = NULL;
 
         #if MICROPY_PY_SYS_EXC_INFO
@@ -312,7 +314,7 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
         // - exceptions re-raised explicitly by "raise"
 
         if (
-                (THE_EXC != &mp_const_GeneratorExit_obj.base)
+                (the_exc != &mp_const_GeneratorExit_obj.base)
                 && (*CTX.code_state->ip != MP_BC_END_FINALLY)
                 && (*CTX.code_state->ip != MP_BC_RAISE_LAST)
             ) {
@@ -338,7 +340,7 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
             #endif
             size_t source_line = mp_bytecode_get_source_line(ipval, bc);
 // /vmbc_trace
-            mp_obj_exception_add_traceback(MP_OBJ_FROM_PTR(THE_EXC), source_file, source_line, block_name);
+            mp_obj_exception_add_traceback(MP_OBJ_FROM_PTR(the_exc), source_file, source_line, block_name);
         }
 //1 615
         while ((CTX.exc_sp >= CTX.exc_stack) && (CTX.exc_sp->handler <= CTX.code_state->ip)) {
@@ -361,9 +363,9 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
             CTX.ip = (CTX.code_state->ip = CTX.exc_sp->handler);
             mp_obj_t *sptr = MP_TAGPTR_PTR(CTX.exc_sp->val_sp);
             // save this exception in the stack so it can be used in a reraise, if needed
-            CTX.exc_sp->prev_exc = THE_EXC;
+            CTX.exc_sp->prev_exc = the_exc;
             // push exception object so it can be handled by bytecode
-            VM_PUSH(MP_OBJ_FROM_PTR(THE_EXC));
+            VM_PUSH(MP_OBJ_FROM_PTR(the_exc));
             CTX.code_state->sp = sptr;
 #if VMTRACE
     clog("      638: where's my EX handler ???");
@@ -396,8 +398,8 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
         } else {
             // propagate exception to higher level
             // Note: ip and sp don't have usable values at this point
-            CTX.code_state->state[0] = MP_OBJ_FROM_PTR(THE_EXC); // put exception here because sp is invalid
-            RETVAL = MP_OBJ_FROM_PTR(THE_EXC);
+            CTX.code_state->state[0] = MP_OBJ_FROM_PTR(the_exc); // put exception here because sp is invalid
+            RETVAL = MP_OBJ_FROM_PTR(the_exc);
             FRAME_LEAVE();
             CTX.vm_return_kind = MP_VM_RETURN_EXCEPTION;
             clog("667: return EX");

@@ -1,3 +1,5 @@
+#define OUTER_INIT (0)
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,6 +82,8 @@ transpile/compile :
 
     https://github.com/pfalcon/awesome-python-compilers
 
+    https://docs.python.org/3/library/inspect.html#retrieving-source-code
+
 interfacing:
 
     https://foss.heptapod.net/pypy/cffi
@@ -121,7 +125,6 @@ wasm/gc/continuations:
     https://emscripten.org/docs/porting/guidelines/function_pointer_issues.html
     https://github.com/emscripten-core/emscripten/issues/8268#
     http://troubles.md/wasm-is-not-a-stack-machine/
-    https://github.com/WebAssembly/design/issues/1252
     https://github.com/WebAssembly/design/issues/919#issuecomment-348000242
 
 
@@ -134,6 +137,7 @@ wasm/gc/continuations:
 
     WAPY implements C3:
         https://github.com/WebAssembly/WASI/issues/276
+        https://github.com/WebAssembly/design/issues/1252#issuecomment-461604032
 
 Protothreads
     http://dunkels.com/adam/pt/
@@ -156,13 +160,24 @@ ASYNC:
     https://www.python.org/dev/peps/pep-0525/
     https://www.pythonsheets.com/notes/python-asyncio.html
 
-
+    Re: [PATCH 09/13] aio: add support for async openat()
+    [Posted January 12, 2016 by corbet]
+    https://lwn.net/Articles/671657/
+    "In fact, if we do it well, we can go the other way, and try to
+implement the nasty AIO interface on top of the generic "just do
+things asynchronously". Linus
 
 
 VM support:
     https://github.com/cretz/asmble
 
     https://github.com/CraneStation/wasmtime
+
+    https://nick.zoic.org/art/web-assembly-on-esp32-with-wasm-wamr/
+    https://github.com/zephyrproject-rtos/zephyr/issues/21329
+
+    https://github.com/vshymanskyy/Wasm3_RGB_Lamp
+
 
 pywasm: Support WASI(WebAssembly System Interface)
     https://github.com/mohanson/pywasm/issues/25
@@ -172,6 +187,8 @@ webuse:
     https://makitweb.com/how-to-detect-browser-window-active-or-not-javascript/
     https://codepen.io/jonathan/full/sxgJl
 
+repl:
+    Unicode Character 'RIGHT-TO-LEFT OVERRIDE' (U+202E)
 
 couldclose:
     https://github.com/micropython/micropython/issues/3313
@@ -366,13 +383,13 @@ void Py_Init() {
     wPy_NewInterpreter();
 
     EM_ASM( {
-        window.plink.shm = $0;
+        aio.plink.shm = $0;
         window.PyRun_SimpleString_MAXSIZE = $1;
 
-        window.plink.io_port_kbd = $2;
-        window.plink.MP_IO_SIZE = $3;
-        console.log("window.plink.shm=" + window.plink.shm+" +"+ window.PyRun_SimpleString_MAXSIZE);
-        console.log("window.plink.io_port_kbd=" + window.plink.io_port_kbd+" +"+ window.plink.MP_IO_SIZE);
+        aio.plink.io_port_kbd = $2;
+        aio.plink.MP_IO_SIZE = $3;
+        console.log("aio.plink.shm=" + aio.plink.shm+" +"+ window.PyRun_SimpleString_MAXSIZE);
+        console.log("aio.plink.io_port_kbd=" + aio.plink.io_port_kbd+" +"+ aio.plink.MP_IO_SIZE);
         window.setTimeout( init_repl_begin , 1000 );
     }, shm_ptr(), IO_KBD, &io_stdin[IO_KBD], MP_IO_SIZE);
 
@@ -388,115 +405,6 @@ static int async_state;
 
 extern int emscripten_GetProcAddress(const char * name);
 
-#if USE_SDL
-
-#include <SDL2/SDL.h>
-static SDL_Window *window = NULL;
-static SDL_Renderer *renderer = NULL;
-static SDL_bool done = SDL_FALSE;
-
-
-void SDL_test(){
-    if (SDL_Init(SDL_INIT_VIDEO) == 0) {
-        if (SDL_CreateWindowAndRenderer(320, 200, 0, &window, &renderer) == 0) {
-            //emscripten_set_main_loop( loop, 0, 1);
-        }
-    }
-}
-
-void SDL_loop(){
-    if (!done) {
-        SDL_Event event;
-
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-        SDL_RenderClear(renderer);
-
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-        SDL_RenderDrawLine(renderer, 220, 100, 200, 140);
-        SDL_RenderDrawLine(renderer, 200, 140, 240, 140);
-        SDL_RenderDrawLine(renderer, 240, 140, 220, 100);
-        SDL_RenderPresent(renderer);
-
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                done = SDL_TRUE;
-            }
-        }
-    } else {
-        if (renderer) {
-            SDL_DestroyRenderer(renderer);
-        }
-        if (window) {
-            SDL_DestroyWindow(window);
-        }
-        SDL_Quit();
-     // else emscripten_exit
-    }
-
-}
-
-
-#include "dlfcn.h"
-
-#define DL_PATH "/lib/lib"
-#define DL_SUFFIX ".so"
-
-#define LIB_NAME "SDL2"
-
-#include <SDL2/SDL.h>
-static SDL_Window *window = NULL;
-static SDL_Renderer *renderer = NULL;
-static SDL_bool done = SDL_FALSE;
-
-
-static void *lib_handle = NULL;
-
-uintptr_t SDL_embed(uintptr_t *ptr){
-    if (!lib_handle) {
-        clog("SDL dlopen");
-        lib_handle = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
-        //return 0;
-    }
-
-    if (!lib_handle)
-        fprintf(stderr,"cannot load %s module", LIB_NAME);
-    else {
-            //void (*SDL_Init)(void) = (void (*)(void))dlsym(lib_handle, "SDL_Init");
-            int (*SDL_Init)(int) = (int (*)(int))dlsym(lib_handle, "SDL_Init");
-            int res = SDL_Init(0x20);
-            if (!res) {
-                if (SDL_CreateWindowAndRenderer(320, 200, 0, &window, &renderer) == 0) {
-                    *ptr = renderer;
-                    clog(" ============ OK rd = %p %p ===============", renderer, ptr);
-
-                }
-
-            } else
-                clog("SDL_Init= %i", res );
-
-        /*
-        {
-            void (*fun_ptr)(void) = (void (*)(void))dlsym(lib_handle, "init_test");
-            fun_ptr();
-        }
-
-        {
-            int (*fun_ptr)(int) = (int (*)(int))dlsym(lib_handle, "init_plus_one");
-            if (fun_ptr) {
-                fprintf(stdout,"DLTEST 1+1 = %i", fun_ptr(1) );
-            }
-        }
-        */
-    }
-    return (uintptr_t)renderer;
-}
-#else
-
-uintptr_t SDL_embed(uintptr_t *ptr){
-    return 0;
-}
-
-#endif //USE_SDL
 
 #if MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE
 static inline mp_map_elem_t *mp_map_cached_lookup(mp_map_t *map, qstr qst, uint8_t *idx_cache) {
@@ -560,155 +468,122 @@ dump_args2(const mp_obj_t *a, size_t sz) {
 }
 
 void
-main_loop_or_step(void) {
-//call_:;
-    if (VMOP < VMOP_WARMUP) {
-        if (VMOP < VMOP_INIT) {
-            puts("init");
-            crash_point = &&VM_stackmess;
+noint_aio_fsync() {
 
-            Py_Init();
+    if (!io_stdin[0])
+        return;
 
-            stack_initial = __builtin_frame_address(0); // could also use alloca(0)
-            stack_max = (uintptr_t)stack_initial - stack_limit;
+    if (!endswith(io_stdin, "#aio.step\n"))
+        return;
 
+    int ex=-1;
+    async_state = VMFLAGS_IF;
+    // CLI
+    VMFLAGS_IF = 0;
 
-            VMOP = VMOP_INIT;
+    //TODO: maybe somehow consumme kbd data for async inputs ?
+    //expect script to be properly async programmed and run them full speed via C stack ?
 
-            entry_point[0]=JMP_NONE;
-            exit_point[0]=JMP_NONE;
-            come_from[0]=0;
-            type_point[0]=0;
+    if (async_loop) {
 
-            for (int i=0; i<SYS_MAX_RECURSION; i++)
-                mp_new_interpreter(&mpi_ctx, i, 0 , 0);
-
-            // 0 hypervisor with no branching ( can use optimized original vm.c with no hard int )
-            // 1 supervisor
-            // 2 __main__
-
-            mp_new_interpreter(&mpi_ctx, 1, 0, 2);
-
-            // 2 has no parent for now, just back to OS
-            mp_new_interpreter(&mpi_ctx, 2, 0, 0);
-            ctx_current = 1;
-
-            while ( mpi_ctx[ctx_current].childcare ) {
-                ctx_current = (int)mpi_ctx[ctx_current].childcare;
-            }
-
-            fprintf(stdout,"running __main__ on pid=%d\n", ctx_current);
-
-            return;
-        } // no continuation -> syscall
-
-        if (VMOP==VMOP_INIT) {
-            puts("VMOP_INIT");
-
-            VMOP = VMOP_WARMUP;
-            show_os_loop(1);
-            // help fix lack of vars()
-            PyRun_SimpleString(
-                "__dict__ = globals();"
-                "import sys;"
-                "import embed;"
-                "import builtins;"
-                "sys.path.extend(['/assets','/assets/packages']);"
-                "import site_wapy;"
-                "#\n"
-            );
-            emscripten_cancel_main_loop();
-            emscripten_set_main_loop( main_loop_or_step, 0, 1);
-
-            return;
-        }
-    } else {
-        //syscall = 2 cycles , pause = 1,
-        if (VMOP>= VMOP_PAUSE) {
-            VMOP--;
-            return;
-        }
-
-        if ( (ENTRY_POINT != JMP_NONE)  && !JUMPED_IN) {
-            clog("re-enter-on-entry %d => %d\n", ctx_current, CTX.pointer);
-            void* jump_entry;
-            jump_entry = ENTRY_POINT;
-            // Never to re-enter as this point. can only use the exit.
-            JUMPED_IN = 1;
-            goto *jump_entry;
-        }
-
-        // allow that here ?
-        if ( (EXIT_POINT != JMP_NONE)  && JUMPED_IN) {
-            clog("re-enter-on-exit %d => %d\n", ctx_current, CTX.pointer);
-
-            // was it gosub
-            if (JUMP_TYPE == TYPE_SUB)
-                RETURN;
-
-            // was it branching
-            if (JUMP_TYPE == TYPE_JUMP)
-                COME_FROM;
-        }
-    }
-
-
-// this block is the async loop , no preemption should be allowed here.
-
-    if (io_stdin[0]) {
-        int ex=-1;
-        async_state = VMFLAGS_IF;
-        // CLI
-        VMFLAGS_IF = 0;
-
-        //is it async top level ? let python access shared mem and rewrite code
-        if (endswith(io_stdin, "#async-tl")) {
-            cdbg("#async-tl -> aio.asyncify()");
-            PyRun_SimpleString("print('aio.asyncify N/I')");
+        if ( (async_loop = pyeval(i_main.shm_stdio, MP_PARSE_FILE_INPUT))  ) {
             ex=0;
-            IO_CODE_DONE;
         } else {
-            if (endswith(io_stdin, "#aio.step\n")) {
-                //TODO: maybe somehow consumme kbd data for async inputs ?
-                //expect script to be properly async programmed and run them full speed via C stack ?
-
-                if (async_loop) {
-                    if ( (async_loop = PyRun_IO_CODE()) ) {
-                        ex=0;
-                    } else {
-                        fprintf(stdout, "ERROR[%s]\n", io_stdin);
-                        // ex check
-                        ex=1;
-                    }
-                }
-                IO_CODE_DONE;
-            }
-
+            fprintf(stdout, "ERROR[%s]\n", io_stdin);
+            // ex check
+            ex=1;
         }
 
-        if (ex>=0) {
-            if (MP_STATE_THREAD(active_exception) != NULL) {
-                clog("646: uncaught exception")
-                //mp_hal_set_interrupt_char(-1);
-                mp_handle_pending(false);
-                //handle_uncaught_exception();
-                if (uncaught_exception_handler()) {
-                    clog("651:SystemExit");
-                } else {
-                    clog("653: exception done");
-                }
-                async_loop = 0;
-            }
-        }
-        // STI
-        VMFLAGS_IF = async_state;
     }
 
-// All I/O IS WRONG and should use a circular buffer.
+// TODO:    here we may able to tranform toplevel sync code to async and re eval
+// WARNING: it may have side effects because could have run until async exception is caught
+    if (ex>=0) {
+        if (MP_STATE_THREAD(active_exception) != NULL) {
+            clog("646: uncaught exception")
+            //mp_hal_set_interrupt_char(-1);
+            mp_handle_pending(false);
+            //handle_uncaught_exception();
+            if (uncaught_exception_handler()) {
+                clog("651:SystemExit");
+            } else {
+                clog("653: exception done");
+            }
+            async_loop = 0;
+        }
+    }
+    IO_CODE_DONE;
+    // STI
+    VMFLAGS_IF = async_state;
+}
+
+size_t
+has_io() {
+    size_t check = strlen(io_stdin);
+  if (io_stdin[0] && (check != 38))
+      return check;
+  return 0;
+}
+
+void
+main_loop_or_step(void) {
+    #if OUTER_INIT
+        #pragma message "check for uncaught unwind "
+        crash_point = &&VM_stackmess;
+    #else
+        if (VMOP <= VMOP_INIT) {
+            crash_point = &&VM_stackmess;
+            #include "vmsl/vmwarmup.c"
+            return;
+        }
+    #endif
+    size_t iolen;
+    // we probably had the chance to process pending Inputs, so ...
+    if (VMOP>= VMOP_PAUSE) {
+        if ( (iolen = has_io()) ) {
+            cdbg("syscall/pause WITH IO=%lu", iolen )
+        } else {
+            clog("syscall/pause -> io flush");
+        }
+        VMOP--;
+        // jump to flush Outputs
+        goto VM_syscall;
+    }
+
+// TODO: is it usefull ?
+    if ( (ENTRY_POINT != JMP_NONE)  && !JUMPED_IN) {
+        clog("re-enter-on-entry %d => %d\n", ctx_current, CTX.pointer);
+        void* jump_entry;
+        jump_entry = ENTRY_POINT;
+        // Never to re-enter as this point. can only use the previous exit point.
+        JUMPED_IN = 1;
+        goto *jump_entry;
+    }
+
+    // this call the async loop , no preemption should be allowed in there.
+    noint_aio_fsync();
+
+
+    // return to where we were going just before giving hand to host
+    if ( (EXIT_POINT != JMP_NONE)  && JUMPED_IN) {
+        //cdbg("re-enter-on-exit IO=%lu", strlen(io_stdin) );
+
+        // was it gosub
+        if (JUMP_TYPE == TYPE_SUB)
+            RETURN;
+
+        // was it branching
+        if (JUMP_TYPE == TYPE_JUMP)
+            COME_FROM;
+    }
+
+
+
+// All I/O stuff IS WRONG and should use a circular buffer.
 
 
     if (io_stdin[0]) {
-    //then it is toplevel or it's sync top level ( tranpiled by aio on the heap)
+    //then it is toplevel or TODO: it's sync top level ( tranpiled by aio on the heap)
         def_PyRun_SimpleString_is_repl = true;
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
         JUMP( def_PyRun_SimpleString, "main_loop_or_step_repl");
@@ -789,16 +664,10 @@ def_PyRun_SimpleString: {
 
         if ( module_fun != MP_OBJ_NULL) {
             //STACKLESS STARTS HERE
-            //mp_obj_t exret = mp_call_function_0(module_fun);
-#if 0
-            ctx_get_next(CTX_NEW);
-            NEXT.self_in = module_fun;
-            NEXT.n_args = 0;
-            NEXT.n_kw = 0;
-            NEXT.args = NULL ;
-                GOSUB(def_mp_call_function_n_kw,"def_PyRun_SimpleString");
-                exret = SUBVAL;
-#else
+
+            // unlock I/O buffer
+            IO_CODE_DONE;
+
             CTX.self_in = module_fun;
             CTX.n_args = 0;
             CTX.n_kw = 0;
@@ -824,7 +693,7 @@ def_PyRun_SimpleString: {
                         )
                     );
             }
-#endif
+
             if ( exret != MP_OBJ_NULL ) {
                 if (MP_STATE_VM(mp_pending_exception) != MP_OBJ_NULL) {
                     clog("645: PENDING EXCEPTION CLEARED AND RAISED");
@@ -913,24 +782,18 @@ def_PyRun_SimpleString: {
 } while(0)
 
 #else // MICROPY_PY_SYS_SETTRACE
+
 #define FRAME_SETUP()
 #define FRAME_ENTER()
 #define FRAME_LEAVE()
 #define FRAME_UPDATE()
 #define TRACE_TICK(current_ip, current_sp, is_exception)
+
 #endif // MICROPY_PY_SYS_SETTRACE
 
 
 def_mp_call_function_n_kw: {
     const mp_obj_type_t *type = mp_obj_get_type(CTX.self_in);
-/*
-#if VMTRACE
-        if (ctx_current>3) {
-            if (!CTX.code_state)
-                clog("8433: WARNING code_state[%i] is NULL", ctx_current);
-        }
-#endif
-*/
 
     if (type->call != NULL) {
         if ( (int)*type->call == (int)&fun_bc_call ) {
@@ -995,7 +858,10 @@ def_func_bc_call: {
     // allocate state for locals and stack
     // new frame == new code state.
     if ( CTX.state_size > 32768 ) {
-        clog("957:BUG =======> start=%p cur=%p end=%p state_size=%ld",
+#define TRACE_ON (1)
+        #include "vmsl/vmbc_trace.c"
+#undef TRACE_ON
+        cdbg("861:BUG: =======> start=%p cur=%p end=%p state_size=%ld",
         MP_STATE_THREAD(pystack_start), MP_STATE_THREAD(pystack_cur), MP_STATE_THREAD(pystack_end)
         , CTX.state_size);
 
@@ -1021,7 +887,7 @@ def_func_bc_call: {
     CTX.code_state = mp_pystack_alloc(sizeof(mp_code_state_t) + CTX.state_size);
 
     if (!CTX.code_state) {
-        clog("974:def_func_bc_call: MP_PYSTACK_ALLOC ex!");
+        clog("887:def_func_bc_call: MP_PYSTACK_ALLOC ex!");
         goto def_func_bc_call_ret;
     }
 
@@ -1030,7 +896,7 @@ def_func_bc_call: {
     CTX.code_state->ip = 0;
     CTX.code_state->n_state = CTX.n_state;
 
-    clog("961:TODO can we save old_globals before this call ?");
+    clog("896:TODO: can we save old_globals before this call ?");
 
     mp_obj_t ret = mp_setup_code_state(CTX.code_state, CTX.n_args, CTX.n_kw, CTX.args);
 
@@ -1050,18 +916,15 @@ def_func_bc_call: {
     mp_globals_set(NEXT.self_fun->globals);
 
 
-    if (VMFLAGS_IF) { // FIXED !
+    if (VMFLAGS_IF>0) { // FIXED !
         clog("132:unwrap.c ALLOWINT def_func_bc_call->def_mp_execute_bytecode");
 
         // ip sp would not be set on NEXT
         NEXT.ip = NEXT.code_state->ip;
         NEXT.sp = NEXT.code_state->sp;
 
-if (MP_STATE_THREAD(active_exception) != NULL) clog("WTF %i", __LINE__);
-
-            GOSUB(def_mp_execute_bytecode,"func_bc_call");
-            CTX.vm_return_kind = CTX.sub_vm_return_kind;
-
+        GOSUB(def_mp_execute_bytecode,"func_bc_call");
+        CTX.vm_return_kind = CTX.sub_vm_return_kind;
 
     } else {
         clog("136:unwrap.c NOINTERRUPT");
@@ -1121,14 +984,13 @@ VM_syscall:;
             printf("%c", out_c );
         printf("\"}\n");
     }
-#if 1 //USE_SDL
-    //if (renderer)
-      //  SDL_RenderPresent(renderer);
-#endif
-}
+} // main_loop_or_step
 
 
-
+void
+main_loop_warmup(void) {
+    #include "vmsl/vmwarmup.c"
+} // main_loop_warmup
 
 
 //***************************************************************************************
@@ -1160,7 +1022,12 @@ main(int argc, char *argv[]) {
 
 
 #if !ASYNCIFY
-    emscripten_set_main_loop( main_loop_or_step, 0, 1);  // <= this will exit to js now.
+    #if OUTER_INIT
+        // this one creates an "uncaught unwind" ex
+        // emscripten_set_main_loop( main_loop_warmup, 0, 1);  // <= this will exit to js now.
+    #else
+        emscripten_set_main_loop( main_loop_or_step, 0, 1);
+    #endif
 #else
     while (!KPANIC) {
         emscripten_sleep(1);

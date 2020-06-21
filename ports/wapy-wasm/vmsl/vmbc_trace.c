@@ -19,7 +19,12 @@
         static size_t last_line = 0;
 
         if (source_line!=last_line) {
+#if TRACE_ON
+            cdbg("\nbc:%i ctx=%i %s:%zu", *CTX.ip , ctx_current,qstr_str(source_file), source_line);
+#else
             clog("\nbc:%i ctx=%i %s:%zu", *CTX.ip , ctx_current,qstr_str(source_file), source_line);
+#endif
+
             last_line = source_line;
         }
 

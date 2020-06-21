@@ -78,7 +78,6 @@
         VM_ENTRY(MP_BC_LOAD_NAME): {
             VM_DECODE_QSTR;
             VM_TRACE_QSTR("MP_BC_LOAD_NAME", MP_BC_LOAD_NAME);
-
             VM_PUSH(mp_load_name(CTX.qst));
             RAISE_IF_NULL(VM_TOP());
             continue;  //? DISPATCH() ?

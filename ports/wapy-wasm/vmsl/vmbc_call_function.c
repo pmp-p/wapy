@@ -102,10 +102,14 @@ deep_recursion_error:
         fn = qstr_str(mp_obj_fun_get_name(NEXT.self_in));
 
         if ( strlen(fn)>1 ) {
-            clog("      99:MP_BC_CALL_FUNCTION [%s %zu '%s']",mp_obj_get_type_str(*CTX.sp), mp_obj_fun_get_name(*CTX.sp), fn);
+#if DEBUG_BC
+    clog("      99:MP_BC_CALL_FUNCTION [%s %zu '%s']",mp_obj_get_type_str(*CTX.sp), mp_obj_fun_get_name(*CTX.sp), fn);
+#endif
             GOSUB(def_mp_call_function_n_kw, fn );
         } else {
-clog("      102:MP_BC_CALL_FUNCTION [%s %zu]",mp_obj_get_type_str(*CTX.sp), mp_obj_fun_get_name(*CTX.sp));
+#if DEBUG_BC
+    clog("      102:MP_BC_CALL_FUNCTION [%s %zu]",mp_obj_get_type_str(*CTX.sp), mp_obj_fun_get_name(*CTX.sp));
+#endif
                 GOSUB(def_mp_call_function_n_kw, mp_obj_get_type_str(NEXT.self_in) );
         }
 
