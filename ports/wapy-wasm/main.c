@@ -450,7 +450,6 @@ int uncaught_exception_handler(void) {
     mp_obj_base_t *exc = MP_STATE_THREAD(active_exception);
     // check for SystemExit
     if (mp_obj_is_subclass_fast(MP_OBJ_FROM_PTR(exc->type), MP_OBJ_FROM_PTR(&mp_type_SystemExit))) {
-
         // None is an exit value of 0; an int is its value; anything else is 1
         /*
         mp_obj_t exit_val = mp_obj_exception_get_value(MP_OBJ_FROM_PTR(exc));
@@ -464,11 +463,12 @@ int uncaught_exception_handler(void) {
                 EM_ASM({console.log("91:SystemExit");});
         #endif
 
-
         return 1;
     }
     MP_STATE_THREAD(active_exception) = NULL;
     // Report all other exceptions
+    cdbg("mp_stderr_print2=%p",exc)
+    cdbg("mp_obj=%p", MP_OBJ_FROM_PTR(exc) );
     mp_obj_print_exception(&mp_stderr_print2, MP_OBJ_FROM_PTR(exc));
     return 0;
 }
@@ -521,7 +521,6 @@ noint_aio_fsync() {
             clog("646: uncaught exception")
             //mp_hal_set_interrupt_char(-1);
             mp_handle_pending(false);
-            //handle_uncaught_exception();
             if (uncaught_exception_handler()) {
                 clog("651:SystemExit");
             } else {

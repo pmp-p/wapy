@@ -345,7 +345,7 @@ pyeval(const char *src, mp_parse_input_kind_t input_kind) {
     mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), False);
 
     if (lex == NULL) {
-        fprintf(stdout, "148:NULL LEXER->handle_uncaught_exception\nn%s\n", src);
+        fprintf(stdout, "148:NULL LEXER->handle_uncaught_exception\n%s\n", src);
         return 0;
     }
     {

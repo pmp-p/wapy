@@ -161,7 +161,7 @@ void mp_obj_print_exception(const mp_print_t *print, mp_obj_t exc) {
     mp_obj_print_helper(print, exc, PRINT_EXC);
     mp_print_str(print, "\n");
 }
-
+#include <stdio.h>
 bool mp_obj_is_true(mp_obj_t arg) {
     if (arg == mp_const_false) {
         return 0;
@@ -176,6 +176,10 @@ bool mp_obj_is_true(mp_obj_t arg) {
             return 1;
         }
     } else {
+if(!arg) {
+    fprintf(stderr,"180:NPE arg=%p\n",arg);
+    return 0;
+}
         const mp_obj_type_t *type = mp_obj_get_type(arg);
         if (type->unary_op != NULL) {
             mp_obj_t result = type->unary_op(MP_UNARY_OP_BOOL, arg);
