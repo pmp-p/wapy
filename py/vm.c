@@ -277,6 +277,7 @@ FRAME_SETUP();
 
 #if WAPY
 if (VMFLAGS_IF>0) {
+    static size_t source_line=0;
     const byte *ip = code_state->fun_bc->bytecode;
     MP_BC_PRELUDE_SIG_DECODE(ip);
     MP_BC_PRELUDE_SIZE_DECODE(ip);
@@ -296,8 +297,11 @@ if (VMFLAGS_IF>0) {
     qstr source_file = mp_decode_uint_value(ip);
     ip = mp_decode_uint_skip(ip);
     #endif
-    size_t source_line = mp_bytecode_get_source_line(ip, bc);
-    cdbg("247:vm.c NOINT %s:%lu but VMFLAGS_IF set", qstr_str(source_file), source_line);
+    size_t the_line = mp_bytecode_get_source_line(ip, bc);
+    if (the_line != source_line) {
+        source_line = the_line;
+        cdbg("247:vm.c NOINT %s:%lu but VMFLAGS_IF set", qstr_str(source_file), source_line);
+    }
 }
 #else
     #pragma message "no wapy vm check"

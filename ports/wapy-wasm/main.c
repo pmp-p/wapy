@@ -84,6 +84,10 @@ transpile/compile :
 
     https://docs.python.org/3/library/inspect.html#retrieving-source-code
 
+    https://01alchemist.com/projects/turboscript/playground/
+
+
+
 interfacing:
 
     https://foss.heptapod.net/pypy/cffi
@@ -160,8 +164,11 @@ ASYNC:
     https://www.python.org/dev/peps/pep-0525/
     https://www.pythonsheets.com/notes/python-asyncio.html
 
+    https://journal.stuffwithstuff.com/2015/02/01/what-color-is-your-function/
+
     Re: [PATCH 09/13] aio: add support for async openat()
     [Posted January 12, 2016 by corbet]
+
     https://lwn.net/Articles/671657/
     "In fact, if we do it well, we can go the other way, and try to
 implement the nasty AIO interface on top of the generic "just do
@@ -467,6 +474,9 @@ dump_args2(const mp_obj_t *a, size_t sz) {
     fprintf(stderr,"\n");
 }
 
+
+// this is reserved to max speed asynchronous code
+
 void
 noint_aio_fsync() {
 
@@ -517,6 +527,8 @@ noint_aio_fsync() {
     VMFLAGS_IF = async_state;
 }
 
+
+
 size_t
 has_io() {
     size_t check = strlen(io_stdin);
@@ -524,6 +536,9 @@ has_io() {
       return check;
   return 0;
 }
+
+
+
 
 void
 main_loop_or_step(void) {
@@ -538,15 +553,17 @@ main_loop_or_step(void) {
         }
     #endif
     size_t iolen;
-    // we probably had the chance to process pending Inputs, so ...
+
     if (VMOP>= VMOP_PAUSE) {
+        VMOP--;
         if ( (iolen = has_io()) ) {
-            cdbg("syscall/pause WITH IO=%lu", iolen )
+            // we have a chance to process pending Inputs, so ...
+            cdbg("syscall/pause WITH IO=%lu", iolen );
+            noint_aio_fsync();
         } else {
             clog("syscall/pause -> io flush");
+            // else just jump to flush Outputs
         }
-        VMOP--;
-        // jump to flush Outputs
         goto VM_syscall;
     }
 
@@ -560,9 +577,10 @@ main_loop_or_step(void) {
         goto *jump_entry;
     }
 
+// ==========================================================================================
     // this call the async loop , no preemption should be allowed in there.
     noint_aio_fsync();
-
+// ==========================================================================================
 
     // return to where we were going just before giving hand to host
     if ( (EXIT_POINT != JMP_NONE)  && JUMPED_IN) {
@@ -857,11 +875,11 @@ def_func_bc_call: {
 
     // allocate state for locals and stack
     // new frame == new code state.
-    if ( CTX.state_size > 32768 ) {
+    if ( CTX.state_size > 41360 ) {
 #define TRACE_ON (1)
         #include "vmsl/vmbc_trace.c"
 #undef TRACE_ON
-        cdbg("861:BUG: =======> start=%p cur=%p end=%p state_size=%ld",
+        cdbg("882:BUG: =======> start=%p cur=%p end=%p state_size=%ld",
         MP_STATE_THREAD(pystack_start), MP_STATE_THREAD(pystack_cur), MP_STATE_THREAD(pystack_end)
         , CTX.state_size);
 
@@ -887,7 +905,7 @@ def_func_bc_call: {
     CTX.code_state = mp_pystack_alloc(sizeof(mp_code_state_t) + CTX.state_size);
 
     if (!CTX.code_state) {
-        clog("887:def_func_bc_call: MP_PYSTACK_ALLOC ex!");
+        clog("908:def_func_bc_call: MP_PYSTACK_ALLOC ex!");
         goto def_func_bc_call_ret;
     }
 
@@ -896,7 +914,7 @@ def_func_bc_call: {
     CTX.code_state->ip = 0;
     CTX.code_state->n_state = CTX.n_state;
 
-    clog("896:TODO: can we save old_globals before this call ?");
+    clog("917:TODO: can we save old_globals before this call ?");
 
     mp_obj_t ret = mp_setup_code_state(CTX.code_state, CTX.n_args, CTX.n_kw, CTX.args);
 

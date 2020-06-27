@@ -13,7 +13,8 @@
 
 
 #if MICROPY_ENABLE_PYSTACK
-#define MP_STACK_SIZE 16384
+//#define MP_STACK_SIZE 16384
+#define MP_STACK_SIZE 32768
 static mp_obj_t pystack[MP_STACK_SIZE];
 #endif
 

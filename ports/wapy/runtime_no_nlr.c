@@ -1120,7 +1120,6 @@ mp_obj_t mp_load_method_maybe(mp_obj_t obj, qstr attr, mp_obj_t *dest) {
         if (MP_STATE_THREAD(active_exception) != NULL) {
             return MP_OBJ_NULL;
         }
-
     } else if (type->locals_dict != NULL) {
         // generic method lookup
         // this is a lookup in the object (ie not class or type)
@@ -1143,7 +1142,10 @@ mp_obj_t mp_load_method_maybe(mp_obj_t obj, qstr attr, mp_obj_t *dest) {
 
 mp_obj_t mp_load_method(mp_obj_t base, qstr attr, mp_obj_t *dest) {
     DEBUG_OP_printf("load method %p.%s\n", base, qstr_str(attr));
-
+    if (!base){
+        cdbg("1146:load method %p.%s\n", base, qstr_str(attr));
+        return MP_OBJ_NULL;
+    }
     if (mp_load_method_maybe(base, attr, dest) == MP_OBJ_NULL) {
         // exception
         return MP_OBJ_NULL;
