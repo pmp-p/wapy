@@ -63,6 +63,13 @@ Python and web:
     https://bugs.python.org/issue40280
     https://discuss.python.org/t/python-in-the-browser/4248/6
 
+OS ? :
+    https://github.com/S2E/PyKVM
+    https://github.com/plasma-umass/browsix
+
+NOGIL:
+    https://github.com/plasma-umass/snakefish
+
 BOOKMARKS:
 
 https://www.aosabook.org/en/500L/a-python-interpreter-written-in-python.html
@@ -86,7 +93,8 @@ transpile/compile :
 
     https://01alchemist.com/projects/turboscript/playground/
 
-
+jit:
+    http://llvmlite.pydata.org/en/latest/
 
 interfacing:
 
