@@ -93,6 +93,17 @@ transpile/compile :
 
     https://01alchemist.com/projects/turboscript/playground/
 
+
+    https://github.com/lark-parser/lark/blob/master/examples/python_parser.py
+    https://github.com/lark-parser/lark
+
+    https://github.com/pyparsing/pyparsing
+
+    https://wiki.python.org/moin/LanguageParsing
+    https://github.com/timothycrosley/jiphy
+    https://github.com/philhassey/tinypy
+
+
 jit:
     http://llvmlite.pydata.org/en/latest/
 

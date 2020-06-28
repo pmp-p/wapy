@@ -38,10 +38,11 @@
 #if MICROPY_PY_BUILTINS_FLOAT
 #include <math.h>
 #endif
-
+#include <stdio.h>
 // This dispatcher function is expected to be independent of the implementation of long int
 STATIC mp_obj_t mp_obj_int_make_new(const mp_obj_type_t *type_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     (void)type_in;
+
     mp_arg_check_num(n_args, n_kw, 0, 2, false);
 
     switch (n_args) {
@@ -49,6 +50,10 @@ STATIC mp_obj_t mp_obj_int_make_new(const mp_obj_type_t *type_in, size_t n_args,
             return MP_OBJ_NEW_SMALL_INT(0);
 
         case 1:
+            if (!args[0]) {
+                fprintf(stderr,"54:mp_obj_int_make_new NPE\n");
+                return MP_OBJ_NULL;
+            }
             if (mp_obj_is_int(args[0])) {
                 // already an int (small or long), just return it
                 return args[0];
@@ -67,8 +72,13 @@ STATIC mp_obj_t mp_obj_int_make_new(const mp_obj_type_t *type_in, size_t n_args,
 
         case 2:
         default: {
+            if (!args[0]) {
+                fprintf(stderr,"76:mp_obj_int_make_new NPE\n");
+                return MP_OBJ_NULL;
+            }
             // should be a string, parse it
             size_t l;
+            fprintf(stderr,"72:mp_obj_int_make_new %p\n", args[0] );
             const char *s = mp_obj_str_get_data(args[0], &l);
             return mp_parse_num_integer(s, l, mp_obj_get_int(args[1]), NULL);
         }
