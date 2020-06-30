@@ -119,7 +119,7 @@ rbo_incr_start(rbo_t *self) {
 int
 rbo_append(rbo_t *self, const void *object) {
   int index;
-  // Perform all atomic opertaions
+  // Perform all atomic operations
   RB_ATOMIC_START
   {
     index = self->next_end_index(self);

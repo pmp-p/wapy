@@ -195,7 +195,7 @@ OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C_EXTRA:.c=.o))
 
 
-CPPFLAGS += "-DNO_NLR=$(NO_NLR)"
+CPPFLAGS += -DNO_NLR=$(NO_NLR)
 CFLAGS += $(CPPFLAGS) $(CFLAGS_EXTRA)
 
 	

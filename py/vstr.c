@@ -296,13 +296,6 @@ void vstr_cut_out_bytes(vstr_t *vstr, size_t byte_pos, size_t bytes_to_cut) {
     }
 }
 
-void vstr_printf(vstr_t *vstr, const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vstr_vprintf(vstr, fmt, ap);
-    va_end(ap);
-}
-
 void vstr_vprintf(vstr_t *vstr, const char *fmt, va_list ap) {
 #if NO_NLR
     mp_print_t print = {vstr, (mp_print_strn_t)void_add_strn};
@@ -311,3 +304,11 @@ void vstr_vprintf(vstr_t *vstr, const char *fmt, va_list ap) {
 #endif
     mp_vprintf(&print, fmt, ap);
 }
+
+void vstr_printf(vstr_t *vstr, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vstr_vprintf(vstr, fmt, ap);
+    va_end(ap);
+}
+

@@ -88,7 +88,7 @@ void mp_emit_glue_assign_bytecode(mp_raw_code_t *rc, const byte *code,
     #endif
 
     #ifdef DEBUG_PRINT
-    #if !MICROPY_DEBUG_PRINTERS
+    #if !MICROPY_DEBUG_PRINTERS && !MICROPY_PERSISTENT_CODE_SAVE
     const size_t len = 0;
     #endif
     DEBUG_printf("assign byte code: code=%p len=" UINT_FMT " flags=%x\n", code, len, (uint)scope_flags);

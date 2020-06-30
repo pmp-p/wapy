@@ -41,7 +41,7 @@
     #define RB_ATOMIC_END xt_wsr_ps(_savedIS) ;} while(0);
 #else
 
-    #if __EMSCRIPTEN__
+    #if __EMSCRIPTEN__ || __WASM__
         #define RB_ATOMIC_START
         #define RB_ATOMIC_END
     #else

@@ -267,9 +267,6 @@ gc_collect_start1(void) {
 
 #else
 
-#include <setjmp.h>
-typedef jmp_buf gc_helper_regs_t;
-
 
 //extern void gc_collect_root(void **ptrs, size_t len);
 
@@ -302,28 +299,23 @@ void
 gc_collect(void) {
 
     gc_dump_info();
-    gc_helper_regs_t regs;
+
     stack_ptr_val = (uintptr_t) __builtin_frame_address(0);
-    setjmp(regs);
-    // GC stack (and regs because we captured them)
 
     clog("gc_collect_start");
 
     gc_collect_start();
 
-    uintptr_t stack_ptr = (uintptr_t) __builtin_frame_address(0);
+    size_t bottom = (uintptr_t) stack_ptr_val;
 
-    void **ptrs = (void **) (void *) &regs;
-
-    //size_t top = (uintptr_t)MP_STATE_THREAD(stack_top);
-    size_t bottom = (uintptr_t) & regs;
+    void **ptrs = (void **) (void *) stack_ptr_val;
 
     size_t len = ((uintptr_t) stack_initial - bottom) / sizeof(uintptr_t);
 
-    clog("gc_collect stack_initial=%p ptr=%zu max=%zu", stack_initial, stack_ptr, stack_max);
-    clog("gc_collect top=%p bottom=%zu, %lu vs %lu", ptrs, bottom, len, stack_limit);
+    clog("gc_collect stack_initial=%p bottom=%zu len=%zu", stack_initial, bottom, len);
 
 //343
+
     gc_collect_root(ptrs, len);
 //343
 

@@ -121,7 +121,6 @@
 
 // nlr.h  MICROPY_NLR_* must match a supported arch
 // define or autodetect will fail to select WASM
-
 #if __WASM__
 #else
 #define MICROPY_NLR_SETJMP          (1)
