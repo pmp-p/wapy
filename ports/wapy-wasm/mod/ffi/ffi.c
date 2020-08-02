@@ -1,18 +1,15 @@
+#ifdef __EMSCRIPTEN__
+
 #include "mod/ffi/ffi.h"
 #include "ffi_common.h"
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifdef __EMSCRIPTEN__
 #include "emscripten.h"
-#else
-    #define EMSCRIPTEN_KEEPALIVE
-#endif
-
 
 
 /*
-#FIXME: PMPP
+
 
 https://groups.google.com/forum/#!topic/emscripten-discuss/cE3hUV3fDSw
 
@@ -20,34 +17,16 @@ https://github.com/emscripten-core/emscripten/wiki/Linking
 
 https://github.com/dgym/cpython-emscripten/pull/1
 
+
+#FIXME:
+
 ffi_prep_closure_loc BROKEN
 ffi_closure_alloc BROKEN
-
 
 
 */
 
 
-ffi_status
-ffi_prep_closure_loc (ffi_closure* closure,
-                      ffi_cif* cif,
-                      void (*fun)(ffi_cif*, void*, void**, void*),
-                      void *user_data,
-                      void *codeloc)
-{
-  closure->cif = cif;
-  closure->fun = fun;
-  closure->user_data = user_data;
-  return FFI_OK;
-}
-
-
-
-void *
-ffi_closure_alloc (size_t size, void **code)
-{
-    return 0;
-}
 
 
 //=====================================================================================================
@@ -208,5 +187,32 @@ ffi_call (ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue)
             throw new Error('Unexpected rtype ' + rtype);
         }
     }, cif, fn, rvalue, avalue);
+}
+#else
+
+#include "ffi.h"
+
+#endif
+
+
+ffi_status
+ffi_prep_closure_loc (ffi_closure* closure,
+                      ffi_cif* cif,
+                      void (*fun)(ffi_cif*, void*, void**, void*),
+                      void *user_data,
+                      void *codeloc)
+{
+  closure->cif = cif;
+  closure->fun = fun;
+  closure->user_data = user_data;
+  return FFI_OK;
+}
+
+
+
+void *
+ffi_closure_alloc (size_t size, void **code)
+{
+    return 0;
 }
 

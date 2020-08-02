@@ -244,6 +244,10 @@ STATIC const mp_rom_map_elem_t mp_module_sys_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_getsizeof), MP_ROM_PTR(&mp_sys_getsizeof_obj) },
     #endif
 
+    #if __ANDROID__
+    { MP_ROM_QSTR(MP_QSTR_getandroidapilevel), MP_ROM_PTR(19) },
+    #endif
+
     /*
      * Extensions to CPython
      */

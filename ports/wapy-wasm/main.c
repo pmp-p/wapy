@@ -1,4 +1,4 @@
-#define OUTER_INIT (0)
+#define OUTER_INIT (1)
 
 #include <stdint.h>
 #include <stdio.h>
@@ -43,14 +43,21 @@
 #include "py/stackctrl.h"
 #include "py/gc.h"
 
+#define __MAIN__ (1)
+#include "emscripten.h"
+#undef __MAIN__
 
 
-/* full shared
 
+
+#if 0 // OUTER_INIT
+    #pragma message " ============= FULL SHARED =============="
 #include "py/mpstate.h"  // mp_state_ctx
 mp_state_ctx_t mp_state_ctx;
+//const mp_obj_type_t mp_type_SystemExit;
+//const mp_obj_type_t mp_type_TypeError;
+#endif
 
-*/
 
 /*
 LOGO:
@@ -70,7 +77,13 @@ OS ? :
 NOGIL:
     https://github.com/plasma-umass/snakefish
 
+THE USER POINT OF VIEW:
+    https://danluu.com/input-lag/
+
+
 BOOKMARKS:
+
+https://faster-cpython.readthedocs.io/implementations.html
 
 https://www.aosabook.org/en/500L/a-python-interpreter-written-in-python.html
 
@@ -102,6 +115,9 @@ transpile/compile :
     https://wiki.python.org/moin/LanguageParsing
     https://github.com/timothycrosley/jiphy
     https://github.com/philhassey/tinypy
+
+
+    http://gambitscheme.org/wiki/index.php/Main_Page
 
 
 jit:
@@ -219,11 +235,15 @@ repl:
 couldclose:
     https://github.com/micropython/micropython/issues/3313
 
+net layer:
+    https://github.com/moshest/p2p-index
+
+
 */
 
 
 
-#include "emscripten.h"
+
 
 /*
 CFLAGS="-Wfatal-errors -Wall -Wextra -Wunused -Werror -Wno-format-extra-args -Wno-format-zero-length\
@@ -273,25 +293,25 @@ bsd_strlen(const char *str) {
 }
 
 
-#ifndef strcmp
-#pragma message " ----------- missing strcmp ------------ "
-int
-bsd_strcmp(const char *s1, const char *s2) {
-    while (*s1 == *s2++)
-        if (*s1++ == '\0')
-            return (0);
-    return (*(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1));
-}
+#if 0 // for esp broken SDK strcmp
 
-int
-endswith(const char * str, const char * suffix) {
-  int str_len = bsd_strlen(str);
-  int suffix_len = bsd_strlen(suffix);
+    int
+    bsd_strcmp(const char *s1, const char *s2) {
+        while (*s1 == *s2++)
+            if (*s1++ == '\0')
+                return (0);
+        return (*(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1));
+    }
 
-  return
-    (str_len >= suffix_len) && (0 == bsd_strcmp(str + (str_len-suffix_len), suffix));
-}
-#else
+    int
+    endswith(const char * str, const char * suffix) {
+      int str_len = bsd_strlen(str);
+      int suffix_len = bsd_strlen(suffix);
+
+      return
+        (str_len >= suffix_len) && (0 == bsd_strcmp(str + (str_len-suffix_len), suffix));
+    }
+#endif
 
 int
 endswith(const char * str, const char * suffix) {
@@ -302,13 +322,15 @@ endswith(const char * str, const char * suffix) {
     (str_len >= suffix_len) && (0 == strcmp(str + (str_len-suffix_len), suffix));
 }
 
-#endif
+
+
+
 
 /* =====================================================================================
     bad sync experiment with file access trying to help on
         https://github.com/littlevgl/lvgl/issues/792
 
-    status: better than nothing.
+    status: better than nothing, but wapy can/could/must use aio_* for that.
 */
 
 #include "api/wasm_file_api.c"
@@ -347,7 +369,6 @@ char **copy_argv(int argc, char *argv[]) {
 
 
 #include "upython.c"
-
 
 #include "vmsl/vmreg.h"
 
@@ -405,19 +426,18 @@ void Py_Init() {
     fprintf(stdout,"done\n");
 #endif
 
-    wPy_Initialize();
-    wPy_NewInterpreter();
+    Py_Initialize();
+    Py_NewInterpreter();
 
     EM_ASM( {
-        aio.plink.shm = $0;
-        window.PyRun_SimpleString_MAXSIZE = $1;
-
-        aio.plink.io_port_kbd = $2;
-        aio.plink.MP_IO_SIZE = $3;
-        console.log("aio.plink.shm=" + aio.plink.shm+" +"+ window.PyRun_SimpleString_MAXSIZE);
-        console.log("aio.plink.io_port_kbd=" + aio.plink.io_port_kbd+" +"+ aio.plink.MP_IO_SIZE);
-        window.setTimeout( init_repl_begin , 1000 );
-    }, shm_ptr(), IO_KBD, &io_stdin[IO_KBD], MP_IO_SIZE);
+        vm.aio.plink.MAXSIZE = $0;
+        vm.aio.plink.shm = $1;
+        vm.aio.plink.io_port_kbd = $2;
+        vm.aio.plink.MP_IO_SIZE = $3;
+        console.log("aio.plink.shm=" + vm.aio.plink.shm+" +" + vm.aio.plink.MAXSIZE);
+        console.log("aio.plink.io_port_kbd=" + vm.aio.plink.io_port_kbd+" +"+ vm.aio.plink.MP_IO_SIZE);
+        window.setTimeout( vm.init_repl_begin , 1000 );
+    }, IO_KBD, shm_ptr(), &io_stdin[IO_KBD], MP_IO_SIZE);
 
     IO_CODE_DONE;
 
@@ -576,7 +596,7 @@ main_loop_or_step(void) {
         VMOP--;
         if ( (iolen = has_io()) ) {
             // we have a chance to process pending Inputs, so ...
-            cdbg("syscall/pause WITH IO=%lu", iolen );
+            cdbg("syscall/pause WITH IO=%zu", iolen );
             noint_aio_fsync();
         } else {
             clog("syscall/pause -> io flush");
@@ -1044,7 +1064,18 @@ int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
 }
 
 
+#include <dlfcn.h>
 
+void *
+import(const char * LIB_NAME) {
+    void *lib_handle = dlopen(LIB_NAME, RTLD_NOW | RTLD_GLOBAL);
+
+    if (!lib_handle)
+        fprintf(stderr,"\n\nDL ======> cannot load %s module\n\n\n", LIB_NAME);
+    else
+        fprintf(stderr,"\n\nDL ======> %s module OK !!!!! \n\n\n", LIB_NAME);
+    return lib_handle;
+}
 
 
 int
@@ -1053,14 +1084,16 @@ main(int argc, char *argv[]) {
     g_argc = argc;
     g_argv = copy_argv(argc, argv);
 
+    //assert(emscripten_run_preload_plugins(LIB_NAME, NULL, NULL) == 0);
 
-    emscripten_GetProcAddress("pouet");
+    void *lib_wapy = import( "libwapy.so");
+    void *lib_sdl2 = import( "libsdl2.so");
 
 
 #if !ASYNCIFY
     #if OUTER_INIT
         // this one creates an "uncaught unwind" ex
-        // emscripten_set_main_loop( main_loop_warmup, 0, 1);  // <= this will exit to js now.
+        emscripten_set_main_loop( main_loop_warmup, 0, 1);  // <= this will exit to js now.
     #else
         emscripten_set_main_loop( main_loop_or_step, 0, 1);
     #endif

@@ -9,20 +9,23 @@
 #define RINGBUF_O_H
 
 #if __ARDUINO__
-#include "Arduino.h"
+    #include "Arduino.h"
+    #define RB_ATOMIC_START ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    #define RB_ATOMIC_END }
+#else
+    #define RB_ATOMIC_START
+    #define RB_ATOMIC_END
 #endif
 
+
 #ifndef __cplusplus
-#ifndef bool
-#define bool uint8_t
-#endif
+    #ifndef bool
+    #define bool uint8_t
+    #endif
 #endif
 
 #if defined(ARDUINO_ARCH_AVR)
     #include <util/atomic.h>
-    #define RB_ATOMIC_START ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    #define RB_ATOMIC_END }
-
 
 #elif defined(ARDUINO_ARCH_ESP8266)
     #ifndef __STRINGIFY
@@ -41,9 +44,8 @@
     #define RB_ATOMIC_END xt_wsr_ps(_savedIS) ;} while(0);
 #else
 
-    #if __EMSCRIPTEN__ || __WASM__
-        #define RB_ATOMIC_START
-        #define RB_ATOMIC_END
+    #if __EMSCRIPTEN__ || __WASM__ || __ANDROID__
+
     #else
         #if __ARDUINO__
             #error ("This library only supports AVR and ESP8266 Boards.")

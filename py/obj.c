@@ -441,7 +441,34 @@ int mp_obj_get_complex(mp_obj_t arg, mp_float_t *real, mp_float_t *imag) {
     }
     return 0;
 }
-#endif
+
+bool mp_obj_get_complex_maybe(mp_obj_t arg, mp_float_t *real, mp_float_t *imag) {
+    if (arg == mp_const_false) {
+        *real = 0;
+        *imag = 0;
+    } else if (arg == mp_const_true) {
+        *real = 1;
+        *imag = 0;
+    } else if (mp_obj_is_small_int(arg)) {
+        *real = (mp_float_t)MP_OBJ_SMALL_INT_VALUE(arg);
+        *imag = 0;
+    #if MICROPY_LONGINT_IMPL != MICROPY_LONGINT_IMPL_NONE
+    } else if (mp_obj_is_type(arg, &mp_type_int)) {
+        *real = mp_obj_int_as_float_impl(arg);
+        *imag = 0;
+    #endif
+    } else if (mp_obj_is_float(arg)) {
+        *real = mp_obj_float_get(arg);
+        *imag = 0;
+    } else if (mp_obj_is_type(arg, &mp_type_complex)) {
+        mp_obj_complex_get(arg, real, imag);
+    } else {
+        return false;
+    }
+    return true;
+}
+
+#endif // MICROPY_PY_BUILTINS_COMPLEX
 
 // note: returned value in *items may point to the interior of a GC block
 int mp_obj_get_array(mp_obj_t o, size_t *len, mp_obj_t **items) {
@@ -524,7 +551,7 @@ size_t mp_get_index(const mp_obj_type_t *type, size_t len, mp_obj_t index, bool 
 #else
 // =================================================================================================================
 #if MICROPY_PY_BUILTINS_COMPLEX
-void mp_obj_get_complex(mp_obj_t arg, mp_float_t *real, mp_float_t *imag) {
+bool mp_obj_get_complex_maybe(mp_obj_t arg, mp_float_t *real, mp_float_t *imag) {
     if (arg == mp_const_false) {
         *real = 0;
         *imag = 0;
@@ -545,6 +572,13 @@ void mp_obj_get_complex(mp_obj_t arg, mp_float_t *real, mp_float_t *imag) {
     } else if (mp_obj_is_type(arg, &mp_type_complex)) {
         mp_obj_complex_get(arg, real, imag);
     } else {
+        return false;
+    }
+    return true;
+}
+
+void mp_obj_get_complex(mp_obj_t arg, mp_float_t *real, mp_float_t *imag) {
+    if (!mp_obj_get_complex_maybe(arg, real, imag)) {
         #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
         mp_raise_TypeError(MP_ERROR_TEXT("can't convert to complex"));
         #else
@@ -553,7 +587,7 @@ void mp_obj_get_complex(mp_obj_t arg, mp_float_t *real, mp_float_t *imag) {
         #endif
     }
 }
-#endif
+#endif // MICROPY_PY_BUILTINS_COMPLEX
 
 // note: returned value in *items may point to the interior of a GC block
 void mp_obj_get_array(mp_obj_t o, size_t *len, mp_obj_t **items) {

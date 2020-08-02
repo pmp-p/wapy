@@ -33,7 +33,7 @@
 #include "py/objtype.h"
 #include "py/objstr.h"
 
-#define mp_obj_is_dict_type(o) (mp_obj_is_obj(o) && ((mp_obj_base_t *)MP_OBJ_TO_PTR(o))->type->make_new == dict_make_new)
+#define mp_obj_is_dict_type(o) (mp_obj_is_obj(o) && ((mp_obj_base_t *)MP_OBJ_TO_PTR(o))->type->make_new == mp_obj_dict_make_new)
 
 STATIC mp_obj_t dict_update(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs);
 
@@ -88,7 +88,7 @@ STATIC void dict_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_
     }
 }
 
-STATIC mp_obj_t dict_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+mp_obj_t mp_obj_dict_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     mp_obj_t dict_out = mp_obj_new_dict(0);
     mp_obj_dict_t *dict = MP_OBJ_TO_PTR(dict_out);
     dict->base.type = type;
@@ -235,7 +235,7 @@ STATIC mp_obj_t dict_clear(mp_obj_t self_in) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(dict_clear_obj, dict_clear);
 
-STATIC mp_obj_t dict_copy(mp_obj_t self_in) {
+mp_obj_t mp_obj_dict_copy(mp_obj_t self_in) {
     mp_check_self(mp_obj_is_dict_type(self_in));
     mp_obj_dict_t *self = MP_OBJ_TO_PTR(self_in);
     mp_obj_t other_out = mp_obj_new_dict(self->map.alloc);
@@ -248,7 +248,7 @@ STATIC mp_obj_t dict_copy(mp_obj_t self_in) {
     memcpy(other->map.table, self->map.table, self->map.alloc * sizeof(mp_map_elem_t));
     return other_out;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(dict_copy_obj, dict_copy);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(dict_copy_obj, mp_obj_dict_copy);
 
 #if MICROPY_PY_BUILTINS_DICT_FROMKEYS
 // this is a classmethod
@@ -591,7 +591,7 @@ const mp_obj_type_t mp_type_dict = {
     { &mp_type_type },
     .name = MP_QSTR_dict,
     .print = dict_print,
-    .make_new = dict_make_new,
+    .make_new = mp_obj_dict_make_new,
     .unary_op = dict_unary_op,
     .binary_op = dict_binary_op,
     .subscr = dict_subscr,
@@ -604,7 +604,7 @@ const mp_obj_type_t mp_type_ordereddict = {
     { &mp_type_type },
     .name = MP_QSTR_OrderedDict,
     .print = dict_print,
-    .make_new = dict_make_new,
+    .make_new = mp_obj_dict_make_new,
     .unary_op = dict_unary_op,
     .binary_op = dict_binary_op,
     .subscr = dict_subscr,

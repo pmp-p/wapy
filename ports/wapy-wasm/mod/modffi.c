@@ -29,7 +29,13 @@
 #include <string.h>
 #include <errno.h>
 #include <dlfcn.h>
-#include <mod/ffi/ffi.h>
+
+#if __EMSCRIPTEN__
+    #include <mod/ffi/ffi.h>
+#else
+    #include "ffi.h"
+#endif
+
 #include <stdint.h>
 
 #include "py/runtime.h"

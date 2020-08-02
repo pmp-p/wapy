@@ -1,3 +1,19 @@
+
+ifdef NDK
+	CC=$(NDK_CC) -march=armv7-a -mthumb --target=armv7-none-linux-androideabi19 --gcc-toolchain=$(NDK)/toolchains/llvm/prebuilt/linux-x86_64 --sysroot=$(NDK)/toolchains/llvm/prebuilt/linux-x86_64/sysroot -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2
+
+	LD=$(NDK_LD) -L$(NDK)/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/arm-linux-androideabi/19
+	CFLAGS +=  -DANDROID_PLATFORM=android-19 -DAPP_PLATFORM=android-19 -D__ANDROID_API__=19
+	LD_EXTRA += -fuse-ld=lld -L/data/cross/pydk/aosp/apkroot-armeabi-v7a/usr/lib -lffi -ldl -lm -lc -landroid
+	INC += -I/data/cross/pydk/aosp/apkroot-armeabi-v7a/usr/include -I../wapy/stubs
+	OG = -O0 -g3
+	LD_SHARED = -shared
+else
+	LD_EXTRA += -s FORCE_FILESYSTEM=1 --use-preload-plugins
+	LD_EXTRA += -L/data/cross/pydk/wasm/apkroot-wasm/usr/lib -lSDL2 -logg
+endif
+
+
 # py object files
 PY_CORE_O_BASENAME = $(addprefix py/,\
 	mpstate.o \
@@ -111,3 +127,4 @@ PY_CORE_O_BASENAME = $(addprefix py/,\
 	smallint.o \
 	frozenmod.o \
 	)
+

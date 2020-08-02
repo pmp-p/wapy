@@ -69,7 +69,7 @@ STATIC const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
 
 STATIC void stderr_print_strn2(void *env, const char *str, size_t len) {
     (void)env;
-    fprintf(stderr,str);
+    fprintf(stderr, "%s", str);
 }
 
 const mp_print_t mp_stderr_print2 = {NULL, stderr_print_strn2};

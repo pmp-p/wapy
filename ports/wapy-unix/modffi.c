@@ -166,7 +166,7 @@ STATIC mp_obj_t return_ffi_value(ffi_arg val, char type) {
         #if MICROPY_PY_BUILTINS_FLOAT
         case 'f': {
             union { ffi_arg ffi;
-                    float flt;
+                    mp_float_t flt;
             } val_union = { .ffi = val };
             return mp_obj_new_float(val_union.flt);
         }

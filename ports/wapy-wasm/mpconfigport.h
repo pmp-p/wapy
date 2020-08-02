@@ -205,6 +205,7 @@
 
 #define MICROPY_PY_BTREE            (0)
 
+#define MICROPY_PY_BUILTINS_COMPLEX   (1) // required
 #define MICROPY_PY_BUILTINS_BYTEARRAY (1)
 #define MICROPY_PY_DESCRIPTORS        (1)
 #define MICROPY_PY_BUILTINS_ENUMERATE (1)
@@ -239,9 +240,7 @@
 #define MICROPY_PY_CMATH            (1)
 
 //? TEST THAT THING !
-#if __WASM__
-    #define MICROPY_PY_FFI              (0)
-#else
+#ifndef MICROPY_PY_FFI
 #define MICROPY_PY_FFI              (1) // <========================== NON STANDARD NOT CPY
 #endif
 
@@ -270,7 +269,16 @@
 
 #define MICROPY_PY_SYS_STDIO_BUFFER (1)
 #define MICROPY_PY_SYS_STDFILES     (1)
-#define MICROPY_PY_OS_DUPTERM       (1) // <==== or js console will get C stdout too ( C-OUT [spam] )
+
+#if __EMSCRIPTEN__
+    #define MICROPY_PY_OS_DUPTERM       (1) // <==== or js console will get C stdout too ( C-OUT [spam] )
+#else
+    #if __ANDROID__
+            #define MICROPY_PY_OS_DUPTERM       (0)
+    #else
+        #define MICROPY_PY_OS_DUPTERM       (1)
+    #endif
+#endif
 
 
 #define MICROPY_PY_THREAD           (0)

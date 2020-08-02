@@ -47,8 +47,9 @@ if (VMOP==VMOP_INIT) {
         "import sys;"
         "import embed;"
         "import builtins;"
-        "sys.path.extend(['/assets','/assets/packages']);"
-        "import site_wapy;"
+        "sys.path.append('/assets');"
+        "import site;"
+        "sys.path.append('/assets/packages');"
         "#\n"
     );
     emscripten_cancel_main_loop();

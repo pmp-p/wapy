@@ -153,7 +153,7 @@ STATIC void mp_obj_class_lookup(struct class_lookup_data *lookup, const mp_obj_t
 
         if (type->locals_dict != NULL) {
             // search locals_dict (the set of methods/attributes)
-            assert(type->locals_dict->base.type == &mp_type_dict); // MicroPython restriction, for now
+            assert(mp_obj_is_dict_or_ordereddict(MP_OBJ_FROM_PTR(type->locals_dict))); // MicroPython restriction, for now
             mp_map_t *locals_map = &type->locals_dict->map;
             mp_map_elem_t *elem = mp_map_lookup(locals_map, MP_OBJ_NEW_QSTR(lookup->attr), MP_MAP_LOOKUP);
             if (elem != NULL) {
@@ -593,16 +593,13 @@ STATIC void mp_obj_instance_load_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
     #if MICROPY_CPYTHON_COMPAT
     if (attr == MP_QSTR___dict__) {
         // Create a new dict with a copy of the instance's map items.
-        // This creates, unlike CPython, a 'read-only' __dict__: modifying
-        // it will not result in modifications to the actual instance members.
-        mp_map_t *map = &self->members;
-        mp_obj_t attr_dict = mp_obj_new_dict(map->used);
-        for (size_t i = 0; i < map->alloc; ++i) {
-            if (mp_map_slot_is_filled(map, i)) {
-                mp_obj_dict_store(attr_dict, map->table[i].key, map->table[i].value);
-            }
-        }
-        dest[0] = attr_dict;
+        // This creates, unlike CPython, a read-only __dict__ that can't be modified.
+        mp_obj_dict_t dict;
+        dict.base.type = &mp_type_dict;
+        dict.map = self->members;
+        dest[0] = mp_obj_dict_copy(MP_OBJ_FROM_PTR(&dict));
+        mp_obj_dict_t *dest_dict = MP_OBJ_TO_PTR(dest[0]);
+        dest_dict->map.is_fixed = 1;
         return;
     }
     #endif
@@ -990,19 +987,28 @@ STATIC mp_obj_t type_make_new(const mp_obj_type_t *type_in, size_t n_args, size_
             mp_raise_TypeError(MP_ERROR_TEXT("type takes 1 or 3 arguments"));
     }
 }
-
+#include <stdio.h>
 STATIC mp_obj_t type_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     // instantiate an instance of a class
 
     mp_obj_type_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (self->make_new == NULL) {
+        fprintf(stderr, "type_call\n");
+        // module(name[, doc])
+        if (n_args) {
+            const char * modulename = mp_obj_str_get_str(args[0]);
+            fprintf(stderr, "type_call create emtpy '%s' : NOT IMPLEMENTED\n", modulename);
+            mp_raise_TypeError("N/I");
+            return MP_OBJ_NULL;
+        } else {
         #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
         mp_raise_TypeError(MP_ERROR_TEXT("can't create instance"));
         #else
         mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
             MP_ERROR_TEXT("cannot create '%q' instances"), self->name));
         #endif
+        }
     }
 
     // make new instance
@@ -1023,6 +1029,21 @@ STATIC void type_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
             dest[0] = MP_OBJ_NEW_QSTR(self->name);
             return;
         }
+        #if MICROPY_CPYTHON_COMPAT
+        if (attr == MP_QSTR___dict__) {
+            // Returns a read-only dict of the class attributes.
+            // If the internal locals is not fixed, a copy will be created.
+            mp_obj_dict_t *dict = self->locals_dict;
+            if (dict->map.is_fixed) {
+                dest[0] = MP_OBJ_FROM_PTR(dict);
+            } else {
+                dest[0] = mp_obj_dict_copy(MP_OBJ_FROM_PTR(dict));
+                dict = MP_OBJ_TO_PTR(dest[0]);
+                dict->map.is_fixed = 1;
+            }
+            return;
+        }
+        #endif
         if (attr == MP_QSTR___bases__) {
             if (self == &mp_type_object) {
                 dest[0] = mp_const_empty_tuple;
@@ -1051,7 +1072,7 @@ STATIC void type_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
         // delete/store attribute
 
         if (self->locals_dict != NULL) {
-            assert(self->locals_dict->base.type == &mp_type_dict); // MicroPython restriction, for now
+            assert(mp_obj_is_dict_or_ordereddict(MP_OBJ_FROM_PTR(self->locals_dict))); // MicroPython restriction, for now
             mp_map_t *locals_map = &self->locals_dict->map;
             if (locals_map->is_fixed) {
                 // can't apply delete/store to a fixed map
@@ -1108,7 +1129,7 @@ mp_obj_t mp_obj_new_type(qstr name, mp_obj_t bases_tuple, mp_obj_t locals_dict) 
     if (!mp_obj_is_type(bases_tuple, &mp_type_tuple)) {
         mp_raise_TypeError(NULL);
     }
-    if (!mp_obj_is_type(locals_dict, &mp_type_dict)) {
+    if (!mp_obj_is_dict_or_ordereddict(locals_dict)) {
         mp_raise_TypeError(NULL);
     }
 

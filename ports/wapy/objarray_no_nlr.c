@@ -488,7 +488,7 @@ STATIC mp_obj_t array_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t value
                 }
                 #endif
                 if (len_adj > 0) {
-                    if (len_adj > o->free) {
+                    if ((unsigned long)len_adj > o->free) {
                         // TODO: alloc policy; at the moment we go conservative
                         dest_items = m_renew(byte, o->items, (o->len + o->free) * item_sz, (o->len + len_adj) * item_sz);
                         if (dest_items == NULL) {

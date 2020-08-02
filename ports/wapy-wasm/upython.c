@@ -40,7 +40,6 @@ show_os_loop(int state) {
     if (state >= 0) {
         SHOW_OS_LOOP = state;
         if (state > 0) {
-            //fprintf(stdout,"------------- showing os loop --------------\n");
             fprintf(stdout, "------------- showing os loop / starting repl --------------\n");
             repl_started = 1;
         } else {
@@ -88,7 +87,7 @@ shm_get_ptr(int major, int minor) {
 
 
 char *
-wPy_NewInterpreter() {
+Py_NewInterpreter() {
     i_main.shm_stdio = (char *) malloc(MP_IO_SHM_SIZE);
     if (!i_main.shm_stdio)
         fprintf(stdout, "74:shm_stdio malloc failed\n");
@@ -101,7 +100,7 @@ wPy_NewInterpreter() {
 }
 
 void
-wPy_Initialize() {
+Py_Initialize() {
     int stack_dummy;
     stack_top = (char *) &stack_dummy;
 
@@ -120,7 +119,6 @@ wPy_Initialize() {
     // Set default emitter options
     MP_STATE_VM(default_emit_opt) = emit_opt;
 #else
-#pragma message "          ------------- (void)emit_opt; ?????????????????????"
     //(void)emit_opt;
 #endif
 
@@ -140,132 +138,7 @@ wPy_Initialize() {
 
 #undef gc_collect
 
-#if  0                          // TODO remove those gc bits was for experimenting
 
-
-#if MICROPY_PY_THREAD && !MICROPY_PY_THREAD_GIL
-#define GC_ENTER() mp_thread_mutex_lock(&MP_STATE_MEM(gc_mutex), 1)
-#define GC_EXIT() mp_thread_mutex_unlock(&MP_STATE_MEM(gc_mutex))
-#else
-#define GC_ENTER()
-#define GC_EXIT()
-#endif
-
-#define TRACE_MARK(block, ptr, i, total) clog("gc_mark(%p) %lu/%i", ptr, i, total)
-
-#define AT_HEAD (1)
-#define AT_TAIL (2)
-#define AT_MARK (3)
-
-// ptr should be of type void*
-#define VERIFY_PTR(ptr) ( \
-    ((uintptr_t)(ptr) & (MICROPY_BYTES_PER_GC_BLOCK - 1)) == 0          /* must be aligned on a block */ \
-    && ptr >= (void *)MP_STATE_MEM(gc_pool_start)        /* must be above start of pool */ \
-    && ptr < (void *)MP_STATE_MEM(gc_pool_end)           /* must be below end of pool */ \
-    )
-
-
-#define BLOCKS_PER_ATB (4)
-
-#define BLOCK_SHIFT(block) (2 * ((block) & (BLOCKS_PER_ATB - 1)))
-
-#define BLOCK_FROM_PTR(ptr) (((byte *)(ptr) - MP_STATE_MEM(gc_pool_start)) / MICROPY_BYTES_PER_GC_BLOCK)
-#define PTR_FROM_BLOCK(block) (((block) * MICROPY_BYTES_PER_GC_BLOCK + (uintptr_t)MP_STATE_MEM(gc_pool_start)))
-
-#define ATB_GET_KIND(block) ((MP_STATE_MEM(gc_alloc_table_start)[(block) / BLOCKS_PER_ATB] >> BLOCK_SHIFT(block)) & 3)
-#define ATB_HEAD_TO_MARK(block) do { \
- MP_STATE_MEM(gc_alloc_table_start)[(block) / BLOCKS_PER_ATB] |= (AT_MARK << BLOCK_SHIFT(block));\
-} while (0)
-
-// Take the given block as the topmost block on the stack. Check all it's
-// children: mark the unmarked child blocks and put those newly marked
-// blocks on the stack. When all children have been checked, pop off the
-// topmost block on the stack and repeat with that one.
-
-//extern void gc_mark_subtree(size_t block);
-
-STATIC void
-gc_mark_subtree1(size_t block) {
-    // Start with the block passed in the argument.
-    size_t sp = 0;
-    for (;;) {
-        // work out number of consecutive blocks in the chain starting with this one
-        size_t n_blocks = 0;
-        do {
-            n_blocks += 1;
-        } while (ATB_GET_KIND(block + n_blocks) == AT_TAIL);
-
-        // check this block's children
-        void **ptrs = (void **) PTR_FROM_BLOCK(block);
-        for (size_t i = n_blocks * MICROPY_BYTES_PER_GC_BLOCK / sizeof(void *); i > 0; i--, ptrs++) {
-            void *ptr = *ptrs;
-            if (VERIFY_PTR(ptr)) {
-                // Mark and push this pointer
-                size_t childblock = BLOCK_FROM_PTR(ptr);
-                if (ATB_GET_KIND(childblock) == AT_HEAD) {
-                    // an unmarked head, mark it, and push it on gc stack
-                    //TRACE_MARK(childblock, ptr);
-                    ATB_HEAD_TO_MARK(childblock);
-                    if (sp < MICROPY_ALLOC_GC_STACK_SIZE) {
-                        MP_STATE_MEM(gc_stack)[sp++] = childblock;
-                    } else {
-                        MP_STATE_MEM(gc_stack_overflow) = 1;
-                    }
-                }
-            }
-        }
-
-        // Are there any blocks on the stack?
-        if (sp == 0) {
-            break;              // No, stack is empty, we're done.
-        }
-        // pop the next block off the stack
-        block = MP_STATE_MEM(gc_stack)[--sp];
-    }
-}
-
-void
-gc_collect_root1(void **ptrs, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        void *ptr = ptrs[i];
-        if (VERIFY_PTR(ptr)) {
-            size_t block = BLOCK_FROM_PTR(ptr);
-            if (ATB_GET_KIND(block) == AT_HEAD) {
-                // An unmarked head: mark it, and mark all its children
-                //TRACE_MARK(block, ptr, i, len);
-                ATB_HEAD_TO_MARK(block);
-                gc_mark_subtree1(block);
-            }
-        }
-    }
-}
-
-void
-gc_collect_start1(void) {
-    GC_ENTER();
-    MP_STATE_MEM(gc_lock_depth)++;
-#if MICROPY_GC_ALLOC_THRESHOLD
-    MP_STATE_MEM(gc_alloc_amount) = 0;
-#endif
-    MP_STATE_MEM(gc_stack_overflow) = 0;
-
-    // Trace root pointers.  This relies on the root pointers being organised
-    // correctly in the mp_state_ctx structure.  We scan nlr_top, dict_locals,
-    // dict_globals, then the root pointer section of mp_state_vm.
-    void **ptrs = (void **) (void *) &mp_state_ctx;
-    size_t root_start = offsetof(mp_state_ctx_t, thread.dict_locals);
-    size_t root_end = offsetof(mp_state_ctx_t, vm.qstr_last_chunk);
-    gc_collect_root(ptrs + root_start / sizeof(void *), (root_end - root_start) / sizeof(void *));
-
-#if MICROPY_ENABLE_PYSTACK
-    // Trace root pointers from the Python stack.
-    ptrs = (void **) (void *) MP_STATE_THREAD(pystack_start);
-    gc_collect_root(ptrs, (MP_STATE_THREAD(pystack_cur) - MP_STATE_THREAD(pystack_start)) / sizeof(void *));
-#endif
-}
-
-
-#else
 
 
 //extern void gc_collect_root(void **ptrs, size_t len);
@@ -330,7 +203,7 @@ gc_collect(void) {
     gc_collect_end();
 }
 
-#endif // gc
+// #endif // gc
 
 int
 pyeval(const char *src, mp_parse_input_kind_t input_kind) {
@@ -369,7 +242,13 @@ pyeval(const char *src, mp_parse_input_kind_t input_kind) {
     return 0;
 }
 
-#include "wasm_mphal.c"
+#if __EMSCRIPTEN__
+    #include "../wapy/wasm_mphal.c"
+#endif
+
+#if __ANDROID__
+    #include "../wapy/aosp_mphal.c"
+#endif
 
 int
 PyRun_IO_CODE() {

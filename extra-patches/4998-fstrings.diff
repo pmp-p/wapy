@@ -1,0 +1,344 @@
+--- micropython-master-wapy/ports/bare-arm/mpconfigport.h	2020-05-27 19:38:53.586456962 +0200
++++ micropython-master-wapy-fstrings/ports/bare-arm/mpconfigport.h	2020-06-01 09:53:03.154996698 +0200
+@@ -37,6 +37,7 @@
+ #define MICROPY_PY_ARRAY            (0)
+ #define MICROPY_PY_ATTRTUPLE        (0)
+ #define MICROPY_PY_COLLECTIONS      (0)
++#define MICROPY_PY_FSTRING          (0)
+ #define MICROPY_PY_MATH             (0)
+ #define MICROPY_PY_CMATH            (0)
+ #define MICROPY_PY_IO               (0)
+--- micropython-master-wapy/ports/unix/mpconfigport.h	2020-05-27 19:38:53.670455849 +0200
++++ micropython-master-wapy-fstrings/ports/unix/mpconfigport.h	2020-06-01 09:53:03.154996698 +0200
+@@ -122,6 +122,7 @@
+ #define MICROPY_PY_SYS_EXC_INFO     (1)
+ #define MICROPY_PY_COLLECTIONS_DEQUE (1)
+ #define MICROPY_PY_COLLECTIONS_ORDEREDDICT (1)
++#define MICROPY_PY_FSTRING          (1)
+ #ifndef MICROPY_PY_MATH_SPECIAL_FUNCTIONS
+ #define MICROPY_PY_MATH_SPECIAL_FUNCTIONS (1)
+ #endif
+--- micropython-master-wapy/ports/windows/mpconfigport.h	2020-05-31 18:13:31.261254328 +0200
++++ micropython-master-wapy-fstrings/ports/windows/mpconfigport.h	2020-06-01 09:53:03.154996698 +0200
+@@ -90,6 +90,7 @@
+ #define MICROPY_PY_SYS_EXC_INFO     (1)
+ #define MICROPY_PY_COLLECTIONS_DEQUE (1)
+ #define MICROPY_PY_COLLECTIONS_ORDEREDDICT (1)
++#define MICROPY_PY_FSTRING          (1)
+ #define MICROPY_PY_MATH_SPECIAL_FUNCTIONS (1)
+ #define MICROPY_PY_MATH_ISCLOSE     (1)
+ #define MICROPY_PY_CMATH            (1)
+--- micropython-master-wapy/py/lexer.c	2020-06-01 17:50:09.054726674 +0200
++++ micropython-master-wapy-fstrings/py/lexer.c	2020-06-01 09:53:25.920692221 +0200
+@@ -62,6 +62,10 @@
+     return lex->chr0 == c1 || lex->chr0 == c2 || lex->chr0 == c3;
+ }
+ 
++STATIC bool is_char_or4(mp_lexer_t *lex, byte c1, byte c2, byte c3, byte c4) {
++    return lex->chr0 == c1 || lex->chr0 == c2 || lex->chr0 == c3 || lex->chr0 == c4;
++}
++
+ STATIC bool is_char_following(mp_lexer_t *lex, byte c) {
+     return lex->chr1 == c;
+ }
+@@ -105,7 +109,9 @@
+ 
+ STATIC bool is_string_or_bytes(mp_lexer_t *lex) {
+     return is_char_or(lex, '\'', '\"')
+-           || (is_char_or3(lex, 'r', 'u', 'b') && is_char_following_or(lex, '\'', '\"'))
++           || (is_char_or4(lex, 'r', 'u', 'b', 'f') && is_char_following_or(lex, '\'', '\"'))
++           || (((is_char_and(lex, 'r', 'f') || is_char_and(lex, 'f', 'r'))
++               && is_char_following_following_or(lex, '\'', '\"')))
+            || ((is_char_and(lex, 'r', 'b') || is_char_and(lex, 'b', 'r'))
+                && is_char_following_following_or(lex, '\'', '\"'));
+ }
+@@ -119,6 +125,29 @@
+     return is_head_of_identifier(lex) || is_digit(lex);
+ }
+ 
++STATIC void swap_char_banks(mp_lexer_t *lex) {
++    if (lex->vstr_postfix_processing) {
++        lex->chr3 = lex->chr0;
++        lex->chr4 = lex->chr1;
++        lex->chr5 = lex->chr2;
++        lex->chr0 = lex->vstr_postfix.buf[0];
++        lex->chr1 = lex->vstr_postfix.buf[1];
++        lex->chr2 = lex->vstr_postfix.buf[2];
++
++        lex->vstr_postfix_idx = 3;
++    } else {
++        // blindly reset to the "backup" bank when done postfix processing
++        // this restores control to the mp_reader
++        lex->chr0 = lex->chr3;
++        lex->chr1 = lex->chr4;
++        lex->chr2 = lex->chr5;
++        // willfully ignoring setting chr3-5 here - WARNING consider those garbage data now
++
++        vstr_reset(&lex->vstr_postfix);
++        lex->vstr_postfix_idx = 0;
++    }
++}
++
+ STATIC void next_char(mp_lexer_t *lex) {
+     if (lex->chr0 == '\n') {
+         // a new line
+@@ -134,7 +163,16 @@
+ 
+     lex->chr0 = lex->chr1;
+     lex->chr1 = lex->chr2;
+-    lex->chr2 = lex->reader.readbyte(lex->reader.data);
++
++    if (lex->vstr_postfix_processing) {
++        if (lex->vstr_postfix_idx == lex->vstr_postfix.len) {
++            lex->chr2 = '\0';
++        } else {
++            lex->chr2 = lex->vstr_postfix.buf[lex->vstr_postfix_idx++];
++        }
++    } else {
++        lex->chr2 = lex->reader.readbyte(lex->reader.data);
++    }
+ 
+     if (lex->chr1 == '\r') {
+         // CR is a new line, converted to LF
+@@ -149,6 +187,11 @@
+     if (lex->chr2 == MP_LEXER_EOF && lex->chr1 != MP_LEXER_EOF && lex->chr1 != '\n') {
+         lex->chr2 = '\n';
+     }
++
++    if (lex->vstr_postfix_processing && lex->chr0 == '\0') {
++        lex->vstr_postfix_processing = false;
++        swap_char_banks(lex);
++    }
+ }
+ 
+ STATIC void indent_push(mp_lexer_t *lex, size_t indent) {
+@@ -270,7 +313,7 @@
+     return true;
+ }
+ 
+-STATIC void parse_string_literal(mp_lexer_t *lex, bool is_raw) {
++STATIC void parse_string_literal(mp_lexer_t *lex, bool is_raw, bool is_fstring) {
+     // get first quoting character
+     char quote_char = '\'';
+     if (is_char(lex, '\"')) {
+@@ -291,15 +334,69 @@
+     }
+ 
+     size_t n_closing = 0;
++    # if MICROPY_PY_FSTRING
++    bool in_expression = false;
++    bool expression_eat = true;
++    # endif
++
+     while (!is_end(lex) && (num_quotes > 1 || !is_char(lex, '\n')) && n_closing < num_quotes) {
+         if (is_char(lex, quote_char)) {
+             n_closing += 1;
+             vstr_add_char(&lex->vstr, CUR_CHAR(lex));
+         } else {
+             n_closing = 0;
++
++            # if MICROPY_PY_FSTRING
++            if (is_fstring && is_char(lex, '{')) {
++                vstr_add_char(&lex->vstr, CUR_CHAR(lex));
++                in_expression = !in_expression;
++                expression_eat = in_expression;
++
++                if (lex->vstr_postfix.len == 0) {
++                    vstr_add_str(&lex->vstr_postfix, ".format(");
++                }
++
++                next_char(lex);
++                continue;
++            }
++
++            if (is_fstring && is_char(lex, '}')) {
++                vstr_add_char(&lex->vstr, CUR_CHAR(lex));
++
++                if (in_expression) {
++                    in_expression = false;
++                    vstr_add_char(&lex->vstr_postfix, ',');
++                }
++
++                next_char(lex);
++                continue;
++            }
++
++            if (in_expression) {
++                // throw errors for illegal chars inside f-string expressions
++                if (is_char(lex, '#') || is_char(lex, '\\')) {
++                    lex->tok_kind = MP_TOKEN_MALFORMED_FSTRING;
++                    return;
++                } else if (is_char(lex, ':')) {
++                    expression_eat = false;
++                }
++
++                unichar c = CUR_CHAR(lex);
++                if (expression_eat) {
++                    vstr_add_char(&lex->vstr_postfix, c);
++                } else {
++                    vstr_add_char(&lex->vstr, c);
++                }
++
++                next_char(lex);
++                continue;
++            }
++            # endif
++
+             if (is_char(lex, '\\')) {
+                 next_char(lex);
+                 unichar c = CUR_CHAR(lex);
++
+                 if (is_raw) {
+                     // raw strings allow escaping of quotes, but the backslash is also emitted
+                     vstr_add_char(&lex->vstr, '\\');
+@@ -453,6 +550,13 @@
+ }
+ 
+ void mp_lexer_to_next(mp_lexer_t *lex) {
++    if (lex->vstr_postfix.len && !lex->vstr_postfix_processing) {
++        // end format call injection
++        vstr_add_char(&lex->vstr_postfix, ')');
++        lex->vstr_postfix_processing = true;
++        swap_char_banks(lex);
++    }
++
+     // start new token text
+     vstr_reset(&lex->vstr);
+ 
+@@ -508,6 +612,7 @@
+         do {
+             // parse type codes
+             bool is_raw = false;
++            bool is_fstring = false;
+             mp_token_kind_t kind = MP_TOKEN_STRING;
+             int n_char = 0;
+             if (is_char(lex, 'u')) {
+@@ -526,7 +631,23 @@
+                     kind = MP_TOKEN_BYTES;
+                     n_char = 2;
+                 }
++                # if MICROPY_PY_FSTRING
++                if (is_char_following(lex, 'f')) {
++                    lex->tok_kind = MP_TOKEN_FSTRING_RAW;
++                    break;
++                }
++                # endif
+             }
++            # if MICROPY_PY_FSTRING
++            else if (is_char(lex, 'f')) {
++                if (is_char_following(lex, 'r')) {
++                    lex->tok_kind = MP_TOKEN_FSTRING_RAW;
++                    break;
++                }
++                n_char = 1;
++                is_fstring = true;
++            }
++            # endif
+ 
+             // Set or check token kind
+             if (lex->tok_kind == MP_TOKEN_END) {
+@@ -545,13 +666,12 @@
+             }
+ 
+             // Parse the literal
+-            parse_string_literal(lex, is_raw);
++            parse_string_literal(lex, is_raw, is_fstring);
+ 
+             // Skip whitespace so we can check if there's another string following
+             skip_whitespace(lex, true);
+ 
+         } while (is_string_or_bytes(lex));
+-
+     } else if (is_head_of_identifier(lex)) {
+         lex->tok_kind = MP_TOKEN_NAME;
+ 
+@@ -715,6 +835,7 @@
+     }
+ #endif
+     vstr_init(&lex->vstr, 32);
++    vstr_init(&lex->vstr_postfix, 0);
+ 
+     // store sentinel for first indentation level
+     lex->indent_level[0] = 0;
+--- micropython-master-wapy/py/lexer.h	2020-05-27 19:38:53.682455690 +0200
++++ micropython-master-wapy-fstrings/py/lexer.h	2020-06-01 09:53:03.154996698 +0200
+@@ -44,6 +44,10 @@
+     MP_TOKEN_INVALID,
+     MP_TOKEN_DEDENT_MISMATCH,
+     MP_TOKEN_LONELY_STRING_OPEN,
++    # if MICROPY_PY_FSTRING
++    MP_TOKEN_MALFORMED_FSTRING,
++    MP_TOKEN_FSTRING_RAW,
++    # endif
+ 
+     MP_TOKEN_NEWLINE,
+     MP_TOKEN_INDENT,
+@@ -157,6 +161,7 @@
+     mp_reader_t reader;         // stream source
+ 
+     unichar chr0, chr1, chr2;   // current cached characters from source
++    unichar chr3, chr4, chr5;   // current cached characters from alt source
+ 
+     size_t line;                // current source line
+     size_t column;              // current source column
+@@ -172,6 +177,9 @@
+     size_t tok_column;          // token source column
+     mp_token_kind_t tok_kind;   // token kind
+     vstr_t vstr;                // token data
++    vstr_t vstr_postfix;        // postfix to apply to string
++    bool vstr_postfix_processing;
++    uint16_t vstr_postfix_idx;
+ } mp_lexer_t;
+ 
+ mp_lexer_t *mp_lexer_new(qstr src_name, mp_reader_t reader);
+--- micropython-master-wapy/py/mpconfig.h	2020-06-01 17:50:09.066726516 +0200
++++ micropython-master-wapy-fstrings/py/mpconfig.h	2020-06-01 09:53:25.934692033 +0200
+@@ -1115,6 +1115,12 @@
+ #define MICROPY_PY_COLLECTIONS_NAMEDTUPLE__ASDICT (0)
+ #endif
+ 
++// Whether to include support for PEP-498 f-strings
++#ifndef MICROPY_PY_FSTRING
++#define MICROPY_PY_FSTRING (0)
++#endif
++
++
+ // Whether to provide "math" module
+ #ifndef MICROPY_PY_MATH
+ #define MICROPY_PY_MATH (1)
+--- micropython-master-wapy/py/parse.c	2020-06-01 17:50:09.108725959 +0200
++++ micropython-master-wapy-fstrings/py/parse.c	2020-06-01 09:53:25.974691498 +0200
+@@ -1185,6 +1185,14 @@
+         } else if (lex->tok_kind == MP_TOKEN_DEDENT_MISMATCH) {
+             exc = mp_obj_new_exception_msg(&mp_type_IndentationError,
+                 MP_ERROR_TEXT("unindent doesn't match any outer indent level"));
++        # if MICROPY_PY_FSTRING
++        } else if (lex->tok_kind == MP_TOKEN_MALFORMED_FSTRING) {
++            exc = mp_obj_new_exception_msg(&mp_type_SyntaxError,
++                MP_ERROR_TEXT("malformed f-string"));
++        } else if (lex->tok_kind == MP_TOKEN_FSTRING_RAW) {
++            exc = mp_obj_new_exception_msg(&mp_type_SyntaxError,
++                MP_ERROR_TEXT("raw f-strings are not supported"));
++        # endif
+         } else {
+             exc = mp_obj_new_exception_msg(&mp_type_SyntaxError,
+                 MP_ERROR_TEXT("invalid syntax"));
+--- micropython-master-wapy/tests/cmdline/cmd_parsetree.py.exp	2020-05-27 19:38:53.712455292 +0200
++++ micropython-master-wapy-fstrings/tests/cmdline/cmd_parsetree.py.exp	2020-06-01 09:53:03.154996698 +0200
+@@ -1,6 +1,6 @@
+ ----------------
+ [   4] rule(1) (n=9)
+-         tok(4)
++         tok(10)
+ [   4]   rule(22) (n=4)
+            id(i)
+ [   4]     rule(44) (n=1)
+@@ -9,7 +9,7 @@
+            NULL
+ [   6]   rule(5) (n=2)
+            id(a)
+-           tok(14)
++           tok(20)
+ [   7]   rule(5) (n=2)
+            id(b)
+            str(str)

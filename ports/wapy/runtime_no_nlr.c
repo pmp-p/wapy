@@ -1216,7 +1216,7 @@ mp_obj_t mp_store_attr(mp_obj_t base, qstr attr, mp_obj_t value) {
 }
 
 mp_obj_t mp_getiter(mp_obj_t o_in, mp_obj_iter_buf_t *iter_buf) {
-    assert(o_in);
+    if (!o_in) mp_raise_TypeError(MP_ERROR_TEXT("1219:object not iterable"));
     const mp_obj_type_t *type = mp_obj_get_type(o_in);
 
     // Check for native getiter which is the identity.  We handle this case explicitly
@@ -1249,7 +1249,6 @@ mp_obj_t mp_getiter(mp_obj_t o_in, mp_obj_iter_buf_t *iter_buf) {
         }
         return mp_obj_new_getitem_iter(dest, iter_buf);
     }
-
     // object not iterable
     #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
         mp_raise_TypeError(MP_ERROR_TEXT("object not iterable"));
@@ -1257,11 +1256,13 @@ mp_obj_t mp_getiter(mp_obj_t o_in, mp_obj_iter_buf_t *iter_buf) {
         mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
             MP_ERROR_TEXT("'%s' object isn't iterable"), mp_obj_get_type_str(o_in)));
     #endif
+
 }
 
 // may return MP_OBJ_STOP_ITERATION as an optimisation instead of raise StopIteration()
 // may also raise StopIteration()
 mp_obj_t mp_iternext_allow_raise(mp_obj_t o_in) {
+    if (!o_in) mp_raise_TypeError(MP_ERROR_TEXT("1265:NPE:object not an iterator"));
     const mp_obj_type_t *type = mp_obj_get_type(o_in);
     if (type->iternext != NULL) {
         return type->iternext(o_in);
@@ -1286,6 +1287,7 @@ mp_obj_t mp_iternext_allow_raise(mp_obj_t o_in) {
 // will always return MP_OBJ_STOP_ITERATION instead of raising StopIteration() (or any subclass thereof)
 // may raise other exceptions
 mp_obj_t mp_iternext(mp_obj_t o_in) {
+    if (!o_in) mp_raise_TypeError(MP_ERROR_TEXT("1290:NPE:object not an iterator"));
     if (MP_STACK_CHECK()) { // enumerate, filter, map and zip can recursively call mp_iternext
         return MP_OBJ_NULL;
     }

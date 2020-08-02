@@ -36,6 +36,9 @@ import subprocess
 PATHS = [
     # C
     "extmod/*.[ch]",
+    "extmod/btstack/*.[ch]",
+    "extmod/nimble/*.[ch]",
+    "lib/mbedtls_errors/tester.c",
     "lib/netutils/*.[ch]",
     "lib/timeutils/*.[ch]",
     "lib/utils/*.[ch]",
@@ -74,9 +77,6 @@ C_EXTS = (
     ".h",
 )
 PY_EXTS = (".py",)
-
-
-FIXUP_REPLACEMENTS = ((re.compile("sizeof\(([a-z_]+)\) \*\(([a-z_]+)\)"), r"sizeof(\1) * (\2)"),)
 
 
 def list_files(paths, exclusions=None, prefix=""):
@@ -123,10 +123,6 @@ def fixup_c(filename):
                         l = l[indent_diff:]
                     if directive == "endif":
                         dedent_stack.pop()
-
-            # Apply general regex-based fixups.
-            for regex, replacement in FIXUP_REPLACEMENTS:
-                l = regex.sub(replacement, l)
 
             # Write out line.
             f.write(l)

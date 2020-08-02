@@ -84,7 +84,8 @@ STATIC mp_obj_t mod_time_clock(void) {
     // float cannot represent full range of int32 precisely, so we pre-divide
     // int to reduce resolution, and then actually do float division hoping
     // to preserve integer part resolution.
-    return mp_obj_new_float((float)(clock() / 1000) / CLOCK_DIV);
+    mp_float_t d = (double)(clock() / 1000) / (double)CLOCK_DIV ;
+    return mp_obj_new_float(d );
     #else
     return mp_obj_new_int((mp_int_t)clock());
     #endif
