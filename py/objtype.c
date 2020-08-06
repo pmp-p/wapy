@@ -987,26 +987,26 @@ STATIC mp_obj_t type_make_new(const mp_obj_type_t *type_in, size_t n_args, size_
             mp_raise_TypeError(MP_ERROR_TEXT("type takes 1 or 3 arguments"));
     }
 }
-#include <stdio.h>
+
 STATIC mp_obj_t type_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     // instantiate an instance of a class
 
     mp_obj_type_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (self->make_new == NULL) {
-        fprintf(stderr, "type_call\n");
         // module(name[, doc])
         if (n_args) {
-            const char * modulename = mp_obj_str_get_str(args[0]);
-            fprintf(stderr, "type_call create emtpy '%s' : NOT IMPLEMENTED\n", modulename);
-            mp_raise_TypeError("N/I");
+            const char * mod_name = mp_obj_str_get_str(args[0]);
+            if (mod_name) {
+                return mp_obj_new_module( qstr_from_strn(mod_name, strlen(mod_name) ));
+            }
             return MP_OBJ_NULL;
         } else {
         #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
-        mp_raise_TypeError(MP_ERROR_TEXT("can't create instance"));
+            mp_raise_TypeError(MP_ERROR_TEXT("can't create instance"));
         #else
-        mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
-            MP_ERROR_TEXT("cannot create '%q' instances"), self->name));
+            mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
+                MP_ERROR_TEXT("cannot create '%q' instances"), self->name));
         #endif
         }
     }
@@ -1034,6 +1034,9 @@ STATIC void type_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
             // Returns a read-only dict of the class attributes.
             // If the internal locals is not fixed, a copy will be created.
             mp_obj_dict_t *dict = self->locals_dict;
+            if (!dict) {
+                dict = mp_obj_new_dict(0);
+            }
             if (dict->map.is_fixed) {
                 dest[0] = MP_OBJ_FROM_PTR(dict);
             } else {

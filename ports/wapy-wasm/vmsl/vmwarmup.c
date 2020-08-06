@@ -41,14 +41,16 @@ if (VMOP==VMOP_INIT) {
 
     VMOP = VMOP_WARMUP;
     show_os_loop(1);
-    // help fix lack of vars()
+
+    // could help fix lack of vars() but wapy does not need
+    // "__dict__ = globals();"
+
     PyRun_SimpleString(
-        "__dict__ = globals();"
         "import sys;"
         "import embed;"
-        "import builtins;"
+        "import builtins;builtins.__WAPY__ = True;"
         "sys.path.append('/assets');"
-        "import site;"
+        "import wapy_wasm_site as site;"
         "sys.path.append('/assets/packages');"
         "#\n"
     );

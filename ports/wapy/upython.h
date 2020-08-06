@@ -75,8 +75,12 @@ wPyThreadState {
 extern struct wPyInterpreterState i_main ;
 extern struct wPyThreadState i_state ;
 
+
+
 #define cdbg(...) if (1){ fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
 #define clog(...) if (show_os_loop(-1)){ fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
+
+
 
 
 #define UPYTHON_H 1

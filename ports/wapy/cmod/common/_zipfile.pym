@@ -1,0 +1,66 @@
+#include "zip.h"
+
+class ZipFile(type):
+    hash : uint8_t = 0
+    zbuf : void_p = NULL
+    zbuf_size : size_t = 0
+    zip = "struct zip_t *"
+    path = ('char_p','NULL')
+
+    def read(name: const_char_p="") -> bytes:
+        zip_entry_open(self.zip, name);
+        zip_entry_read(self.zip, &self.zbuf, &self.zbuf_size);
+        zip_entry_close(self.zip);
+        try:
+            if (self.zbuf):
+                return self.zbuf
+        finally:
+            free(self.zbuf)
+
+    def open(path : const_char_p="") -> void:
+        self.path = strdup(path)
+        self.hash = strlen(path)
+        printf("ZIPFILE[%d;%s]self\n", self.hash, self.path)
+        self.zip = zip_open(self.path, 0, 'r');
+
+    def filename() -> bytes:
+        return self.path
+
+    def close() -> void:
+        if self.path:
+            zip_close(self.zip);
+            free(self.path)
+
+    async def pouet() -> int:
+        if 1:
+            printf(" pouet arg0 %zu\n", argc );
+            return 42;
+
+    async def pouet2() -> int:
+/*
+        for (iterator = 0; iterator < 5; iterator++) {
+            printf("gen2 %s ",self.name);
+            yield(iterator);
+        }
+*/
+        if 1:
+            if 2:
+                return 43;
+
+
+
+
+#>>> import zipfile; x= zipfile.ZipFile()
+#>>> x.open("/data/cross/pydk-applications/org.beerware.wapy/app/build/outputs/apk/debug/app-debug.apk")
+#>>> x.read("assets/python3/python3.py")
+# x.read_from("assets/python3/python3.py",zp)
+
+
+
+
+
+
+
+
+
+

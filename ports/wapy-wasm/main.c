@@ -237,7 +237,7 @@ couldclose:
 
 net layer:
     https://github.com/moshest/p2p-index
-
+    https://rangermauve.hashbase.io/
 
 */
 
@@ -400,6 +400,11 @@ int pyexec_friendly_repl_process_char(int c);
 int pyexec_repl_repl_restart(int ret);
 int handle_uncaught_exception(void);
 
+// entry point for implementing core vm parts in python, set via "embed" module
+extern void pyv(mp_obj_t value);
+extern mp_obj_t pycore(const char *fn);
+
+
 #define io_stdin i_main.shm_stdio
 
 // to use kb buffer space for scripts
@@ -436,7 +441,7 @@ void Py_Init() {
         vm.aio.plink.MP_IO_SIZE = $3;
         console.log("aio.plink.shm=" + vm.aio.plink.shm+" +" + vm.aio.plink.MAXSIZE);
         console.log("aio.plink.io_port_kbd=" + vm.aio.plink.io_port_kbd+" +"+ vm.aio.plink.MP_IO_SIZE);
-        window.setTimeout( vm.init_repl_begin , 1000 );
+        window.setTimeout( vm.scripting.init_repl, 1000 );
     }, IO_KBD, shm_ptr(), &io_stdin[IO_KBD], MP_IO_SIZE);
 
     IO_CODE_DONE;
@@ -473,6 +478,7 @@ static inline mp_map_elem_t *mp_map_cached_lookup(mp_map_t *map, qstr qst, uint8
 STATIC void stderr_print_strn2(void *env, const char *str, size_t len) {
     (void)env;
     mp_hal_stdout_tx_strn(str,len);
+
 }
 
 const mp_print_t mp_stderr_print2 = {NULL, stderr_print_strn2};
@@ -498,8 +504,36 @@ int uncaught_exception_handler(void) {
     }
     MP_STATE_THREAD(active_exception) = NULL;
     // Report all other exceptions
-    cdbg("mp_stderr_print2=%p",exc)
-    cdbg("mp_obj=%p", MP_OBJ_FROM_PTR(exc) );
+
+/*
+    if (mp_obj_is_exception_instance(exc)) {
+        size_t n, *values;
+        mp_obj_exception_get_traceback(exc, &n, &values);
+        if (n > 0) {
+            assert(n % 3 == 0);
+            mp_print_str(print, "Traceback (most recent call last):\n");
+            for (int i = n - 3; i >= 0; i -= 3) {
+                #if MICROPY_ENABLE_SOURCE_LINE
+                mp_printf(print, "  File \"%q\", line %d", values[i], (int)values[i + 1]);
+                #else
+                mp_printf(print, "  File \"%q\"", values[i]);
+                #endif
+                // the block name can be NULL if it's unknown
+                qstr block = values[i + 2];
+                if (block == MP_QSTRnull) {
+                    mp_print_str(print, "\n");
+                } else {
+                    mp_printf(print, ", in %q\n", block);
+                }
+            }
+        }
+    }
+*/
+    cdbg("mp_stderr_print2->mp_obj=%p", MP_OBJ_FROM_PTR(exc) );
+    pyv( mp_obj_get_type(exc) );
+    pyv( MP_OBJ_FROM_PTR(exc) );
+    pyv( MP_ROM_NONE );
+    pycore("pyc_excepthook");
     mp_obj_print_exception(&mp_stderr_print2, MP_OBJ_FROM_PTR(exc));
     return 0;
 }

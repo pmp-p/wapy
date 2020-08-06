@@ -1991,7 +1991,7 @@ STATIC void compile_expr_stmt(compiler_t *comp, mp_parse_node_struct_t *pns) {
     if (MP_PARSE_NODE_IS_NULL(pn_rhs)) {
         if (comp->is_repl && comp->scope_cur->kind == SCOPE_MODULE) {
             // for REPL, evaluate then print the expression
-            compile_load_id(comp, MP_QSTR___repl_print__);
+            compile_load_id(comp, MP_QSTR_displayhook);
             compile_node(comp, pns->nodes[0]);
             EMIT_ARG(call_function, 1, 0, 0);
             EMIT(pop_top);
@@ -2284,6 +2284,7 @@ STATIC void compile_atom_expr_normal(compiler_t *comp, mp_parse_node_struct_t *p
     size_t i = 0;
 
     // handle special super() call
+#pragma message "FIXME: broken on super().__init__(self) when parent is dict"
     if (comp->scope_cur->kind == SCOPE_FUNCTION
         && MP_PARSE_NODE_IS_ID(pns->nodes[0])
         && MP_PARSE_NODE_LEAF_ARG(pns->nodes[0]) == MP_QSTR_super

@@ -1,0 +1,326 @@
+// modgen
+// python annotations describe the C types you need, argv is always a variable size array of mp_obj_t.
+// glue code will do its best to do the conversion or init.
+//
+
+
+#if  __EMSCRIPTEN__
+    #define WAPY_VALUE (1)
+    extern int VMFLAGS_IF;
+    extern int show_os_loop(int state);
+    extern int state_os_loop(int state);
+#else
+    #define WAPY_VALUE (0)
+    int VMFLAGS_IF = 0;
+    int show_os_loop(int state) {return 0;}
+    int state_os_loop(int state) {return 0;}
+    void emscripten_sleep(int t){}
+#endif
+
+#include "emscripten.h"
+
+#include "py/emitglue.h"
+
+#include "py/lexer.h"
+#include "py/compile.h"
+
+#include <time.h>
+#include <sys/time.h>
+
+#include "py/smallint.h"
+
+char * cstr ;
+size_t cstr_max=0;
+
+extern mp_lexer_t* mp_lexer_new_from_file(const char *filename);
+
+//#include <dlfcn.h>
+//extern uintptr_t SDL_embed(uintptr_t *ptr);
+
+#if MICROPY_PERSISTENT_CODE_SAVE
+    extern void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename);
+// Save .mpy file to file system
+    int raw_code_save_file(mp_raw_code_t *rc, const char *filename) {  return 0; }
+#endif
+
+# this one is used on MCU to run asyncio loop from repl  loop idle state
+# TODO: fix NO_NLR mode
+#if NO_NLR
+mp_obj_t execute_from_str(const char *str) {
+      return (mp_obj_t)0;
+}
+#else
+mp_obj_t execute_from_str(const char *str) {
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        qstr src_name = 1/*MP_QSTR_*/;
+        mp_lexer_t *lex = mp_lexer_new_from_str_len(src_name, str, strlen(str), false);
+        mp_parse_tree_t pt = mp_parse(lex, MP_PARSE_FILE_INPUT);
+        mp_obj_t module_fun = mp_compile(&pt, src_name, false);
+        mp_call_function_0(module_fun);
+        nlr_pop();
+        return 0;
+    } else {
+        // uncaught exception
+        return (mp_obj_t)nlr.ret_val;
+    }
+}
+#endif
+
+STATIC void coropass(void) {
+    const char sched[] =
+        "__module__ = __import__('sys').modules.get('asyncio',None);"
+        "__module__ = __module__ and __module__.get_event_loop().step()";
+
+    const char *sched_ptr = &sched[0];
+    execute_from_str( sched_ptr);
+    MP_STATE_PORT(coro_call_counter++);
+}
+
+# corepy
+
+static mp_obj_t * ffpy = NULL;
+static mp_obj_t * ffpy_add = NULL;
+
+void
+pyv(mp_obj_t value) {
+    if (ffpy_add)
+        mp_call_function_n_kw((mp_obj_t *)ffpy_add, 1, 0, &value);
+}
+
+mp_obj_t
+pycore(const char *fn) {
+    uintptr_t __creturn__ = 0;
+    qstr qfn ;
+    qfn = qstr_from_strn(fn, strlen(fn));
+    mp_obj_t qst = MP_OBJ_NEW_QSTR(qfn);
+
+    // ------- method body (try/finally) -----
+    fprintf(stderr,"FFYPY[%p->%s]\n", ffpy, fn );
+    if (ffpy) {
+        mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &qst);
+    }
+    return mp_obj_new_int_from_ptr(__creturn__);
+}
+
+# finalizers
+
+typedef struct _on_del_t {
+    mp_obj_base_t base;
+    mp_obj_t fun;
+} on_del_t;
+
+extern mp_obj_type_t mp_type_on_del;
+
+STATIC mp_obj_t new_on_del(const mp_obj_type_t *type_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+    mp_arg_check_num(n_args, n_kw, 1, 1, false);
+    on_del_t *o = m_new_obj_with_finaliser(on_del_t);
+    o->base.type = &mp_type_on_del;
+    o->fun = args[0];
+    return o;
+}
+
+STATIC mp_obj_t on_del_del(mp_obj_t self_in) {
+    return mp_call_function_0(((on_del_t *)self_in)->fun);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(on_del_del_obj, on_del_del);
+
+STATIC void on_del_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
+    if (dest[0] == MP_OBJ_NULL && attr == MP_QSTR___del__) {
+        dest[0] = MP_OBJ_FROM_PTR(&on_del_del_obj);
+        dest[1] = self_in;
+    }
+}
+
+mp_obj_type_t mp_type_on_del = {
+    {&mp_type_type},
+    .name = MP_QSTR_on_del,
+    .make_new = new_on_del,
+    .attr = on_del_attr,
+};
+
+
+def set_io_buffer(ptr: int = 0, ptr_max: int = 0):
+    uintptr_t * addr;
+    addr = (uintptr_t *)(uintptr_t)ptr;
+    cstr = (char *)addr;
+    cstr_max = (size_t)ptr_max ;
+    cstr[0]=0;
+
+def run(runstr : const_char_p = "[]"):
+    # os interfacing, this is not really running except you could have eval() on the other side
+    # this is actually for passing json / cbor etc ...
+
+    size_t ln = strlen(runstr);
+    if ( ln < cstr_max ) {
+        strcpy(cstr,runstr);
+    } else {
+        fprintf(stderr, "buffer overrun in embed.run %zu >= %zu", ln, cstr_max);
+    }
+
+
+
+def CLI():
+    VMFLAGS_IF--;
+
+def STI():
+    VMFLAGS_IF++;
+
+def FLAGS_IF() -> _int_from_uint:
+    return VMFLAGS_IF
+
+def WAPY() -> _int_from_uint:
+    return WAPY_VALUE
+
+def os_print( data : const_char_p = "{}" ) -> void :
+    #fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
+    fprintf( stdout , "%s\n" , data );
+
+def os_write( data : const_char_p = "{}" ) -> void :
+    #fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
+    fprintf( stdout , "%s" , data );
+
+def os_stderr( data : const_char_p = "" ) -> void :
+    fprintf( stderr, "embed.os_stderr(%s)\n", data );
+
+def log( data : const_char_p = "" ) -> void :
+    fprintf( stderr, "%s\n", data );
+
+def builtins_vars(module_obj : mp_obj_t = None ) -> dict:
+    mp_obj_dict_t *mod_globals = mp_obj_module_get_globals(module_obj);
+    return mod_globals;
+
+def os_state_loop(state:int = 0)->int:
+    return mp_obj_new_int( state_os_loop(state) );
+
+def os_showloop()->void :
+    fprintf(stderr,"will show begin/end for os loop\n");
+    show_os_loop(1);
+
+def os_hideloop()->void :
+    fprintf(stderr,"will hide begin/end for os loop\n");
+    show_os_loop(0);
+
+
+def os_hook() ->void:
+    void (*void_ptr)(int) = MP_STATE_PORT(PyOS_InputHook);
+    if ( void_ptr != NULL ) {
+        printf("PyOS_InputHook %p TODO: allow py callback ptr\n", void_ptr);
+    } else {
+        printf("PyOS_InputHook undef TODO: allow py callback ptr\n");
+        if ( !MP_STATE_PORT(coro_call_counter)) {
+            MP_STATE_PORT(PyOS_InputHook) = &coropass ;
+            printf("coro task started\n");
+            coropass();
+        }
+    }
+
+// https://www.python.org/dev/peps/pep-0564/
+//    https://vstinner.github.io/python37-pep-564-nanoseconds.html
+def time_ns() -> int:
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    //unsigned long ul = ts.tv_nsec ;
+    return mp_obj_new_int_from_ull( ts.tv_nsec );
+
+// upy
+def time_ms() -> int:
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    //unsigned long ul = ts.tv_nsec * 1000000 ;
+    return mp_obj_new_int_from_ull( ts.tv_nsec * 1000000);
+
+def ticks_add(ticks : int=0, delta : int=0)->int:
+    return mp_obj_new_int_from_ull( ticks + delta );
+
+def ticks_diff(ticks : int=0, delta : int=0)->int:
+    return mp_obj_new_int_from_ull( ticks - delta );
+
+
+def sleep_ms(ms : int =0) -> void :
+    //emscripten_sleep_with_yield( ms );
+    emscripten_sleep(ms);
+
+def sleep(s : float =0) -> void :
+    emscripten_sleep( (int)(s*1000) );
+
+
+def ticks_period() -> int:
+    return mp_obj_new_int_from_uint( MICROPY_PY_UTIME_TICKS_PERIOD );
+
+
+//def os_read() -> bytes:
+//    return bytes( repl_line );
+
+// TODO: remove after tests
+
+
+def os_read_useless() -> bytes:
+    // simple read string
+
+    static char buf[256];
+    //fputs(p, stdout);
+    char *s = fgets(buf, sizeof(buf), stdin);
+    if (!s) {
+        //return mp_obj_new_int(0);
+        buf[0]=0;
+        fprintf(stderr,"embed.os_read EOF\n" );
+    } else {
+        int l = strlen(buf);
+        if (buf[l - 1] == '\n') {
+            if ( (l>1) && (buf[l - 2] == '\r') ) {
+                buf[l - 2] = 0;
+            } else {
+                buf[l - 1] = 0;
+            }
+        } else {
+            l++;
+        }
+        fprintf(stderr,"embed.os_read [%s]\n", buf );
+    }
+    return bytes(buf);
+    # py comment #1
+
+
+def echosum1(num : int=0) -> int:
+    return MP_OBJ_NEW_SMALL_INT(num+1);
+
+# py comment #2
+
+def callsome(fnptr : void_p=npe) -> void:
+    void (*fn)() = fnptr;
+    (*fn)();
+
+def callpy(fn: const_char_p ="") -> void:
+    fprintf(stderr,"embed.callpy[%s]\n", fn )
+    pycore(fn)
+
+
+def address_of(ptr : void_p = NULL ) -> _int_from_ptr:
+    uintptr_t * ptraddr = (uintptr_t *)ptr;
+    uintptr_t ptrvalue = (uintptr_t)(void *)ptraddr;
+    return ptrvalue;
+
+
+def set_ffpy(fn: void_p) -> void:
+    fprintf(stderr,"embed.ffpy[%p]\n", fn );
+    ffpy = (mp_obj_t *)fn ;
+
+def set_ffpy_add(fn: void_p) -> void:
+    fprintf(stderr,"embed.ffpy[%p]\n", fn );
+    ffpy_add = (mp_obj_t *)fn ;
+
+
+
+def corepy(fn: const_char_p = "") -> _int_from_ptr:
+    fprintf(stderr,"embed.ffipy[%p(%s)]\n", ffpy, fn );
+    if (ffpy):
+        mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &argv[0]);
+
+
+def somecall(s:str='pouet'):
+    fprintf(stderr, "FPRINTF[%s]\n", mp_obj_str_get_str((char *)s) );
+    print( (char *)s);
+
+// c comment #3
+

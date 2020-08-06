@@ -1111,6 +1111,13 @@ mp_obj_t mp_load_method_maybe(mp_obj_t obj, qstr attr, mp_obj_t *dest) {
         dest[0] = MP_OBJ_FROM_PTR(type);
         return MP_OBJ_SENTINEL; // success
     }
+    if (attr == MP_QSTR___base__) { // PMPP https://github.com/micropython/micropython/pull/4368
+        const mp_obj_type_t *t = MP_OBJ_TO_PTR(obj);
+        if (mp_obj_is_instance_type(t)) {
+            dest[0] = MP_OBJ_FROM_PTR(t->parent);
+            return MP_OBJ_SENTINEL; // success
+        }
+    }
     #endif
 
     if (attr == MP_QSTR___next__ && type->iternext != NULL) {
