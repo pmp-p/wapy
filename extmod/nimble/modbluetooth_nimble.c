@@ -96,6 +96,13 @@ STATIC ble_uuid_t *create_nimble_uuid(const mp_obj_bluetooth_uuid_t *uuid, ble_u
     }
 }
 
+// modbluetooth (and the layers above it) work in BE for addresses, Nimble works in LE.
+STATIC void reverse_addr_byte_order(uint8_t *addr_out, const uint8_t *addr_in) {
+    for (int i = 0; i < 6; ++i) {
+        addr_out[i] = addr_in[5 - i];
+    }
+}
+
 #if MICROPY_PY_BLUETOOTH_ENABLE_CENTRAL_MODE
 
 STATIC mp_obj_bluetooth_uuid_t create_mp_uuid(const ble_uuid_any_t *uuid) {
@@ -121,13 +128,6 @@ STATIC mp_obj_bluetooth_uuid_t create_mp_uuid(const ble_uuid_any_t *uuid) {
             assert(false);
     }
     return result;
-}
-
-// modbluetooth (and the layers above it) work in BE for addresses, Nimble works in LE.
-STATIC void reverse_addr_byte_order(uint8_t *addr_out, const uint8_t *addr_in) {
-    for (int i = 0; i < 6; ++i) {
-        addr_out[i] = addr_in[5 - i];
-    }
 }
 
 STATIC ble_addr_t create_nimble_addr(uint8_t addr_type, const uint8_t *addr) {
@@ -248,6 +248,15 @@ STATIC int gap_event_cb(struct ble_gap_event *event, void *arg) {
             reverse_addr_byte_order(addr, event->disconnect.conn.peer_id_addr.val);
             mp_bluetooth_gap_on_connected_disconnected(MP_BLUETOOTH_IRQ_CENTRAL_DISCONNECT, event->disconnect.conn.conn_handle, event->disconnect.conn.peer_id_addr.type, addr);
             break;
+
+        case BLE_GAP_EVENT_NOTIFY_TX: {
+            DEBUG_EVENT_printf("gap_event_cb: notify_tx: %d %d\n", event->notify_tx.indication, event->notify_tx.status);
+            // This event corresponds to either a sent notify/indicate (status == 0), or an indication confirmation (status != 0).
+            if (event->notify_tx.indication && event->notify_tx.status != 0) {
+                // Map "done/ack" to 0, otherwise pass the status directly.
+                mp_bluetooth_gatts_on_indicate_complete(event->notify_tx.conn_handle, event->notify_tx.attr_handle, event->notify_tx.status == BLE_HS_EDONE ? 0 : event->notify_tx.status);
+            }
+        }
     }
 
     return 0;
@@ -587,13 +596,13 @@ int mp_bluetooth_gatts_notify(uint16_t conn_handle, uint16_t value_handle) {
     return ble_hs_err_to_errno(ble_gattc_notify(conn_handle, value_handle));
 }
 
-int mp_bluetooth_gatts_notify_send(uint16_t conn_handle, uint16_t value_handle, const uint8_t *value, size_t *value_len) {
+int mp_bluetooth_gatts_notify_send(uint16_t conn_handle, uint16_t value_handle, const uint8_t *value, size_t value_len) {
     if (!mp_bluetooth_is_active()) {
         return ERRNO_BLUETOOTH_NOT_ACTIVE;
     }
-    struct os_mbuf *om = ble_hs_mbuf_from_flat(value, *value_len);
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(value, value_len);
     if (om == NULL) {
-        return -1;
+        return MP_ENOMEM;
     }
     // TODO: check that notify_custom takes ownership of om, if not os_mbuf_free_chain(om).
     return ble_hs_err_to_errno(ble_gattc_notify_custom(conn_handle, value_handle, om));
@@ -603,6 +612,8 @@ int mp_bluetooth_gatts_indicate(uint16_t conn_handle, uint16_t value_handle) {
     if (!mp_bluetooth_is_active()) {
         return ERRNO_BLUETOOTH_NOT_ACTIVE;
     }
+    // This will raise BLE_GAP_EVENT_NOTIFY_TX with a status when it is
+    // acknowledged (or timeout/error).
     return ble_hs_err_to_errno(ble_gattc_indicate(conn_handle, value_handle));
 }
 
@@ -846,7 +857,7 @@ STATIC int ble_gatt_attr_read_cb(uint16_t conn_handle, const struct ble_gatt_err
     if (error->status == 0) {
         gattc_on_data_available(MP_BLUETOOTH_IRQ_GATTC_READ_RESULT, conn_handle, attr->handle, attr->om);
     }
-    mp_bluetooth_gattc_on_read_write_status(MP_BLUETOOTH_IRQ_GATTC_READ_DONE, conn_handle, attr->handle, error->status);
+    mp_bluetooth_gattc_on_read_write_status(MP_BLUETOOTH_IRQ_GATTC_READ_DONE, conn_handle, attr ? attr->handle : -1, error->status);
     return 0;
 }
 
