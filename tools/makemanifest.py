@@ -25,7 +25,6 @@
 # THE SOFTWARE.
 
 from __future__ import print_function
-import errno
 import sys
 import os
 import subprocess
@@ -165,17 +164,10 @@ def get_timestamp_newest(path):
     return ts_newest
 
 
-def mkdir(path):
-    cur_path = ""
-    for p in path.split("/")[:-1]:
-        cur_path += p + "/"
-        try:
-            os.mkdir(cur_path)
-        except OSError as er:
-            if er.args[0] == errno.EEXIST:
-                pass
-            else:
-                raise er
+def mkdir(filename):
+    path = os.path.dirname(filename)
+    if not os.path.isdir(path):
+        os.makedirs(path)
 
 
 def freeze_internal(kind, path, script, opt):
@@ -288,7 +280,8 @@ def main():
                     + ["-o", outfile, "-s", script, "-O{}".format(opt), infile]
                 )
                 if res != 0:
-                    print("error compiling {}: {}".format(infile, out))
+                    print("error compiling {}:".format(infile))
+                    sys.stdout.buffer.write(out)
                     raise SystemExit(1)
                 ts_outfile = get_timestamp(outfile)
             mpy_files.append(outfile)
@@ -334,7 +327,7 @@ def main():
             b"    (qstr_pool_t*)&mp_qstr_const_pool, MP_QSTRnumber_of, 0, 0\n"
             b"};\n"
             b'const char mp_frozen_mpy_names[1] = {"\\0"};\n'
-            b"const mp_raw_code_t *const mp_frozen_mpy_content[0] = {};\n"
+            b"const mp_raw_code_t *const mp_frozen_mpy_content[1] = {NULL};\n"
         )
 
     # Generate output
