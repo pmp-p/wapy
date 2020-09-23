@@ -141,11 +141,9 @@ STATIC void led_pwm_init(int led) {
         case 2:
             __TIM2_CLK_ENABLE();
             break;
-        #if defined(TIM3)
         case 3:
             __TIM3_CLK_ENABLE();
             break;
-        #endif
         default:
             assert(0);
     }

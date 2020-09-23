@@ -115,8 +115,11 @@ typedef struct _mp_obj_uctypes_struct_t {
     byte *addr;
     uint32_t flags;
 } mp_obj_uctypes_struct_t;
-
+#if NO_NLR
+STATIC mp_obj_t syntax_error(void) {
+#else
 STATIC NORETURN void syntax_error(void) {
+#endif
     mp_raise_TypeError(MP_ERROR_TEXT("syntax error in uctypes descriptor"));
 }
 
@@ -218,9 +221,12 @@ STATIC mp_uint_t uctypes_struct_size(mp_obj_t desc_in, int layout_type, mp_uint_
             // but scalar structure field is lowered into native Python int, so all
             // type info is lost. So, we cannot say if it's scalar type description,
             // or such lowered scalar.
-            mp_raise_TypeError(MP_ERROR_TEXT("can't unambiguously get sizeof scalar"));
+            mp_raise_TypeError_or_return(MP_ERROR_TEXT("can't unambiguously get sizeof scalar"), (mp_uint_t)-1);
         }
         syntax_error();
+#if NO_NLR
+        return (mp_uint_t)-1;
+#endif
     }
 
     mp_obj_dict_t *d = MP_OBJ_TO_PTR(desc_in);
@@ -246,6 +252,9 @@ STATIC mp_uint_t uctypes_struct_size(mp_obj_t desc_in, int layout_type, mp_uint_
             } else {
                 if (!mp_obj_is_type(v, &mp_type_tuple)) {
                     syntax_error();
+#if NO_NLR
+                    return (mp_uint_t)-1;
+#endif
                 }
                 mp_obj_tuple_t *t = MP_OBJ_TO_PTR(v);
                 mp_int_t offset = MP_OBJ_SMALL_INT_VALUE(t->items[0]);
@@ -288,6 +297,11 @@ STATIC mp_obj_t uctypes_struct_sizeof(size_t n_args, const mp_obj_t *args) {
         }
     }
     mp_uint_t size = uctypes_struct_size(obj_in, layout_type, &max_field_size);
+#if NO_NLR
+    if (size == (mp_uint_t)-1) {
+        return MP_OBJ_NULL;
+    }
+#endif
     return MP_OBJ_NEW_SMALL_INT(size);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(uctypes_struct_sizeof_obj, 1, 2, uctypes_struct_sizeof);
@@ -477,11 +491,17 @@ STATIC mp_obj_t uctypes_struct_attr_op(mp_obj_t self_in, qstr attr, mp_obj_t set
     }
 
     if (!mp_obj_is_type(deref, &mp_type_tuple)) {
+#if NO_NLR
+        return
+#endif
         syntax_error();
     }
 
     if (set_val != MP_OBJ_NULL) {
         // Cannot assign to aggregate
+#if NO_NLR
+        return
+#endif
         syntax_error();
     }
 

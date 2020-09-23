@@ -144,11 +144,15 @@ bool MICROPY_WRAP_MP_SCHED_SCHEDULE(mp_sched_schedule)(mp_obj_t function, mp_obj
 // A variant of this is inlined in the VM at the pending exception check
 void mp_handle_pending(bool raise_exc) {
     if (MP_STATE_VM(mp_pending_exception) != MP_OBJ_NULL) {
+#if NO_NLR
+#pragma message "mp_handle_pending what, where and how ?"
+#else
         mp_obj_t obj = MP_STATE_VM(mp_pending_exception);
         MP_STATE_VM(mp_pending_exception) = MP_OBJ_NULL;
         if (raise_exc) {
             nlr_raise(obj);
         }
+#endif
     }
 }
 

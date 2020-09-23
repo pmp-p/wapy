@@ -113,6 +113,11 @@ STATIC void mp_reader_posix_close(void *data) {
 
 void mp_reader_new_file_from_fd(mp_reader_t *reader, int fd, bool close_fd) {
     mp_reader_posix_t *rp = m_new_obj(mp_reader_posix_t);
+#if NO_NLR
+    if (rp == NULL) {
+        return;
+    }
+#endif
     rp->close_fd = close_fd;
     rp->fd = fd;
     MP_THREAD_GIL_EXIT();
@@ -122,7 +127,12 @@ void mp_reader_new_file_from_fd(mp_reader_t *reader, int fd, bool close_fd) {
             close(fd);
         }
         MP_THREAD_GIL_ENTER();
+#if NO_NLR
+        mp_raise_OSError_o(errno);
+        return;
+#else
         mp_raise_OSError(errno);
+#endif
     }
     MP_THREAD_GIL_ENTER();
     rp->len = n;
@@ -139,7 +149,13 @@ void mp_reader_new_file(mp_reader_t *reader, const char *filename) {
     int fd = open(filename, O_RDONLY, 0644);
     MP_THREAD_GIL_ENTER();
     if (fd < 0) {
+#if NO_NLR
+        mp_raise_OSError_o(errno);
+        return;
+#else
         mp_raise_OSError(errno);
+#endif
+
     }
     mp_reader_new_file_from_fd(reader, fd, true);
 }

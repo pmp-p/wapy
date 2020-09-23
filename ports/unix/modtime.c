@@ -132,7 +132,7 @@ STATIC mp_obj_t mod_time_sleep(mp_obj_t arg) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_time_sleep_obj, mod_time_sleep);
 
-STATIC mp_obj_t mod_time_gm_local_time(size_t n_args, const mp_obj_t *args, struct tm *(*time_func)(const time_t *timep)) {
+STATIC mp_obj_t mod_time_localtime(size_t n_args, const mp_obj_t *args) {
     time_t t;
     if (n_args == 0) {
         t = time(NULL);
@@ -144,7 +144,7 @@ STATIC mp_obj_t mod_time_gm_local_time(size_t n_args, const mp_obj_t *args, stru
         t = mp_obj_get_int(args[0]);
         #endif
     }
-    struct tm *tm = time_func(&t);
+    struct tm *tm = localtime(&t);
 
     mp_obj_t ret = mp_obj_new_tuple(9, NULL);
 
@@ -164,15 +164,6 @@ STATIC mp_obj_t mod_time_gm_local_time(size_t n_args, const mp_obj_t *args, stru
     tuple->items[8] = MP_OBJ_NEW_SMALL_INT(tm->tm_isdst);
 
     return ret;
-}
-
-STATIC mp_obj_t mod_time_gmtime(size_t n_args, const mp_obj_t *args) {
-    return mod_time_gm_local_time(n_args, args, gmtime);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_time_gmtime_obj, 0, 1, mod_time_gmtime);
-
-STATIC mp_obj_t mod_time_localtime(size_t n_args, const mp_obj_t *args) {
-    return mod_time_gm_local_time(n_args, args, localtime);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_time_localtime_obj, 0, 1, mod_time_localtime);
 
@@ -219,7 +210,6 @@ STATIC const mp_rom_map_elem_t mp_module_time_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ticks_cpu), MP_ROM_PTR(&mp_utime_ticks_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_ticks_add), MP_ROM_PTR(&mp_utime_ticks_add_obj) },
     { MP_ROM_QSTR(MP_QSTR_ticks_diff), MP_ROM_PTR(&mp_utime_ticks_diff_obj) },
-    { MP_ROM_QSTR(MP_QSTR_gmtime), MP_ROM_PTR(&mod_time_gmtime_obj) },
     { MP_ROM_QSTR(MP_QSTR_localtime), MP_ROM_PTR(&mod_time_localtime_obj) },
     { MP_ROM_QSTR(MP_QSTR_mktime), MP_ROM_PTR(&mod_time_mktime_obj) },
 };

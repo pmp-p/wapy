@@ -24,7 +24,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#if NO_NLR
+#error "Wrong file: use _no_nlr.c"
+#endif
 #include <string.h>
 #include <assert.h>
 

@@ -44,6 +44,8 @@ LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections
 endif
 LDFLAGS = $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
 
+include ../ports/wapy/wapy.mk
+
 # source files
 SRC_C = \
 	main.c \

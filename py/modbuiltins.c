@@ -23,6 +23,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#if NO_NLR
+#error "Wrong file: use _no_nlr.c"
+#endif
 
 #include <stdio.h>
 #include <assert.h>
@@ -624,7 +627,8 @@ STATIC const mp_rom_map_elem_t mp_module_builtins_globals_table[] = {
     // built-in core functions
     { MP_ROM_QSTR(MP_QSTR___build_class__), MP_ROM_PTR(&mp_builtin___build_class___obj) },
     { MP_ROM_QSTR(MP_QSTR___import__), MP_ROM_PTR(&mp_builtin___import___obj) },
-    { MP_ROM_QSTR(MP_QSTR___repl_print__), MP_ROM_PTR(&mp_builtin___repl_print___obj) },
+//    { MP_ROM_QSTR(MP_QSTR___repl_print__), MP_ROM_PTR(&mp_builtin___repl_print___obj) },
+    { MP_ROM_QSTR(MP_QSTR_displayhook), MP_ROM_PTR(&mp_builtin___repl_print___obj) },
 
     // built-in types
     { MP_ROM_QSTR(MP_QSTR_bool), MP_ROM_PTR(&mp_type_bool) },

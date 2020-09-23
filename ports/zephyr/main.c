@@ -38,7 +38,9 @@
 #include <usb/usb_device.h>
 #endif
 
+#ifdef CONFIG_FLASH_MAP
 #include <storage/flash_map.h>
+#endif
 
 #include "py/mperrno.h"
 #include "py/compile.h"

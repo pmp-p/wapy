@@ -87,7 +87,11 @@ STATIC void namedtuple_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
     } else {
         // delete/store attribute
         // provide more detailed error message than we'd get by just returning
+#if NO_NLR
+        mp_raise_o( mp_obj_new_exception_msg(&mp_type_AttributeError, MP_ERROR_TEXT("can't set attribute")) );
+#else
         mp_raise_msg(&mp_type_AttributeError, MP_ERROR_TEXT("can't set attribute"));
+#endif
     }
 }
 
@@ -97,14 +101,17 @@ STATIC mp_obj_t namedtuple_make_new(const mp_obj_type_t *type_in, size_t n_args,
     if (n_args + n_kw != num_fields) {
         #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
         mp_arg_error_terse_mismatch();
+#if NO_NLR
+        return MP_OBJ_NULL;
+#endif
         #elif MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_NORMAL
-        mp_raise_msg_varg(&mp_type_TypeError,
+        mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
             MP_ERROR_TEXT("function takes %d positional arguments but %d were given"),
-            num_fields, n_args + n_kw);
+            num_fields, n_args + n_kw));
         #elif MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_DETAILED
-        mp_raise_msg_varg(&mp_type_TypeError,
+        mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
             MP_ERROR_TEXT("%q() takes %d positional arguments but %d were given"),
-            type->base.name, num_fields, n_args + n_kw);
+            type->base.name, num_fields, n_args + n_kw));
         #endif
     }
 
@@ -123,16 +130,21 @@ STATIC mp_obj_t namedtuple_make_new(const mp_obj_type_t *type_in, size_t n_args,
         if (id == (size_t)-1) {
             #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
             mp_arg_error_terse_mismatch();
+#if NO_NLR
+            return MP_OBJ_NULL;
+#endif
             #else
-            mp_raise_msg_varg(&mp_type_TypeError, MP_ERROR_TEXT("unexpected keyword argument '%q'"), kw);
+            mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
+                MP_ERROR_TEXT("unexpected keyword argument '%q'"), kw));
             #endif
         }
         if (tuple->items[id] != MP_OBJ_NULL) {
             #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
-            mp_arg_error_terse_mismatch();
+                mp_arg_error_terse_mismatch();
+                return MP_OBJ_NULL;
             #else
-            mp_raise_msg_varg(&mp_type_TypeError,
-                MP_ERROR_TEXT("function got multiple values for argument '%q'"), kw);
+                mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
+                    MP_ERROR_TEXT("function got multiple values for argument '%q'"), kw));
             #endif
         }
         tuple->items[id] = args[i + 1];
@@ -176,7 +188,13 @@ STATIC mp_obj_t new_namedtuple_type(mp_obj_t name_in, mp_obj_t fields_in) {
         fields_in = mp_obj_str_split(1, &fields_in);
     }
     #endif
+#if NO_NLR
+    if (mp_obj_get_array(fields_in, &n_fields, &fields)) {
+        return MP_OBJ_NULL;
+    }
+#else
     mp_obj_get_array(fields_in, &n_fields, &fields);
+#endif
     return mp_obj_new_namedtuple_type(name, n_fields, fields);
 }
 MP_DEFINE_CONST_FUN_OBJ_2(mp_namedtuple_obj, new_namedtuple_type);

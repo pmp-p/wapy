@@ -93,6 +93,9 @@ uintptr_t mp_uos_dupterm_poll(uintptr_t poll_flags) {
 }
 
 int mp_uos_dupterm_rx_chr(void) {
+#if __WASM__
+    #pragma message "error: incompatible pointer to integer conversion returning 'mp_obj_t' (aka 'void *') from a function with result type 'int' [-Werror,-Wint-conversion]"
+#else
     for (size_t idx = 0; idx < MICROPY_PY_OS_DUPTERM; ++idx) {
         if (MP_STATE_VM(dupterm_objs[idx]) == MP_OBJ_NULL) {
             continue;
@@ -142,7 +145,7 @@ int mp_uos_dupterm_rx_chr(void) {
             mp_uos_deactivate(idx, "dupterm: Exception in read() method, deactivating: ", MP_OBJ_FROM_PTR(nlr.ret_val));
         }
     }
-
+#endif
     // No chars available
     return -1;
 }

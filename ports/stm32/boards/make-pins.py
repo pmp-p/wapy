@@ -515,10 +515,7 @@ def main():
         action="store_true",
     )
     parser.add_argument(
-        "-b",
-        "--board",
-        dest="board_filename",
-        help="Specifies the board file",
+        "-b", "--board", dest="board_filename", help="Specifies the board file",
     )
     parser.add_argument(
         "-p",

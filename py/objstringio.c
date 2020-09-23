@@ -35,6 +35,22 @@
 
 #if MICROPY_PY_IO
 
+#if NO_NLR
+
+#if MICROPY_CPYTHON_COMPAT
+STATIC int check_stringio_is_open(const mp_obj_stringio_t *o) {
+    if (o->vstr == NULL) {
+        mp_raise_ValueError_o(MP_ERROR_TEXT("I/O operation on closed file"));
+        return 1;
+    }
+    return 0;
+}
+#else
+#define check_stringio_is_open(o) 0
+#endif
+
+#else // NO_NLR
+
 #if MICROPY_CPYTHON_COMPAT
 STATIC void check_stringio_is_open(const mp_obj_stringio_t *o) {
     if (o->vstr == NULL) {
@@ -45,6 +61,8 @@ STATIC void check_stringio_is_open(const mp_obj_stringio_t *o) {
 #define check_stringio_is_open(o)
 #endif
 
+#endif // NO_NLR
+
 STATIC void stringio_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     (void)kind;
     mp_obj_stringio_t *self = MP_OBJ_TO_PTR(self_in);
@@ -54,7 +72,14 @@ STATIC void stringio_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
 STATIC mp_uint_t stringio_read(mp_obj_t o_in, void *buf, mp_uint_t size, int *errcode) {
     (void)errcode;
     mp_obj_stringio_t *o = MP_OBJ_TO_PTR(o_in);
+
+#if NO_NLR
+    if (check_stringio_is_open(o)) {
+        return MP_STREAM_ERROR;
+    }
+#else
     check_stringio_is_open(o);
+#endif
     if (o->vstr->len <= o->pos) {  // read to EOF, or seeked to EOF or beyond
         return 0;
     }
@@ -78,8 +103,14 @@ STATIC void stringio_copy_on_write(mp_obj_stringio_t *o) {
 STATIC mp_uint_t stringio_write(mp_obj_t o_in, const void *buf, mp_uint_t size, int *errcode) {
     (void)errcode;
     mp_obj_stringio_t *o = MP_OBJ_TO_PTR(o_in);
-    check_stringio_is_open(o);
 
+#if NO_NLR
+    if (check_stringio_is_open(o)) {
+        return MP_STREAM_ERROR;
+    }
+#else
+    check_stringio_is_open(o);
+#endif
     if (o->vstr->fixed_buf) {
         stringio_copy_on_write(o);
     }
@@ -164,8 +195,16 @@ STATIC mp_uint_t stringio_ioctl(mp_obj_t o_in, mp_uint_t request, uintptr_t arg,
 
 STATIC mp_obj_t stringio_getvalue(mp_obj_t self_in) {
     mp_obj_stringio_t *self = MP_OBJ_TO_PTR(self_in);
+#if NO_NLR
+#pragma message "TODO: Try to avoid copying string"
+    if (check_stringio_is_open(self)) {
+        return MP_OBJ_NULL;
+    }
+#else
     check_stringio_is_open(self);
     // TODO: Try to avoid copying string
+#endif
+
     return mp_obj_new_str_of_type(STREAM_TO_CONTENT_TYPE(self), (byte *)self->vstr->buf, self->vstr->len);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(stringio_getvalue_obj, stringio_getvalue);
@@ -185,8 +224,8 @@ STATIC mp_obj_stringio_t *stringio_new(const mp_obj_type_t *type) {
 }
 
 STATIC mp_obj_t stringio_make_new(const mp_obj_type_t *type_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
-    (void)n_kw; // TODO check n_kw==0
-
+    (void)n_kw;
+#pragma message "TODO: check n_kw==0"
     mp_uint_t sz = 16;
     bool initdata = false;
     mp_buffer_info_t bufinfo;

@@ -1,10 +1,11 @@
 # test compile builtin
 
-try:
-    compile
-except NameError:
-    print("SKIP")
-    raise SystemExit
+def have_compile():
+    try:
+        compile
+        return True
+    except NameError:
+        return False
 
 def test():
     global x
@@ -25,9 +26,8 @@ def test():
     exec(c, {}, {"x":3})
 
     # single/eval mode
-    exec(compile("if 1: 10 + 1\n", "file", "single"))
-    exec(compile("print(10 + 2)", "file", "single"))
-    print(eval(compile("10 + 3", "file", "eval")))
+    exec(compile('print(1 + 1)', 'file', 'single'))
+    print(eval(compile('1 + 1', 'file', 'eval')))
 
     # bad mode
     try:
@@ -42,4 +42,8 @@ def test():
         print("NameError")
     print(x) # check 'x' still exists as a global
 
-test()
+if have_compile():
+    test()
+else:
+    print("SKIP")
+    raise SystemExit

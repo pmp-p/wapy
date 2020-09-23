@@ -35,14 +35,23 @@ mp_uint_t mp_stack_usage(void);
 #if MICROPY_STACK_CHECK
 
 void mp_stack_set_limit(mp_uint_t limit);
+#if NO_NLR
+int mp_stack_check(void);
+#else
 void mp_stack_check(void);
+#endif
 #define MP_STACK_CHECK() mp_stack_check()
 
 #else
 
 #define mp_stack_set_limit(limit)
+#if NO_NLR
+static inline int MP_STACK_CHECK(void) {
+    return 0;
+}
+#else
 #define MP_STACK_CHECK()
-
+#endif // NO_NLR
 #endif
 
 #endif // MICROPY_INCLUDED_PY_STACKCTRL_H

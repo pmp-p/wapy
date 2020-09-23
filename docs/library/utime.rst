@@ -36,17 +36,11 @@ behave not as expected.
 Functions
 ---------
 
-.. function:: gmtime([secs])
-              localtime([secs])
+.. function:: localtime([secs])
 
-   Convert the time *secs* expressed in seconds since the Epoch (see above) into an
-   8-tuple which contains: ``(year, month, mday, hour, minute, second, weekday, yearday)``
-   If *secs* is not provided or None, then the current time from the RTC is used.
-
-   The `gmtime()` function returns a date-time tuple in UTC, and `localtime()` returns a
-   date-time tuple in local time.
-
-   The format of the entries in the 8-tuple are:
+   Convert a time expressed in seconds since the Epoch (see above) into an 8-tuple which
+   contains: (year, month, mday, hour, minute, second, weekday, yearday)
+   If secs is not provided or None, then the current time from the RTC is used.
 
    * year includes the century (for example 2014).
    * month   is 1-12

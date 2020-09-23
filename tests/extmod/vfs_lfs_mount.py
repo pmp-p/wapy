@@ -68,17 +68,17 @@ def test(bdev, vfs_class):
     uos.umount("/lfs")
 
     # clear imported modules
-    usys.modules.clear()
+    sys.modules.clear()
 
 
 bdev = RAMBlockDevice(30)
 
 # initialise path
-import usys
+import sys
 
-usys.path.clear()
-usys.path.append("/lfs")
-usys.path.append("")
+sys.path.clear()
+sys.path.append("/lfs")
+sys.path.append("")
 
 # run tests
 test(bdev, uos.VfsLfs1)

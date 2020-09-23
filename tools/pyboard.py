@@ -70,7 +70,6 @@ Or:
 import sys
 import time
 import os
-import ast
 
 try:
     stdout = sys.stdout.buffer
@@ -427,12 +426,7 @@ class Pyboard:
                 data = bytearray()
                 self.exec_("print(r(%u))" % chunk_size, data_consumer=lambda d: data.extend(d))
                 assert data.endswith(b"\r\n\x04")
-                try:
-                    data = ast.literal_eval(str(data[:-3], "ascii"))
-                    if not isinstance(data, bytes):
-                        raise ValueError("Not bytes")
-                except (UnicodeError, ValueError) as e:
-                    raise PyboardError("fs_get: Could not interpret received data: %s" % str(e))
+                data = eval(str(data[:-3], "ascii"))
                 if not data:
                     break
                 f.write(data)

@@ -52,6 +52,9 @@ mp_uint_t mp_verbose_flag = 0;
 
 mp_raw_code_t *mp_emit_glue_new_raw_code(void) {
     mp_raw_code_t *rc = m_new0(mp_raw_code_t, 1);
+    if (rc == NULL) {
+        return NULL;
+    }
     rc->kind = MP_CODE_RESERVED;
     #if MICROPY_PY_SYS_SETTRACE
     rc->line_of_definition = 0;
@@ -85,14 +88,14 @@ void mp_emit_glue_assign_bytecode(mp_raw_code_t *rc, const byte *code,
     #endif
 
     #ifdef DEBUG_PRINT
-    #if !MICROPY_DEBUG_PRINTERS
+    #if !MICROPY_DEBUG_PRINTERS && !MICROPY_PERSISTENT_CODE_SAVE
     const size_t len = 0;
     #endif
     DEBUG_printf("assign byte code: code=%p len=" UINT_FMT " flags=%x\n", code, len, (uint)scope_flags);
     #endif
     #if MICROPY_DEBUG_PRINTERS
     if (mp_verbose_flag >= 2) {
-        mp_bytecode_print(&mp_plat_print, rc, code, len, const_table);
+        mp_bytecode_print(rc, code, len, const_table);
     }
     #endif
 }

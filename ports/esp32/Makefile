@@ -341,7 +341,7 @@ SRC_C = \
 	modnetwork.c \
 	network_lan.c \
 	network_ppp.c \
-	mpnimbleport.c \
+	nimble.c \
 	modsocket.c \
 	modesp.c \
 	esp32_partition.c \

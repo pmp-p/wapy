@@ -167,11 +167,6 @@ typedef struct _mp_state_vm_t {
     mp_obj_dict_t *mp_module_builtins_override_dict;
     #endif
 
-    #if MICROPY_PERSISTENT_CODE_TRACK_RELOC_CODE
-    // An mp_obj_list_t that tracks relocated native code to prevent the GC from reclaiming them.
-    mp_obj_t track_reloc_code_list;
-    #endif
-
     // include any root pointers defined by a port
     MICROPY_PORT_ROOT_POINTERS
 
@@ -262,7 +257,11 @@ typedef struct _mp_state_thread_t {
     mp_obj_dict_t *dict_locals;
     mp_obj_dict_t *dict_globals;
 
+#if NO_NLR
+    mp_obj_base_t *active_exception;
+#else
     nlr_buf_t *nlr_top;
+#endif
 
     #if MICROPY_PY_SYS_SETTRACE
     mp_obj_t prof_trace_callback;

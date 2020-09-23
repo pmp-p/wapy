@@ -241,6 +241,11 @@ STATIC void compile_decrease_except_level(compiler_t *comp) {
 
 STATIC scope_t *scope_new_and_link(compiler_t *comp, scope_kind_t kind, mp_parse_node_t pn, uint emit_options) {
     scope_t *scope = scope_new(kind, pn, comp->source_file, emit_options);
+#if NO_NLR
+    if (scope == NULL) {
+        return NULL;
+    }
+#endif
     scope->parent = comp->scope_cur;
     scope->next = NULL;
     if (comp->scope_head == NULL) {
@@ -1986,7 +1991,7 @@ STATIC void compile_expr_stmt(compiler_t *comp, mp_parse_node_struct_t *pns) {
     if (MP_PARSE_NODE_IS_NULL(pn_rhs)) {
         if (comp->is_repl && comp->scope_cur->kind == SCOPE_MODULE) {
             // for REPL, evaluate then print the expression
-            compile_load_id(comp, MP_QSTR___repl_print__);
+            compile_load_id(comp, MP_QSTR_displayhook);
             compile_node(comp, pns->nodes[0]);
             EMIT_ARG(call_function, 1, 0, 0);
             EMIT(pop_top);
@@ -2279,6 +2284,7 @@ STATIC void compile_atom_expr_normal(compiler_t *comp, mp_parse_node_struct_t *p
     size_t i = 0;
 
     // handle special super() call
+#pragma message "FIXME: broken on super().__init__(self) when parent is dict"
     if (comp->scope_cur->kind == SCOPE_FUNCTION
         && MP_PARSE_NODE_IS_ID(pns->nodes[0])
         && MP_PARSE_NODE_LEAF_ARG(pns->nodes[0]) == MP_QSTR_super
@@ -3508,6 +3514,11 @@ mp_raw_code_t *mp_compile_to_raw_code(mp_parse_tree_t *parse_tree, qstr source_f
     // create standard emitter; it's used at least for MP_PASS_SCOPE
     emit_t *emit_bc = emit_bc_new();
 
+#if NO_NLR
+    if (module_scope == NULL || emit_bc == NULL) {
+        return NULL;
+    }
+#endif
     // compile pass 1
     comp->emit = emit_bc;
     #if MICROPY_EMIT_NATIVE
@@ -3523,6 +3534,11 @@ mp_raw_code_t *mp_compile_to_raw_code(mp_parse_tree_t *parse_tree, qstr source_f
         {
             compile_scope(comp, s, MP_PASS_SCOPE);
 
+#if NO_NLR
+            if (MP_STATE_THREAD(active_exception) != NULL) {
+                return NULL;
+            }
+#endif
             // Check if any implicitly declared variables should be closed over
             for (size_t i = 0; i < s->id_info_len; ++i) {
                 id_info_t *id = &s->id_info[i];
@@ -3546,6 +3562,11 @@ mp_raw_code_t *mp_compile_to_raw_code(mp_parse_tree_t *parse_tree, qstr source_f
     // set max number of labels now that it's calculated
     emit_bc_set_max_num_labels(emit_bc, max_num_labels);
 
+#if NO_NLR
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        return NULL;
+    }
+#endif
     // compile pass 2 and 3
     #if MICROPY_EMIT_NATIVE
     emit_t *emit_native = NULL;
@@ -3571,7 +3592,11 @@ mp_raw_code_t *mp_compile_to_raw_code(mp_parse_tree_t *parse_tree, qstr source_f
                 compile_scope_inline_asm(comp, s, MP_PASS_CODE_SIZE);
             }
             #endif
+#if NO_NLR
+            if (MP_STATE_THREAD(active_exception) == NULL && comp->compile_error == MP_OBJ_NULL) {
+#else
             if (comp->compile_error == MP_OBJ_NULL) {
+#endif
                 compile_scope_inline_asm(comp, s, MP_PASS_EMIT);
             }
         } else
@@ -3610,7 +3635,11 @@ mp_raw_code_t *mp_compile_to_raw_code(mp_parse_tree_t *parse_tree, qstr source_f
             }
 
             // final pass: emit code
+#if NO_NLR
+            if (MP_STATE_THREAD(active_exception) == NULL && comp->compile_error == MP_OBJ_NULL) {
+#else
             if (comp->compile_error == MP_OBJ_NULL) {
+#endif
                 compile_scope(comp, s, MP_PASS_EMIT);
             }
         }
@@ -3651,15 +3680,26 @@ mp_raw_code_t *mp_compile_to_raw_code(mp_parse_tree_t *parse_tree, qstr source_f
     }
 
     if (comp->compile_error != MP_OBJ_NULL) {
-        nlr_raise(comp->compile_error);
+        mp_raise_or_return_value(comp->compile_error, NULL);
     } else {
         return outer_raw_code;
     }
 }
 
 mp_obj_t mp_compile(mp_parse_tree_t *parse_tree, qstr source_file, bool is_repl) {
+#if NO_NLR
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        // parser had an exception
+        return MP_OBJ_NULL;
+    }
+#endif
     mp_raw_code_t *rc = mp_compile_to_raw_code(parse_tree, source_file, is_repl);
     // return function that executes the outer module
+#if NO_NLR
+    if (rc == NULL) {
+        return MP_OBJ_NULL;
+    }
+#endif
     return mp_make_function_from_raw_code(rc, MP_OBJ_NULL, MP_OBJ_NULL);
 }
 

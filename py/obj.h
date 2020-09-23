@@ -328,7 +328,31 @@ typedef struct _mp_rom_obj_t { mp_const_obj_t o; } mp_rom_obj_t;
 
 #define MP_OBJ_FUN_ARGS_MAX (0xffff) // to set maximum value in n_args_max below
 #define MP_OBJ_FUN_MAKE_SIG(n_args_min, n_args_max, takes_kw) ((uint32_t)((((uint32_t)(n_args_min)) << 17) | (((uint32_t)(n_args_max)) << 1) | ((takes_kw) ? 1 : 0)))
-
+#if MICROPY_PY_FUNCTION_ATTRS
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define MP_DEFINE_CONST_FUN_OBJ_0(obj_name, fun_name) \
+    const mp_obj_fun_builtin_fixed_t obj_name = \
+        {{&mp_type_fun_builtin_0}, .fun._0 = fun_name, .name = TOSTRING(fun_name)}
+#define MP_DEFINE_CONST_FUN_OBJ_1(obj_name, fun_name) \
+    const mp_obj_fun_builtin_fixed_t obj_name = \
+        {{&mp_type_fun_builtin_1}, .fun._1 = fun_name, .name = TOSTRING(fun_name)}
+#define MP_DEFINE_CONST_FUN_OBJ_2(obj_name, fun_name) \
+    const mp_obj_fun_builtin_fixed_t obj_name = \
+        {{&mp_type_fun_builtin_2}, .fun._2 = fun_name, .name = TOSTRING(fun_name)}
+#define MP_DEFINE_CONST_FUN_OBJ_3(obj_name, fun_name) \
+    const mp_obj_fun_builtin_fixed_t obj_name = \
+        {{&mp_type_fun_builtin_3}, .fun._3 = fun_name, .name = TOSTRING(fun_name)}
+#define MP_DEFINE_CONST_FUN_OBJ_VAR(obj_name, n_args_min, fun_name) \
+    const mp_obj_fun_builtin_var_t obj_name = \
+        {{&mp_type_fun_builtin_var}, MP_OBJ_FUN_MAKE_SIG(n_args_min, MP_OBJ_FUN_ARGS_MAX, false), .fun.var = fun_name, .name = TOSTRING(fun_name)}
+#define MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(obj_name, n_args_min, n_args_max, fun_name) \
+    const mp_obj_fun_builtin_var_t obj_name = \
+        {{&mp_type_fun_builtin_var}, MP_OBJ_FUN_MAKE_SIG(n_args_min, n_args_max, false), .fun.var = fun_name, .name = TOSTRING(fun_name)}
+#define MP_DEFINE_CONST_FUN_OBJ_KW(obj_name, n_args_min, fun_name) \
+    const mp_obj_fun_builtin_var_t obj_name = \
+        {{&mp_type_fun_builtin_var}, MP_OBJ_FUN_MAKE_SIG(n_args_min, MP_OBJ_FUN_ARGS_MAX, true), .fun.kw = fun_name, .name = TOSTRING(fun_name)}
+#else
 #define MP_DEFINE_CONST_FUN_OBJ_0(obj_name, fun_name) \
     const mp_obj_fun_builtin_fixed_t obj_name = \
     {{&mp_type_fun_builtin_0}, .fun._0 = fun_name}
@@ -350,7 +374,7 @@ typedef struct _mp_rom_obj_t { mp_const_obj_t o; } mp_rom_obj_t;
 #define MP_DEFINE_CONST_FUN_OBJ_KW(obj_name, n_args_min, fun_name) \
     const mp_obj_fun_builtin_var_t obj_name = \
     {{&mp_type_fun_builtin_var}, MP_OBJ_FUN_MAKE_SIG(n_args_min, MP_OBJ_FUN_ARGS_MAX, true), .fun.kw = fun_name}
-
+#endif
 // These macros are used to define constant map/dict objects
 // You can put "static" in front of the definition to make it local
 
@@ -523,7 +547,12 @@ typedef struct _mp_buffer_p_t {
     mp_int_t (*get_buffer)(mp_obj_t obj, mp_buffer_info_t *bufinfo, mp_uint_t flags);
 } mp_buffer_p_t;
 bool mp_get_buffer(mp_obj_t obj, mp_buffer_info_t *bufinfo, mp_uint_t flags);
-void mp_get_buffer_raise(mp_obj_t obj, mp_buffer_info_t *bufinfo, mp_uint_t flags);
+#if NO_NLR
+bool
+#else
+void
+#endif
+mp_get_buffer_raise(mp_obj_t obj, mp_buffer_info_t *bufinfo, mp_uint_t flags);
 
 struct _mp_obj_type_t {
     // A type is an object so must start with this entry, which points to mp_type_type.
@@ -663,6 +692,9 @@ extern const mp_obj_type_t mp_type_StopAsyncIteration;
 extern const mp_obj_type_t mp_type_StopIteration;
 extern const mp_obj_type_t mp_type_SyntaxError;
 extern const mp_obj_type_t mp_type_SystemExit;
+#if NO_NLR
+extern const mp_obj_type_t mp_type_TimeoutError;
+#endif
 extern const mp_obj_type_t mp_type_TypeError;
 extern const mp_obj_type_t mp_type_UnicodeError;
 extern const mp_obj_type_t mp_type_ValueError;
@@ -781,10 +813,22 @@ bool mp_obj_get_int_maybe(mp_const_obj_t arg, mp_int_t *value);
 #if MICROPY_PY_BUILTINS_FLOAT
 mp_float_t mp_obj_get_float(mp_obj_t self_in);
 bool mp_obj_get_float_maybe(mp_obj_t arg, mp_float_t *value);
+#if MICROPY_PY_BUILTINS_COMPLEX
+#if NO_NLR
+int mp_obj_get_complex(mp_obj_t self_in, mp_float_t *real, mp_float_t *imag);
+#else
 void mp_obj_get_complex(mp_obj_t self_in, mp_float_t *real, mp_float_t *imag);
+#endif // NO_NLR
 bool mp_obj_get_complex_maybe(mp_obj_t self_in, mp_float_t *real, mp_float_t *imag);
-#endif
+#else
+    #error wtf
+#endif //MICROPY_PY_BUILTINS_COMPLEX
+#endif //MICROPY_PY_BUILTINS_FLOAT
+#if NO_NLR
+int mp_obj_get_array(mp_obj_t o, size_t *len, mp_obj_t **items); // *items may point inside a GC block
+#else
 void mp_obj_get_array(mp_obj_t o, size_t *len, mp_obj_t **items); // *items may point inside a GC block
+#endif
 void mp_obj_get_array_fixed_n(mp_obj_t o, size_t len, mp_obj_t **items); // *items may point inside a GC block
 size_t mp_get_index(const mp_obj_type_t *type, size_t len, mp_obj_t index, bool is_slice);
 mp_obj_t mp_obj_id(mp_obj_t o_in);
@@ -924,12 +968,16 @@ typedef struct _mp_obj_slice_t {
     mp_obj_t stop;
     mp_obj_t step;
 } mp_obj_slice_t;
+
 void mp_obj_slice_indices(mp_obj_t self_in, mp_int_t length, mp_bound_slice_t *result);
 
 // functions
 
 typedef struct _mp_obj_fun_builtin_fixed_t {
     mp_obj_base_t base;
+#if MICROPY_PY_FUNCTION_ATTRS
+    const char *name; //PMPP
+#endif
     union {
         mp_fun_0_t _0;
         mp_fun_1_t _1;
@@ -941,6 +989,9 @@ typedef struct _mp_obj_fun_builtin_fixed_t {
 typedef struct _mp_obj_fun_builtin_var_t {
     mp_obj_base_t base;
     uint32_t sig; // see MP_OBJ_FUN_MAKE_SIG
+#if MICROPY_PY_FUNCTION_ATTRS
+    const char *name; //PMPP
+#endif
     union {
         mp_fun_var_t var;
         mp_fun_kw_t kw;
@@ -983,7 +1034,12 @@ const mp_obj_t *mp_obj_property_get(mp_obj_t self_in);
 
 void mp_seq_multiply(const void *items, size_t item_sz, size_t len, size_t times, void *dest);
 #if MICROPY_PY_BUILTINS_SLICE
-bool mp_seq_get_fast_slice_indexes(mp_uint_t len, mp_obj_t slice, mp_bound_slice_t *indexes);
+#if NO_NLR
+int
+#else
+bool
+#endif
+mp_seq_get_fast_slice_indexes(mp_uint_t len, mp_obj_t slice, mp_bound_slice_t *indexes);
 #endif
 #define mp_seq_copy(dest, src, len, item_t) memcpy(dest, src, len * sizeof(item_t))
 #define mp_seq_cat(dest, src1, len1, src2, len2, item_t) { memcpy(dest, src1, (len1) * sizeof(item_t)); memcpy(dest + (len1), src2, (len2) * sizeof(item_t)); }

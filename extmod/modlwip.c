@@ -757,11 +757,8 @@ STATIC mp_uint_t lwip_tcp_receive(lwip_socket_obj_t *socket, byte *buf, mp_uint_
                 return 0;
             }
         } else if (socket->state != STATE_CONNECTED) {
-            if (socket->state >= STATE_NEW) {
-                *_errno = MP_ENOTCONN;
-            } else {
-                *_errno = error_lookup_table[-socket->state];
-            }
+            assert(socket->state < 0);
+            *_errno = error_lookup_table[-socket->state];
             return -1;
         }
     }

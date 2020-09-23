@@ -35,11 +35,6 @@ class RAMBlockDevice:
             return 0
 
 
-def print_stat(st, print_size=True):
-    # don't print times (just check that they have the correct type)
-    print(st[:6], st[6] if print_size else -1, type(st[7]), type(st[8]), type(st[9]))
-
-
 def test(bdev, vfs_class):
     print("test", vfs_class)
 
@@ -74,10 +69,10 @@ def test(bdev, vfs_class):
     vfs.mkdir("testdir")
 
     # stat a file
-    print_stat(vfs.stat("test"))
+    print(vfs.stat("test"))
 
     # stat a dir (size seems to vary on LFS2 so don't print that)
-    print_stat(vfs.stat("testdir"), False)
+    print(vfs.stat("testdir")[:6])
 
     # read
     with vfs.open("test", "r") as f:
@@ -117,8 +112,8 @@ def test(bdev, vfs_class):
 
     # create file in directory to make sure paths are relative
     vfs.open("test2", "w").close()
-    print_stat(vfs.stat("test2"))
-    print_stat(vfs.stat("/testdir/test2"))
+    print(vfs.stat("test2"))
+    print(vfs.stat("/testdir/test2"))
     vfs.remove("test2")
 
     # chdir back to root and remove testdir

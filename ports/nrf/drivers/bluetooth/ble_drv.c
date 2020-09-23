@@ -32,6 +32,7 @@
 
 #include "py/runtime.h"
 #include "ble_drv.h"
+#include "mpconfigport.h"
 #include "nrf_sdm.h"
 #include "ble_gap.h"
 #include "ble.h" // sd_ble_uuid_encode

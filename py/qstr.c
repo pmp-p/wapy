@@ -155,6 +155,9 @@ STATIC qstr qstr_add(const byte *q_ptr) {
         if (pool == NULL) {
             QSTR_EXIT();
             m_malloc_fail(new_alloc);
+#if NO_NLR
+            return 0;
+#endif
         }
         pool->prev = MP_STATE_VM(last_pool);
         pool->total_prev_len = MP_STATE_VM(last_pool)->total_prev_len + MP_STATE_VM(last_pool)->len;
@@ -201,7 +204,12 @@ qstr qstr_from_strn(const char *str, size_t len) {
         // check that len is not too big
         if (len >= (1 << (8 * MICROPY_QSTR_BYTES_IN_LEN))) {
             QSTR_EXIT();
+#if NO_NLR
+            mp_raise_msg_o(&mp_type_RuntimeError, MP_ERROR_TEXT("name too long"));
+            return 0;
+#else
             mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("name too long"));
+#endif
         }
 
         // compute number of bytes needed to intern this string
@@ -233,6 +241,9 @@ qstr qstr_from_strn(const char *str, size_t len) {
                 if (MP_STATE_VM(qstr_last_chunk) == NULL) {
                     QSTR_EXIT();
                     m_malloc_fail(n_bytes);
+#if NO_NLR
+                    return 0;
+#endif
                 }
                 al = n_bytes;
             }
