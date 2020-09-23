@@ -4,7 +4,7 @@
 
 
 BASENAME=wapy
-PROG=$(BASENAME).html
+PROG=$(BASENAME).wasm
 LIBPYTHON = lib$(BASENAME).a
 CROSS = 0
 
@@ -27,11 +27,14 @@ include ../../py/mkenv.mk
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
 
-CPPFLAGS += -D__WASM__=1 -DNO_NLR=1 -Wno-unused-variable
-CC=clang -D__WASM__=1 -DNO_NLR=1
-CPP=clang -E -D__CPP__ -D__WASM__=1 -DNO_NLR=1
-CPPFLAGS += $(INC) $(WARN) -ansi -std=gnu11 
 
+CX = --target=wasm32-unknow-wasi -D__WASM__=1 -DNO_NLR=1
+
+CC ?= clang
+CC += $(CX)
+CPP=clang $(CX) -E -D__CPP__ -D__WASM__=1 -DNO_NLR=1
+
+CPPFLAGS += $(CX) $(INC) $(WARN) -ansi -std=gnu11 -Wno-unused-variable
 
 
 # include py core make definitions
@@ -44,6 +47,8 @@ INC += -I.
 INC += -I../..
 INC += -I$(BUILD)
 
+#stubs
+INC += -I../wapy -I../wapy/stubs
 
 
 #LD_SHARED = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
@@ -89,7 +94,7 @@ SRC_C+= \
 	mod/modffi.c \
 	mod/ffi/ffi.c \
 	mod/ffi/types.c \
-	mod/ffi/prep_cif.c	
+	mod/ffi/prep_cif.c
 endif
 
 LIB_SRC_C= $(addprefix lib/, \
@@ -132,12 +137,12 @@ OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C_EXTRA:.c=.o))
 CPPFLAGS += -DNO_NLR=$(NO_NLR)
 CFLAGS += $(CPPFLAGS) $(CFLAGS_EXTRA)
 
-	
+
 all: $(PROG)
 
 include ../../py/mkrules.mk
 
-		
+
 # one day, maybe go via a *embeddable* static lib first  ?
 LIBPYTHON = lib$(BASENAME)$(TARGET).a
 
@@ -149,7 +154,7 @@ $(BUILD)/clang_predefs.h:
 
 # Create `clang_predefs.h` as soon as possible, using a Makefile trick
 
-Makefile: $(BUILD)/clang_predefs.h	
+Makefile: $(BUILD)/clang_predefs.h
 endif
 
 
@@ -166,7 +171,7 @@ lib-static: $(OBJ)
 	$(ECHO) "Linking static $(LIBPYTHON)"
 	$(Q)$(AR) rcs $(LIBPYTHON) $(OBJ)
 
-lib-shared: $(OBJ)	
+lib-shared: $(OBJ)
 	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
 	$(Q)$(LD) $(LD_SHARED) $(LD_LIB) -o lib$(BASENAME)$(TARGET).wasm $(OBJ) -ldl -lc
 
@@ -174,7 +179,7 @@ libs: lib-static lib-shared
 
 # ============ static + pic was SERIOUSLY BROKEN until clang 11 ==========
 # but this is the good one
-LD_PROG += $(CFLAGS) $(WASM_FLAGS) 
+LD_PROG += $(CFLAGS) $(WASM_FLAGS)
 LD_LIB += $(WASM_FLAGS)
 CFLAGS += -fPIC
 

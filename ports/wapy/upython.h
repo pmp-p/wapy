@@ -37,7 +37,8 @@ int do_code(const char *src,  int is_file);
     #if MICROPY_ENABLE_GC
         static char heap[32*1024*1024];
     #endif
-static int repl_started = -100;
+
+//static int repl_started = -100;
 
 #endif
 

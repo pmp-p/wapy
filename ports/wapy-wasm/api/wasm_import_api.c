@@ -10,10 +10,10 @@ wasm_find_module(const char *modname) {
         return MP_IMPORT_STAT_FILE;
     }
 
-    int found = EM_ASM_INT({return wasm_file_exists(UTF8ToString($0), true); }, modname ) ;
+    int found = EM_ASM_INT({return vm.fsync.exists(UTF8ToString($0), true); }, modname ) ;
 
     if ( found>0 ) {
-        int dl = EM_ASM_INT({return wasm_file_open(UTF8ToString($0),UTF8ToString($0)); }, modname );
+        int dl = EM_ASM_INT({return vm.fsync.open(UTF8ToString($0),UTF8ToString($0)); }, modname );
 
         if (found==1) {
             fprintf(stderr,"wasm_find_module: DL FILE %s size=%d ", modname, dl);

@@ -28,11 +28,11 @@ QSTR_DEFS = qstrdefsport.h
 
 ifdef EMSCRIPTEN
 	ifdef WASM_FILE_API
-# note that WASM_FILE_API will pull filesystem function into the wasm lib	
+# note that WASM_FILE_API will pull filesystem function into the wasm lib
 		CPPFLAGS += -DWASM_FILE_API=1
 		LD_LIB += -s FORCE_FILESYSTEM=1
 		COPT += -s FORCE_FILESYSTEM=1
-	endif	
+	endif
 
 	CC = emcc
 	LD = $(CC)
@@ -53,23 +53,23 @@ ifdef EMSCRIPTEN
 		CFLAGS_USERMOD += -DMICROPY_PY_LVGL=1 -Wno-unused-function -Wno-for-loop-analysis
 		CPP += -DMICROPY_PY_LVGL=1
 	endif
-	
+
 	#Debugging/Optimization
 	WASM_FLAGS += $(OG) --source-map-base http://localhost:8000/
 	LD_SHARED += $(OG) --source-map-base http://localhost:8000/
-	
+
 	# make clang++ Act like 'emcc' but for preprocessing use
 	CPP = ${EMSCRIPTEN}/../bin/clang -E -undef -D__CPP__ -D__EMSCRIPTEN__
 	CPP += --sysroot $(EMSCRIPTEN)/system
-	CPP += -include $(BUILD)/clang_predefs.h	
+	CPP += -include $(BUILD)/clang_predefs.h
 	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(JSFLAGS) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 
-	CPPFLAGS += -D__WASM__ -DMICROPY_PY_FFI=1 -Wno-unused-variable		
-	CPP += -D__WASM__ -DMICROPY_PY_FFI=1 
-	CPPFLAGS += $(INC) -Wall -ansi -std=gnu11 
+	CPPFLAGS += -D__WASM__ -DMICROPY_PY_FFI=1 -Wno-unused-variable
+	CPP += -D__WASM__ -DMICROPY_PY_FFI=1
+	CPPFLAGS += $(INC) -Wall -ansi -std=gnu11
 
 	# NO FFI on upstream for now
-		
+
 else
 	CPPFLAGS += $(INC) $(WARN) -DMICROPY_PY_FFI=1 -ansi -std=gnu11
 	CPP += -D__CPP__  -D__EMSCRIPTEN__ -DMICROPY_PY_FFI=1
@@ -182,12 +182,12 @@ OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C_EXTRA:.c=.o))
 CPPFLAGS += -DNO_NLR=$(NO_NLR)
 CFLAGS += $(CPPFLAGS) $(CFLAGS_EXTRA)
 
-	
+
 all: $(PROG)
 
 include ../../py/mkrules.mk
 
-		
+
 # one day, maybe go via a *embeddable* static lib first  ?
 LIBPYTHON = lib$(BASENAME)$(TARGET).a
 
@@ -199,7 +199,7 @@ $(BUILD)/clang_predefs.h:
 
 # Create `clang_predefs.h` as soon as possible, using a Makefile trick
 
-Makefile: $(BUILD)/clang_predefs.h	
+Makefile: $(BUILD)/clang_predefs.h
 endif
 
 
@@ -221,8 +221,8 @@ COPT += -s TOTAL_MEMORY=512MB
 # -s LZ4=0
 COPT += $(JSFLAGS) $(WASM_FLAGS) -s ASSERTIONS=2
 
-LD_PROG += -s FORCE_FILESYSTEM=1 
-LD_PROG += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_shm_get_ptr','_repl_run', '_show_os_loop']"
+LD_PROG += -s FORCE_FILESYSTEM=1
+LD_PROG += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_shm_get_ptr', '_show_os_loop']"
 #LD_PROG += -s EXTRA_EXPORTED_RUNTIME_METHODS="['addRunDependency','removeRunDependency']"
 
 WASM_FLAGS += -s LZ4=1 -s WASM=1 -s EXPORT_ALL=1
@@ -246,27 +246,27 @@ lib-static: $(OBJ)
 	$(Q)$(AR) rcs $(LIBPYTHON) $(OBJ)
 
 
-lib-shared: $(OBJ)	
+lib-shared: $(OBJ)
 	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
 	$(Q)$(LD) $(LD_LIB) $(LD_SHARED) -o lib$(BASENAME)$(TARGET).wasm $(OBJ) -ldl -lc -s FORCE_FILESYSTEM=1 --use-preload-plugins
 
-lib-android: $(OBJ)	
+lib-android: $(OBJ)
 	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).so"
 	$(Q)$(LD) $(LD_LIB) $(LD_SHARED) -o lib$(BASENAME)$(TARGET).so $(OBJ) $(LD_EXTRA)
 
-lib-allshared: $(OBJ)	
+lib-allshared: $(OBJ)
 	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
 	$(Q)$(LD) $(LD_LIB) $(LD_SHARED) -o lib$(BASENAME)$(TARGET).wasm $(OBJ)
 #
 	$(ECHO) "Linking shared libsdl2.wasm"
-	$(Q)$(LD) $(LD_LIB) $(LD_SHARED) -o libsdl2.wasm -lSDL2 -logg -lfreetype  
+	$(Q)$(LD) $(LD_LIB) $(LD_SHARED) -o libsdl2.wasm -lSDL2 -logg -lfreetype
 
-libs: lib-static lib-shared		
+libs: lib-static lib-shared
 
 ifdef HALF
 #============
 LD_PROG += $(WASM_FLAGS) -s MAIN_MODULE=1
-LD_LIB += $(WASM_FLAGS) -s SIDE_MODULE=1 
+LD_LIB += $(WASM_FLAGS) -s SIDE_MODULE=1
 CFLAGS += -fPIC
 
 # lib-static <= beware to clean the .a could be linked in
@@ -278,13 +278,13 @@ $(PROG): lib-allshared
  -s BINARYEN_ASYNC_COMPILATION=1 -s FORCE_FILESYSTEM=1 --use-preload-plugins\
  -o $@ main.c -l$(BASENAME)$(TARGET) -lSDL2 -lGL -lEGL -lGLESv2 -ldl -lm
 	$(shell mv $(BASENAME).* $(BASENAME)/)
-#-L. lib$(BASENAME)$(TARGET).a 
+#-L. lib$(BASENAME)$(TARGET).a
 endif
 
 ifdef SHARED
 #============
 LD_PROG += $(WASM_FLAGS) -s MAIN_MODULE=1
-LD_LIB += $(WASM_FLAGS) -s SIDE_MODULE=1 
+LD_LIB += $(WASM_FLAGS) -s SIDE_MODULE=1
 CFLAGS += -fPIC
 
 $(PROG): lib-static lib-allshared
@@ -293,7 +293,7 @@ $(PROG): lib-static lib-allshared
 	$(shell cp libsdl2.wasm libsdl2.so)
 	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) $(BLOBS)\
  -s BINARYEN_ASYNC_COMPILATION=1 -s FORCE_FILESYSTEM=1 --use-preload-plugins\
- -o $@ main.c -L. -lwapy -lsdl2 -ldl -lm 
+ -o $@ main.c -L. -lwapy -lsdl2 -ldl -lm
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
 endif
@@ -302,9 +302,10 @@ endif
 ifdef STATIC
 # ============ static + pic was SERIOUSLY BROKEN until clang 11 ==========
 # but this is the good one
+CFLAGS += -fPIC
 LD_PROG += $(CFLAGS) $(WASM_FLAGS) -s MAIN_MODULE=1 -s EXPORT_ALL=1 -s LZ4=1
 LD_LIB += $(WASM_FLAGS)
-CFLAGS += -fPIC
+
 
 $(PROG): lib-static
 	$(ECHO) "Building static executable $@"
@@ -332,13 +333,13 @@ endif
 
 
 check:
-	$(ECHO) 
+	$(ECHO)
 	$(ECHO) "============================================================"
-	$(ECHO) "CC=[$(CC)]"	
+	$(ECHO) "CC=[$(CC)]"
 	$(ECHO) "CPP=[$(CPP)]"
-	$(ECHO) "COPT=[$(COPT)]"	
+	$(ECHO) "COPT=[$(COPT)]"
 	$(ECHO) JSFLAGS=$(JSFLAGS)
-	$(ECHO) CPPFLAGS=$(CPPFLAGS)		
+	$(ECHO) CPPFLAGS=$(CPPFLAGS)
 	$(ECHO)
 	$(ECHO) CXX=$(CXX)
 	$(ECHO) AS=$(AS)
@@ -347,10 +348,10 @@ check:
 	$(ECHO) SIZE=$(SIZE)
 	$(ECHO) STRIP=$(STRIP)
 	$(ECHO) AR=$(AR)
-	$(ECHO)	
-#emscripten specifics	
+	$(ECHO)
+#emscripten specifics
 	$(ECHO) EMSDK=$(EMSDK)
-	$(ECHO) UPSTREAM=$(UPSTREAM)	
+	$(ECHO) UPSTREAM=$(UPSTREAM)
 	$(ECHO) EMSCRIPTEN=$(EMSCRIPTEN)
 	$(ECHO) EMSDK_NODE=$(EMSDK_NODE)
 	$(ECHO) EMSCRIPTEN_TOOLS=$(EMSCRIPTEN_TOOLS)
@@ -361,6 +362,6 @@ check:
 	$(ECHO) EM_CACHE=$(EM_CACHE)
 	$(ECHO) EM_CONFIG=$(EM_CONFIG)
 	$(shell env|grep ^EM)
-	$(ECHO)	
+	$(ECHO)
 	$(shell ${EMSCRIPTEN}/../bin/clang -v 2>&1|grep ^clang )
 	#terminate on error so python webserver won't start

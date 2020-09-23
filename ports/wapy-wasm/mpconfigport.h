@@ -16,10 +16,12 @@
 #define MICROPY_ROM_TEXT_COMPRESSION (0)
 #define MICROPY_PY_FSTRING          (1)
 
-#undef NO_NLR
+#ifndef NO_NLR
 #define NO_NLR (1)
 #define WAPY (1)
+#endif
 
+#define MICROPY_EPOCH_IS_1970 (0)
 
 #define False false
 #define True true

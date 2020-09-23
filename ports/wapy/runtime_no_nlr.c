@@ -116,6 +116,10 @@ void mp_init(void) {
     MP_STATE_VM(mp_module_builtins_override_dict) = NULL;
     #endif
 
+    #if MICROPY_PERSISTENT_CODE_TRACK_RELOC_CODE
+    MP_STATE_VM(track_reloc_code_list) = MP_OBJ_NULL;
+    #endif
+
     #if MICROPY_PY_OS_DUPTERM
     for (size_t i = 0; i < MICROPY_PY_OS_DUPTERM; ++i) {
         MP_STATE_VM(dupterm_objs[i]) = MP_OBJ_NULL;
@@ -657,7 +661,12 @@ mp_obj_t mp_call_function_n_kw(mp_obj_t fun_in, size_t n_args, size_t n_kw, cons
     DEBUG_OP_printf("calling function %p(n_args=" UINT_FMT ", n_kw=" UINT_FMT ", args=%p)\n", fun_in, n_args, n_kw, args);
 
     if (!fun_in) {
-        cdbg("660:calling function %p(n_args=" UINT_FMT ", n_kw=" UINT_FMT ", args=%p)\n", fun_in, n_args, n_kw, args);
+#if defined(__WASM__) || defined(__EMSCRIPTEN__)
+        cdbg("660:calling function %p(n_args=" UINT_FMT ", n_kw=" UINT_FMT ", args=%p)\n", fun_in, (unsigned int)n_args, (unsigned int)n_kw, args);
+#else
+// x64
+        cdbg("660:calling function %p(n_args=" UINT_FMT ", n_kw=" UINT_FMT ", args=%p)\n", fun_in, (long unsigned int)n_args, (long unsigned int)n_kw, args);
+#endif
     } else {
         // get the type
         const mp_obj_type_t *type = mp_obj_get_type(fun_in);
@@ -1560,7 +1569,7 @@ mp_obj_t mp_parse_compile_execute(mp_lexer_t *lex, mp_parse_input_kind_t parse_i
 
     qstr source_name = lex->source_name;
     mp_parse_tree_t parse_tree = mp_parse(lex, parse_input_kind);
-    mp_obj_t module_fun = mp_compile(&parse_tree, source_name, false);
+    mp_obj_t module_fun = mp_compile(&parse_tree, source_name, parse_input_kind == MP_PARSE_SINGLE_INPUT);
 
     mp_obj_t ret = MP_OBJ_NULL;
     if (module_fun != MP_OBJ_NULL) {

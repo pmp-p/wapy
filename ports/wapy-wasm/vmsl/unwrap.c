@@ -179,12 +179,15 @@ clog("157:unwrap.c pending_exception to inject");
 
         // stores ip pointing to last opcode
         CTX.code_state->ip = CTX.ip;
-
+if (trace_on) {
+   #include "vmsl/vmbc_trace.c"
+} else {
 #if VMTRACE
-if (SHOW_OS_LOOP>0) {
+if ( (SHOW_OS_LOOP>0) || (source_trace) {
         #include "vmsl/vmbc_trace.c"
 }
 #endif
+}
         switch (*CTX.ip++) {
             // opcode table, can be optimized later with computed goto
             // if compiler does not already.

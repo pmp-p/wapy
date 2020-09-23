@@ -230,10 +230,10 @@ mp_obj_t mp_setup_code_state(mp_code_state_t *code_state, size_t n_args, size_t 
 #else
 void mp_setup_code_state(mp_code_state_t *code_state, size_t n_args, size_t n_kw, const mp_obj_t *args);
 #endif
-void mp_bytecode_print(const void *descr, const byte *code, mp_uint_t len, const mp_uint_t *const_table);
-void mp_bytecode_print2(const byte *code, size_t len, const mp_uint_t *const_table);
-const byte *mp_bytecode_print_str(const byte *ip);
-#define mp_bytecode_print_inst(code, const_table) mp_bytecode_print2(code, 1, const_table)
+void mp_bytecode_print(const mp_print_t *print, const void *descr, const byte *code, mp_uint_t len, const mp_uint_t *const_table);
+void mp_bytecode_print2(const mp_print_t *print, const byte *code, size_t len, const mp_uint_t *const_table);
+const byte *mp_bytecode_print_str(const mp_print_t *print, const byte *ip);
+#define mp_bytecode_print_inst(print, code, const_table) mp_bytecode_print2(print, code, 1, const_table)
 
 // Helper macros to access pointer with least significant bits holding flags
 #define MP_TAGPTR_PTR(x) ((void *)((uintptr_t)(x) & ~((uintptr_t)3)))

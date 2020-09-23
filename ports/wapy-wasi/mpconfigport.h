@@ -451,7 +451,7 @@ extern const struct _mp_obj_module_t mp_module_os;
 // We need to provide a declaration/definition of alloca()
 #include <alloca.h>
 
-#define MICROPY_HW_BOARD_NAME "emscripten"
+#define MICROPY_HW_BOARD_NAME "WaPy"
 #define MICROPY_HW_MCU_NAME "wasm"
 
 #ifdef __linux__

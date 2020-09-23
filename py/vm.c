@@ -42,7 +42,7 @@
 #endif
 
 #if 0
-#define TRACE(ip) printf("sp=%d ", (int)(sp - &code_state->state[0] + 1)); mp_bytecode_print2(ip, 1, code_state->fun_bc->const_table);
+#define TRACE(ip) printf("sp=%d ", (int)(sp - &code_state->state[0] + 1)); mp_bytecode_print2(&mp_plat_print, ip, 1, code_state->fun_bc->const_table);
 #else
 #define TRACE(ip)
 #endif
@@ -300,7 +300,8 @@ if (VMFLAGS_IF>0) {
     size_t the_line = mp_bytecode_get_source_line(ip, bc);
     if (the_line != source_line) {
         source_line = the_line;
-        cdbg("247:vm.c NOINT %s:%lu but VMFLAGS_IF set", qstr_str(source_file), source_line);
+        if (strcmp(qstr_str(source_file),"pythons/aio/plink.py"))
+            cdbg("247:vm.c NOINT src/%s#%lu but VMFLAGS_IF set", qstr_str(source_file), source_line);
     }
 }
 #else

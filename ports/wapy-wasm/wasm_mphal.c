@@ -10,8 +10,8 @@
 
 #include <stdarg.h>
 
-#ifdef __EMSCRIPTEN__
-#include "emscripten.h"
+#if defined(__EMSCRIPTEN__) || defined(__WASM__)
+    #include "emscripten.h"
 #elif __CPP__
     #define EMSCRIPTEN_KEEPALIVE
 #endif
@@ -19,6 +19,12 @@
 #include "../wapy/upython.h"
 
 #include <time.h>
+
+#if __EMSCRIPTEN__
+#define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
+#define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
+#endif
+
 
 void mp_hal_delay_us(mp_uint_t us) {
     clog("mp_hal_delay_us(%u)", us );
@@ -29,40 +35,44 @@ void mp_hal_delay_ms(mp_uint_t ms) {
 }
 
 
+extern struct timespec t_timespec;
+extern struct timeval t_timeval;
 
 
-struct timespec ts;
 #define EPOCH_US 0
 #if EPOCH_US
 static unsigned long epoch_us = 0;
 #endif
 
-mp_uint_t mp_hal_ticks_ms(void) {
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    unsigned long now_us = ts.tv_sec * 1000000 + ts.tv_nsec / 1000 ;
-#if EPOCH_US
-    if (!epoch_us)
-        epoch_us = now_us -1000;
-    return (mp_uint_t)( (now_us - epoch_us) / 1000 ) ;
-#else
-    return  (mp_uint_t)(now_us / 1000);
-#endif
 
+uint64_t mp_hal_time_ns(void) {
+    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    return (uint64_t)( t_timespec.tv_sec + t_timespec.tv_sec );
 }
+
+
+mp_uint_t mp_hal_ticks_ms(void) {
+    #if (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
+    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    return t_timespec.tv_sec * 1000 + t_timespec.tv_nsec / 1000000;
+    #else
+    wa_gettimeofday(&t_timeval, NULL);
+    return t_timeval.tv_sec * 1000 + t_timeval.tv_usec / 1000;
+    #endif
+}
+
 
 mp_uint_t mp_hal_ticks_us(void) {
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    unsigned long now_us = ts.tv_sec * 1000000 + ts.tv_nsec / 1000 ;
-#if EPOCH_US
-    if (!epoch_us)
-        epoch_us = now_us-1;
-    return (mp_uint_t)(now_us - epoch_us);
-#else
-    return  (mp_uint_t)now_us;
-#endif
+    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    unsigned long now_us = t_timespec.tv_sec * 1000000 + t_timespec.tv_nsec / 1000 ;
+    #if EPOCH_US
+        if (!epoch_us)
+            epoch_us = now_us-1;
+        return (mp_uint_t)(now_us - epoch_us);
+    #else
+        return  (mp_uint_t)now_us;
+    #endif
 }
-
-
 
 
 // Receive single character
@@ -107,9 +117,16 @@ unsigned char out_push(unsigned char c) {
 
 //FIXME: libc print with valid json are likely to pass and get interpreted by pts
 //TODO: buffer all until render tick
-
+extern int g_argc;
 //this one (over)cooks like _cooked
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
+#if __EMSCRIPTEN__
+#else // WASI/node
+    if (g_argc) {
+        printf("%s", str);
+        return;
+    }
+#endif
     for(int i=0;i<len;i++) {
         if ( (str[i] == 0x0a) && (last != 0x0d) ) {
             out_push( 0x0d );
@@ -119,6 +136,7 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 }
 
 
+#if __EMSCRIPTEN__
 
 EMSCRIPTEN_KEEPALIVE static PyObject *
 embed_run_script(PyObject *self, PyObject *argv) {
@@ -129,6 +147,10 @@ embed_run_script(PyObject *self, PyObject *argv) {
     emscripten_run_script( runstr );
     Py_RETURN_NONE;
 }
+
+
+#endif
+
 
 
 #if MICROPY_USE_READLINE

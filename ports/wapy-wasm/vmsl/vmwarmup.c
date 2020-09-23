@@ -1,5 +1,5 @@
 if (VMOP < VMOP_INIT) {
-    puts("init");
+    //puts("init");
 
     Py_Init();
 
@@ -31,29 +31,36 @@ if (VMOP < VMOP_INIT) {
         ctx_current = (int)mpi_ctx[ctx_current].childcare;
     }
 
-    fprintf(stdout,"running __main__ on pid=%d\n", ctx_current);
+    fprintf(stdout,"running __main__ on pid=%d\r\n\r\n", ctx_current);
+    #if __EMSCRIPTEN__
+        return 0;
+    #endif
+}
 
-    return;
-} // no continuation -> syscall
-
-if (VMOP==VMOP_INIT) {
-    puts("VMOP_INIT");
+if (VMOP < VMOP_WARMUP) {
 
     VMOP = VMOP_WARMUP;
+
+// maybe no debug for wasi
     show_os_loop(1);
 
-    // could help fix lack of vars() but wapy does not need
-    // "__dict__ = globals();"
-
     PyRun_SimpleString(
-        "import sys;"
+        "import usys;usys.modules['sys']=usys;usys.modules['usys']=usys;"
         "import embed;"
-        "import builtins;builtins.__WAPY__ = True;"
-        "sys.path.append('/assets');"
-        "import wapy_wasm_site as site;"
-        "sys.path.append('/assets/packages');"
+        "import builtins;builtins.__WAPY__ = True;builtins.sys = usys;"
+        "usys.path.append('/assets');"
+        "import wapy_wasm_site as site;usys.modules['site']=site;"
+        "usys.path.append('/assets/packages');"
         "#\n"
     );
+
+    pyexec_event_repl_init();
+
+#if __EMSCRIPTEN__
     emscripten_cancel_main_loop();
     emscripten_set_main_loop( main_loop_or_step, 0, 1);
+    return 0;
+#else
+    #pragma message "WASI startup"
+#endif
 }

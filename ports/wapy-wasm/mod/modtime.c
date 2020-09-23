@@ -31,7 +31,19 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-#include <sys/time.h>
+
+#if __EMSCRIPTEN__
+    #include <sys/time.h>
+    #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
+    #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
+#endif
+
+
+extern struct timespec t_timespec;
+extern struct timeval t_timeval;
+
+
+
 #include <math.h>
 
 #include "py/runtime.h"
@@ -40,8 +52,6 @@
 #include "extmod/utime_mphal.h"
 
 #include <stdio.h>
-
-
 
 // mingw32 defines CLOCKS_PER_SEC as ((clock_t)<somevalue>) but preprocessor does not handle casts
 #if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
@@ -76,24 +86,27 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_clock_obj, mod_time_clock);
 
 
 STATIC mp_obj_t mod_time_time(void) {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
+
+    wa_gettimeofday(&t_timeval, NULL);
 
 #if MICROPY_PY_BUILTINS_FLOAT
-    mp_float_t val = tv.tv_sec + (mp_float_t)tv.tv_usec / 1000000;
+    mp_float_t val = t_timeval.tv_sec + (mp_float_t)t_timeval.tv_usec / 1000000;
     return mp_obj_new_float(val);
 #else
-    return mp_obj_new_int_from_uint( tv.tv_sec );
+    return mp_obj_new_int_from_uint( t_timeval.tv_sec );
 #endif
 }
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_obj, mod_time_time);
 
 STATIC mp_obj_t mod_time_time_ns(void) {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return mp_obj_new_int_from_uint( ts.tv_nsec );
+    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    //unsigned long ul = ts.tv_nsec ;
+    return mp_obj_new_int_from_ull( t_timespec.tv_nsec );
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_ns_obj, mod_time_time_ns);
+
+
 
 STATIC
 mp_obj_t mod_time_sleep(mp_obj_t arg) {
