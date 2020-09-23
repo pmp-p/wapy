@@ -1,0 +1,1 @@
+../wapy/qstrdefsport.h

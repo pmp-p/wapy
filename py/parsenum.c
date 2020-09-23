@@ -36,14 +36,18 @@
 #include <math.h>
 #endif
 
+#if NO_NLR
+STATIC mp_obj_t raise_exc(mp_obj_t exc, mp_lexer_t *lex) {
+#else
 STATIC NORETURN void raise_exc(mp_obj_t exc, mp_lexer_t *lex) {
+#endif
     // if lex!=NULL then the parser called us and we need to convert the
     // exception's type from ValueError to SyntaxError and add traceback info
     if (lex != NULL) {
         ((mp_obj_base_t *)MP_OBJ_TO_PTR(exc))->type = &mp_type_SyntaxError;
         mp_obj_exception_add_traceback(exc, lex->source_name, lex->tok_line, MP_QSTRnull);
     }
-    nlr_raise(exc);
+    mp_raise_or_return(exc);
 }
 
 mp_obj_t mp_parse_num_integer(const char *restrict str_, size_t len, int base, mp_lexer_t *lex) {
@@ -148,10 +152,16 @@ value_error:
         #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
         mp_obj_t exc = mp_obj_new_exception_msg(&mp_type_ValueError,
             MP_ERROR_TEXT("invalid syntax for integer"));
+#if NO_NLR
+        return
+#endif
         raise_exc(exc, lex);
         #elif MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_NORMAL
         mp_obj_t exc = mp_obj_new_exception_msg_varg(&mp_type_ValueError,
             MP_ERROR_TEXT("invalid syntax for integer with base %d"), base);
+#if NO_NLR
+        return
+#endif
         raise_exc(exc, lex);
         #else
         vstr_t vstr;
@@ -161,8 +171,14 @@ value_error:
         mp_str_print_quoted(&print, str_val_start, top - str_val_start, true);
         mp_obj_t exc = mp_obj_new_exception_arg1(&mp_type_ValueError,
             mp_obj_new_str_from_vstr(&mp_type_str, &vstr));
+#if NO_NLR
+#else
         raise_exc(exc, lex);
+#endif
         #endif
+#if NO_NLR
+        return raise_exc(exc, lex);
+#endif
     }
 }
 
@@ -344,6 +360,9 @@ mp_obj_t mp_parse_num_decimal(const char *str, size_t len, bool allow_imag, bool
     }
     #else
     if (imag || force_complex) {
+#if NO_NLR
+        return
+#endif
         raise_exc(mp_obj_new_exception_msg(&mp_type_ValueError, MP_ERROR_TEXT("complex values not supported")), lex);
     }
     #endif
@@ -352,9 +371,15 @@ mp_obj_t mp_parse_num_decimal(const char *str, size_t len, bool allow_imag, bool
     }
 
 value_error:
+#if NO_NLR
+    return
+#endif
     raise_exc(mp_obj_new_exception_msg(&mp_type_ValueError, MP_ERROR_TEXT("invalid syntax for number")), lex);
 
     #else
+#if NO_NLR
+    return
+#endif
     raise_exc(mp_obj_new_exception_msg(&mp_type_ValueError, MP_ERROR_TEXT("decimal numbers not supported")), lex);
     #endif
 }

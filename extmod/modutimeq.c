@@ -75,7 +75,12 @@ STATIC bool time_less_than(struct qentry *item, struct qentry *parent) {
 }
 
 STATIC mp_obj_t utimeq_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+#if NO_NLR
+    if ( mp_arg_check_num(n_args, n_kw, 1, 1, false) )
+        return MP_OBJ_NULL;
+#else
     mp_arg_check_num(n_args, n_kw, 1, 1, false);
+#endif
     mp_uint_t alloc = mp_obj_get_int(args[0]);
     mp_obj_utimeq_t *o = m_new_obj_var(mp_obj_utimeq_t, struct qentry, alloc);
     o->base.type = type;
@@ -85,7 +90,7 @@ STATIC mp_obj_t utimeq_make_new(const mp_obj_type_t *type, size_t n_args, size_t
     return MP_OBJ_FROM_PTR(o);
 }
 
-STATIC void utimeq_heap_siftdown(mp_obj_utimeq_t *heap, mp_uint_t start_pos, mp_uint_t pos) {
+STATIC void utimeq_heap_shift_down(mp_obj_utimeq_t *heap, mp_uint_t start_pos, mp_uint_t pos) {
     struct qentry item = heap->items[pos];
     while (pos > start_pos) {
         mp_uint_t parent_pos = (pos - 1) >> 1;
@@ -101,7 +106,7 @@ STATIC void utimeq_heap_siftdown(mp_obj_utimeq_t *heap, mp_uint_t start_pos, mp_
     heap->items[pos] = item;
 }
 
-STATIC void utimeq_heap_siftup(mp_obj_utimeq_t *heap, mp_uint_t pos) {
+STATIC void utimeq_heap_shift_up(mp_obj_utimeq_t *heap, mp_uint_t pos) {
     mp_uint_t start_pos = pos;
     mp_uint_t end_pos = heap->len;
     struct qentry item = heap->items[pos];
@@ -118,7 +123,7 @@ STATIC void utimeq_heap_siftup(mp_obj_utimeq_t *heap, mp_uint_t pos) {
         pos = child_pos;
     }
     heap->items[pos] = item;
-    utimeq_heap_siftdown(heap, start_pos, pos);
+    utimeq_heap_shift_down(heap, start_pos, pos);
 }
 
 STATIC mp_obj_t mod_utimeq_heappush(size_t n_args, const mp_obj_t *args) {
@@ -129,11 +134,15 @@ STATIC mp_obj_t mod_utimeq_heappush(size_t n_args, const mp_obj_t *args) {
         mp_raise_msg(&mp_type_IndexError, MP_ERROR_TEXT("queue overflow"));
     }
     mp_uint_t l = heap->len;
+#if __EMSCRIPTEN__
+    heap->items[l].time = (mp_uint_t)args[1];
+#else
     heap->items[l].time = MP_OBJ_SMALL_INT_VALUE(args[1]);
+#endif
     heap->items[l].id = utimeq_id++;
     heap->items[l].callback = args[2];
     heap->items[l].args = args[3];
-    utimeq_heap_siftdown(heap, 0, heap->len);
+    utimeq_heap_shift_down(heap, 0, heap->len);
     heap->len++;
     return mp_const_none;
 }
@@ -146,11 +155,16 @@ STATIC mp_obj_t mod_utimeq_heappop(mp_obj_t heap_in, mp_obj_t list_ref) {
     }
     mp_obj_list_t *ret = MP_OBJ_TO_PTR(list_ref);
     if (!mp_obj_is_type(list_ref, &mp_type_list) || ret->len < 3) {
-        mp_raise_TypeError(NULL);
+        //mp_raise_TypeError(NULL);
+        mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("invalid arguments"));
     }
 
     struct qentry *item = &heap->items[0];
+#if __EMSCRIPTEN__
+    ret->items[0] = (mp_uint_t *)(item->time);
+#else
     ret->items[0] = MP_OBJ_NEW_SMALL_INT(item->time);
+#endif
     ret->items[1] = item->callback;
     ret->items[2] = item->args;
     heap->len -= 1;
@@ -158,7 +172,7 @@ STATIC mp_obj_t mod_utimeq_heappop(mp_obj_t heap_in, mp_obj_t list_ref) {
     heap->items[heap->len].callback = MP_OBJ_NULL; // so we don't retain a pointer
     heap->items[heap->len].args = MP_OBJ_NULL;
     if (heap->len) {
-        utimeq_heap_siftup(heap, 0);
+        utimeq_heap_shift_up(heap, 0);
     }
     return mp_const_none;
 }
@@ -171,7 +185,11 @@ STATIC mp_obj_t mod_utimeq_peektime(mp_obj_t heap_in) {
     }
 
     struct qentry *item = &heap->items[0];
+#if __EMSCRIPTEN__
+    return (mp_uint_t *)(item->time);
+#else
     return MP_OBJ_NEW_SMALL_INT(item->time);
+#endif
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_utimeq_peektime_obj, mod_utimeq_peektime);
 

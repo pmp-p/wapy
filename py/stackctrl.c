@@ -48,10 +48,20 @@ void mp_stack_set_limit(mp_uint_t limit) {
     MP_STATE_THREAD(stack_limit) = limit;
 }
 
+#if NO_NLR
+int mp_stack_check(void) {
+    if (mp_stack_usage() >= MP_STATE_THREAD(stack_limit)) {
+        mp_raise_recursion_depth();
+
+        return 1;
+    }
+    return 0;
+}
+#else
 void mp_stack_check(void) {
     if (mp_stack_usage() >= MP_STATE_THREAD(stack_limit)) {
         mp_raise_recursion_depth();
     }
 }
-
+#endif
 #endif // MICROPY_STACK_CHECK

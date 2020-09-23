@@ -24,6 +24,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#if NO_NLR
+#error "Wrong file: use _no_nlr.c"
+#endif
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -1086,6 +1089,13 @@ void mp_load_method_maybe(mp_obj_t obj, qstr attr, mp_obj_t *dest) {
         dest[0] = MP_OBJ_FROM_PTR(type);
         return;
     }
+    if (attr == MP_QSTR___base__) { // PMPP https://github.com/micropython/micropython/pull/4368
+        const mp_obj_type_t *t = MP_OBJ_TO_PTR(obj);
+        if (mp_obj_is_instance_type(t)) {
+            dest[0] = MP_OBJ_FROM_PTR(t->parent);
+            return; // success
+        }
+    }
     #endif
 
     if (attr == MP_QSTR___next__ && type->iternext != NULL) {
@@ -1106,6 +1116,13 @@ void mp_load_method_maybe(mp_obj_t obj, qstr attr, mp_obj_t *dest) {
             mp_convert_member_lookup(obj, type, elem->value, dest);
         }
     }
+    #if MICROPY_PY_FUNCTION_ATTRS //PMPP
+      else if (attr == MP_QSTR___name__) {
+        if ( type->name  ==  MP_QSTR_function) {
+            dest[0] = MP_OBJ_NEW_QSTR(mp_obj_fun_get_name(obj));
+        }
+    }
+    #endif
 }
 
 void mp_load_method(mp_obj_t base, qstr attr, mp_obj_t *dest) {

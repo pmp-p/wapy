@@ -135,7 +135,11 @@ size_t mp_binary_get_size(char struct_type, char val_type, size_t *palign) {
     }
 
     if (size == 0) {
+#if NO_NLR
+        mp_raise_ValueError_o( mp_obj_new_exception_msg(&mp_type_ValueError, MP_ERROR_TEXT("bad typecode")));
+#else
         mp_raise_ValueError(MP_ERROR_TEXT("bad typecode"));
+#endif
     }
 
     if (palign != NULL) {

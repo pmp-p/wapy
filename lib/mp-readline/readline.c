@@ -517,6 +517,35 @@ int readline(vstr_t *line, const char *prompt) {
     }
 }
 
+#if MICROPY_UNIXSCHEDULE
+#include <sys/select.h>
+fd_set rfds;
+struct timeval tv;
+
+int readline_select(vstr_t *line, const char *prompt, int resuming) {
+    if (resuming== -3)
+        readline_init(line, prompt);
+
+    for (;;) {
+        // On Linux, select() modifies timeout to reflect the amount of time not slept
+        tv.tv_sec = 0;
+        tv.tv_usec = 16;
+        FD_ZERO(&rfds);
+        FD_SET(STDIN_FILENO, &rfds);
+        int rv=select(STDIN_FILENO+1, &rfds, NULL, NULL, &tv);
+        // 0-1 == -1 =>tmout -1-1 == -2=>failure
+        if (rv <=0)
+            return rv-1;
+
+        int c = mp_hal_stdin_rx_chr();
+        int r = readline_process_char(c);
+        if (r >= 0) {
+            return r;
+        }
+    }
+}
+#endif
+
 void readline_push_history(const char *line) {
     if (line[0] != '\0'
         && (MP_STATE_PORT(readline_hist)[0] == NULL

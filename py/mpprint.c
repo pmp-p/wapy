@@ -376,13 +376,6 @@ int mp_print_float(const mp_print_t *print, mp_float_t f, char fmt, int flags, c
 }
 #endif
 
-int mp_printf(const mp_print_t *print, const char *fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    int ret = mp_vprintf(print, fmt, ap);
-    va_end(ap);
-    return ret;
-}
 
 int mp_vprintf(const mp_print_t *print, const char *fmt, va_list args) {
     int chrs = 0;
@@ -575,3 +568,12 @@ int mp_vprintf(const mp_print_t *print, const char *fmt, va_list args) {
     }
     return chrs;
 }
+
+int mp_printf(const mp_print_t *print, const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = mp_vprintf(print, fmt, ap);
+    va_end(ap);
+    return ret;
+}
+

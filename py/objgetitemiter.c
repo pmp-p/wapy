@@ -34,7 +34,27 @@ typedef struct _mp_obj_getitem_iter_t {
     mp_obj_base_t base;
     mp_obj_t args[3];
 } mp_obj_getitem_iter_t;
-
+#if NO_NLR
+STATIC mp_obj_t it_iternext(mp_obj_t self_in) {
+    mp_obj_getitem_iter_t *self = MP_OBJ_TO_PTR(self_in);
+    // try to get next item
+    mp_obj_t value = mp_call_method_n_kw(1, 0, self->args);
+    if (value == MP_OBJ_NULL) {
+        // an exception was raised
+        mp_obj_type_t *t = (mp_obj_type_t *)MP_STATE_THREAD(active_exception)->type;
+        if (t == &mp_type_StopIteration || t == &mp_type_IndexError) {
+            // return MP_OBJ_STOP_ITERATION instead of raising
+            MP_STATE_THREAD(active_exception) = NULL;
+            return MP_OBJ_STOP_ITERATION;
+        } else {
+            // re-raise exception
+            return MP_OBJ_NULL;
+        }
+    }
+    self->args[2] = MP_OBJ_NEW_SMALL_INT(MP_OBJ_SMALL_INT_VALUE(self->args[2]) + 1);
+    return value;
+}
+#else
 STATIC mp_obj_t it_iternext(mp_obj_t self_in) {
     mp_obj_getitem_iter_t *self = MP_OBJ_TO_PTR(self_in);
     nlr_buf_t nlr;
@@ -56,6 +76,7 @@ STATIC mp_obj_t it_iternext(mp_obj_t self_in) {
         }
     }
 }
+#endif
 
 STATIC const mp_obj_type_t it_type = {
     { &mp_type_type },

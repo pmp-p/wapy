@@ -554,12 +554,22 @@ mp_raw_code_t *mp_raw_code_load(mp_reader_t *reader) {
         || MPY_FEATURE_DECODE_FLAGS(header[2]) != MPY_FEATURE_FLAGS
         || header[3] > mp_small_int_bits()
         || read_uint(reader, NULL) > QSTR_WINDOW_SIZE) {
+#if NO_NLR
+        mp_raise_ValueError_o(MP_ERROR_TEXT("incompatible .mpy file"));
+        return NULL;
+#else
         mp_raise_ValueError(MP_ERROR_TEXT("incompatible .mpy file"));
+#endif
     }
     if (MPY_FEATURE_DECODE_ARCH(header[2]) != MP_NATIVE_ARCH_NONE) {
         byte arch = MPY_FEATURE_DECODE_ARCH(header[2]);
         if (!MPY_FEATURE_ARCH_TEST(arch)) {
+#if NO_NLR
+            mp_raise_ValueError_o(MP_ERROR_TEXT("incompatible .mpy arch"));
+            return NULL;
+#else
             mp_raise_ValueError(MP_ERROR_TEXT("incompatible .mpy arch"));
+#endif
         }
     }
     qstr_window_t qw;
@@ -854,7 +864,11 @@ void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename) {
 }
 
 #else
+#if __WASM__
+#pragma message "#error mp_raw_code_save_file not implemented for this platform"
+#else
 #error mp_raw_code_save_file not implemented for this platform
+#endif
 #endif
 
 #endif // MICROPY_PERSISTENT_CODE_SAVE

@@ -51,7 +51,11 @@ STATIC mp_obj_t slice_indices(mp_obj_t self_in, mp_obj_t length_obj) {
     mp_int_t length = mp_obj_int_get_checked(length_obj);
     mp_bound_slice_t bound_indices;
     mp_obj_slice_indices(self_in, length, &bound_indices);
-
+#if NO_NLR
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        return MP_OBJ_NULL;
+    }
+#endif
     mp_obj_t results[3] = {
         MP_OBJ_NEW_SMALL_INT(bound_indices.start),
         MP_OBJ_NEW_SMALL_INT(bound_indices.stop),
@@ -59,6 +63,7 @@ STATIC mp_obj_t slice_indices(mp_obj_t self_in, mp_obj_t length_obj) {
     };
     return mp_obj_new_tuple(3, results);
 }
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(slice_indices_obj, slice_indices);
 #endif
 
@@ -105,6 +110,11 @@ const mp_obj_type_t mp_type_slice = {
 
 mp_obj_t mp_obj_new_slice(mp_obj_t ostart, mp_obj_t ostop, mp_obj_t ostep) {
     mp_obj_slice_t *o = m_new_obj(mp_obj_slice_t);
+#if NO_NLR
+    if (o == NULL) {
+        return MP_OBJ_NULL;
+    }
+#endif
     o->base.type = &mp_type_slice;
     o->start = ostart;
     o->stop = ostop;
@@ -124,7 +134,11 @@ void mp_obj_slice_indices(mp_obj_t self_in, mp_int_t length, mp_bound_slice_t *r
     } else {
         step = mp_obj_get_int(self->step);
         if (step == 0) {
+#if NO_NLR
+            mp_raise_ValueError_o(MP_ERROR_TEXT("slice step can't be zero"));
+#else
             mp_raise_ValueError(MP_ERROR_TEXT("slice step can't be zero"));
+#endif
         }
     }
 

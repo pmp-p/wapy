@@ -275,6 +275,11 @@ mp_obj_t mp_obj_int_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t rhs_i
             case MP_BINARY_OP_RSHIFT:
             case MP_BINARY_OP_INPLACE_RSHIFT: {
                 mp_int_t irhs = mp_obj_int_get_checked(rhs_in);
+#if NO_NLR
+                if (MP_STATE_THREAD(active_exception) != NULL) {
+                    return MP_OBJ_NULL;
+                }
+#endif
                 if (irhs < 0) {
                     mp_raise_ValueError(MP_ERROR_TEXT("negative shift count"));
                 }
@@ -416,6 +421,9 @@ mp_int_t mp_obj_int_get_truncated(mp_const_obj_t self_in) {
     }
 }
 
+#if NO_NLR
+#pragma message "TODO callers must handle exceptions mp_obj_(u)int_get_checked"
+#endif
 mp_int_t mp_obj_int_get_checked(mp_const_obj_t self_in) {
     if (mp_obj_is_small_int(self_in)) {
         return MP_OBJ_SMALL_INT_VALUE(self_in);
@@ -426,7 +434,13 @@ mp_int_t mp_obj_int_get_checked(mp_const_obj_t self_in) {
             return value;
         } else {
             // overflow
+#if NO_NLR
+            mp_raise_msg_o(&mp_type_OverflowError, MP_ERROR_TEXT("438:overflow converting long int to machine word"));
+            return 0; // TODO callers must handle exceptions
+#else
             mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting long int to machine word"));
+#endif
+
         }
     }
 }
@@ -444,7 +458,12 @@ mp_uint_t mp_obj_int_get_uint_checked(mp_const_obj_t self_in) {
         }
     }
 
+#if NO_NLR
+    mp_raise_msg_o(&mp_type_OverflowError, MP_ERROR_TEXT("462:overflow converting long int to machine word"));
+    return 0; // TODO callers must handle exceptions
+#else
     mp_raise_msg(&mp_type_OverflowError, MP_ERROR_TEXT("overflow converting long int to machine word"));
+#endif
 }
 
 #if MICROPY_PY_BUILTINS_FLOAT

@@ -54,6 +54,21 @@ STATIC mp_obj_t iobase_make_new(const mp_obj_type_t *type, size_t n_args, size_t
     return MP_OBJ_FROM_PTR(&iobase_singleton);
 }
 
+#if NO_NLR
+STATIC mp_uint_t iobase_read_write(mp_obj_t obj, void *buf, mp_uint_t size, int *errcode, qstr qst) {
+    mp_obj_t dest[3];
+    mp_load_method(obj, qst, dest);
+    mp_obj_array_t ar = {{&mp_type_bytearray}, BYTEARRAY_TYPECODE, 0, size, buf};
+    dest[2] = MP_OBJ_FROM_PTR(&ar);
+    mp_obj_t ret = mp_call_method_n_kw(1, 0, dest);
+    if (ret == mp_const_none) {
+        *errcode = MP_EAGAIN;
+        return MP_STREAM_ERROR;
+    } else {
+        return mp_obj_get_int(ret);
+    }
+}
+#else
 STATIC mp_uint_t iobase_read_write(mp_obj_t obj, void *buf, mp_uint_t size, int *errcode, qstr qst) {
     mp_obj_t dest[3];
     mp_load_method(obj, qst, dest);
@@ -72,6 +87,7 @@ STATIC mp_uint_t iobase_read_write(mp_obj_t obj, void *buf, mp_uint_t size, int 
         return MP_STREAM_ERROR;
     }
 }
+#endif // NO_NLR
 STATIC mp_uint_t iobase_read(mp_obj_t obj, void *buf, mp_uint_t size, int *errcode) {
     return iobase_read_write(obj, buf, size, errcode, MP_QSTR_readinto);
 }

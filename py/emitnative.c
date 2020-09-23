@@ -841,7 +841,11 @@ STATIC vtype_kind_t load_reg_stack_imm(emit_t *emit, int reg_dest, const stack_i
         } else if (si->vtype == VTYPE_PTR_NONE) {
             emit_native_mov_reg_const(emit, reg_dest, MP_F_CONST_NONE_OBJ);
         } else {
+#if NO_NLR
+            mp_raise_NotImplementedError_o(MP_ERROR_TEXT("conversion to object"));
+#else
             mp_raise_NotImplementedError(MP_ERROR_TEXT("conversion to object"));
+#endif
         }
         return VTYPE_PYOBJ;
     }
@@ -1104,13 +1108,16 @@ STATIC void emit_native_leave_exc_stack(emit_t *emit, bool start_of_handler) {
     }
     ASM_MOV_LOCAL_REG(emit->as, LOCAL_IDX_EXC_HANDLER_PC(emit), REG_RET);
 }
-
+#if NO_NLR
+#pragma message "TODO"
+#else
 STATIC exc_stack_entry_t *emit_native_pop_exc_stack(emit_t *emit) {
     assert(emit->exc_stack_size > 0);
     exc_stack_entry_t *e = &emit->exc_stack[--emit->exc_stack_size];
     assert(e->is_active == false);
     return e;
 }
+#endif
 
 STATIC void emit_load_reg_with_ptr(emit_t *emit, int reg, mp_uint_t ptr, size_t table_off) {
     if (!emit->do_viper_types) {
@@ -1166,6 +1173,9 @@ STATIC void emit_native_label_assign(emit_t *emit, mp_uint_t l) {
 }
 
 STATIC void emit_native_global_exc_entry(emit_t *emit) {
+#if NO_NLR
+#pragma message "TODO"
+#else
     // Note: 4 labels are reserved for this function, starting at *emit->label_slot
 
     emit->exit_label = *emit->label_slot;
@@ -1272,9 +1282,13 @@ STATIC void emit_native_global_exc_entry(emit_t *emit) {
             emit_call(emit, MP_F_NATIVE_RAISE);
         }
     }
+#endif
 }
 
 STATIC void emit_native_global_exc_exit(emit_t *emit) {
+#if NO_NLR
+#pragma message "TODO"
+#else
     // Label for end of function
     emit_native_label_assign(emit, emit->exit_label);
 
@@ -1307,6 +1321,7 @@ STATIC void emit_native_global_exc_exit(emit_t *emit) {
     }
 
     ASM_EXIT(emit->as);
+#endif
 }
 
 STATIC void emit_native_import_name(emit_t *emit, qstr qst) {
@@ -2196,6 +2211,9 @@ STATIC void emit_native_with_cleanup(emit_t *emit, mp_uint_t label) {
 }
 
 STATIC void emit_native_end_finally(emit_t *emit) {
+#if NO_NLR
+#pragma message "TODO"
+#else
     // logic:
     //   exc = pop_stack
     //   if exc == None: pass
@@ -2219,6 +2237,7 @@ STATIC void emit_native_end_finally(emit_t *emit) {
     }
 
     emit_post(emit);
+#endif
 }
 
 STATIC void emit_native_get_iter(emit_t *emit, bool use_stack) {
@@ -2698,7 +2717,12 @@ STATIC void emit_native_call_function(emit_t *emit, mp_uint_t n_positional, mp_u
                 break;
             default:
                 // this can happen when casting a cast: int(int)
+#if NO_NLR
+                mp_raise_NotImplementedError_o(MP_ERROR_TEXT("casting"));
+                return;
+#else
                 mp_raise_NotImplementedError(MP_ERROR_TEXT("casting"));
+#endif
         }
     } else {
         assert(vtype_fun == VTYPE_PYOBJ);
@@ -2786,6 +2810,9 @@ STATIC void emit_native_return_value(emit_t *emit) {
 }
 
 STATIC void emit_native_raise_varargs(emit_t *emit, mp_uint_t n_args) {
+#if NO_NLR
+#pragma message "TODO"
+#else
     (void)n_args;
     assert(n_args == 1);
     vtype_kind_t vtype_exc;
@@ -2795,13 +2822,21 @@ STATIC void emit_native_raise_varargs(emit_t *emit, mp_uint_t n_args) {
     }
     // TODO probably make this 1 call to the runtime (which could even call convert, native_raise(obj, type))
     emit_call(emit, MP_F_NATIVE_RAISE);
+#endif
 }
 
 STATIC void emit_native_yield(emit_t *emit, int kind) {
+#if NO_NLR
+#pragma message "TODO"
+#else
     // Note: 1 (yield) or 3 (yield from) labels are reserved for this function, starting at *emit->label_slot
 
     if (emit->do_viper_types) {
+#if NO_NLR
+        mp_raise_NotImplementedError_o(MP_ERROR_TEXT("native yield"));
+#else
         mp_raise_NotImplementedError(MP_ERROR_TEXT("native yield"));
+#endif
     }
     emit->scope->scope_flags |= MP_SCOPE_FLAG_GENERATOR;
 
@@ -2878,6 +2913,7 @@ STATIC void emit_native_yield(emit_t *emit, int kind) {
         emit_native_adjust_stack_size(emit, 1); // ret_value
         emit_fold_stack_top(emit, REG_ARG_1);
     }
+#endif
 }
 
 STATIC void emit_native_start_except_handler(emit_t *emit) {

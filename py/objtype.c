@@ -351,8 +351,8 @@ mp_obj_t mp_obj_instance_make_new(const mp_obj_type_t *self, size_t n_args, size
             #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
             mp_raise_TypeError(MP_ERROR_TEXT("__init__() should return None"));
             #else
-            mp_raise_msg_varg(&mp_type_TypeError,
-                MP_ERROR_TEXT("__init__() should return None, not '%s'"), mp_obj_get_type_str(init_ret));
+            mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
+                MP_ERROR_TEXT("__init__() should return None, not '%s'"), mp_obj_get_type_str(init_ret)));
             #endif
         }
     }
@@ -423,6 +423,11 @@ STATIC mp_obj_t instance_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
             case MP_UNARY_OP_HASH:
                 // __hash__ must return a small int
                 val = MP_OBJ_NEW_SMALL_INT(mp_obj_get_int_truncated(val));
+#if NO_NLR
+                if (MP_STATE_THREAD(active_exception) != NULL) {
+                    return MP_OBJ_NULL;
+                }
+#endif
                 break;
             case MP_UNARY_OP_INT:
                 // Must return int
@@ -624,7 +629,11 @@ STATIC void mp_obj_instance_load_attr(mp_obj_t self_in, qstr attr, mp_obj_t *des
             // the code.
             const mp_obj_t *proxy = mp_obj_property_get(member);
             if (proxy[0] == mp_const_none) {
+#if NO_NLR
+                mp_raise_msg_o(&mp_type_AttributeError, MP_ERROR_TEXT("unreadable attribute"));
+#else
                 mp_raise_msg(&mp_type_AttributeError, MP_ERROR_TEXT("unreadable attribute"));
+#endif
             } else {
                 dest[0] = mp_call_function_n_kw(proxy[0], 1, 0, &self_in);
             }
@@ -863,8 +872,8 @@ mp_obj_t mp_obj_instance_call(mp_obj_t self_in, size_t n_args, size_t n_kw, cons
         #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
         mp_raise_TypeError(MP_ERROR_TEXT("object not callable"));
         #else
-        mp_raise_msg_varg(&mp_type_TypeError,
-            MP_ERROR_TEXT("'%s' object isn't callable"), mp_obj_get_type_str(self_in));
+        mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
+            MP_ERROR_TEXT("'%s' object isn't callable"), mp_obj_get_type_str(self_in)));
         #endif
     }
     mp_obj_instance_t *self = MP_OBJ_TO_PTR(self_in);
@@ -985,11 +994,21 @@ STATIC mp_obj_t type_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp
     mp_obj_type_t *self = MP_OBJ_TO_PTR(self_in);
 
     if (self->make_new == NULL) {
+        // module(name[, doc])
+        if (n_args) {
+            const char * mod_name = mp_obj_str_get_str(args[0]);
+            if (mod_name) {
+                return mp_obj_new_module( qstr_from_strn(mod_name, strlen(mod_name) ));
+            }
+            return MP_OBJ_NULL;
+        } else {
         #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
-        mp_raise_TypeError(MP_ERROR_TEXT("can't create instance"));
+            mp_raise_TypeError(MP_ERROR_TEXT("can't create instance"));
         #else
-        mp_raise_msg_varg(&mp_type_TypeError, MP_ERROR_TEXT("can't create '%q' instances"), self->name);
+            mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
+                MP_ERROR_TEXT("cannot create '%q' instances"), self->name));
         #endif
+        }
     }
 
     // make new instance
@@ -1015,6 +1034,9 @@ STATIC void type_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
             // Returns a read-only dict of the class attributes.
             // If the internal locals is not fixed, a copy will be created.
             mp_obj_dict_t *dict = self->locals_dict;
+            if (!dict) {
+                dict = mp_obj_new_dict(0);
+            }
             if (dict->map.is_fixed) {
                 dest[0] = MP_OBJ_FROM_PTR(dict);
             } else {
@@ -1072,7 +1094,14 @@ STATIC void type_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
                     if (check_for_special_accessors(MP_OBJ_NEW_QSTR(attr), dest[1])) {
                         if (self->flags & MP_TYPE_FLAG_IS_SUBCLASSED) {
                             // This class is already subclassed so can't have special accessors added
-                            mp_raise_msg(&mp_type_AttributeError, MP_ERROR_TEXT("can't add special method to already-subclassed class"));
+#if NO_NLR
+                            mp_raise_msg_o(&mp_type_AttributeError,
+                                MP_ERROR_TEXT("can't add special method to already-subclassed class"));
+#else
+                            mp_raise_msg(&mp_type_AttributeError,
+                                MP_ERROR_TEXT("can't add special method to already-subclassed class"));
+#endif
+                            return;
                         }
                         self->flags |= MP_TYPE_FLAG_HAS_SPECIAL_ACCESSORS;
                     }
@@ -1120,13 +1149,13 @@ mp_obj_t mp_obj_new_type(qstr name, mp_obj_t bases_tuple, mp_obj_t locals_dict) 
             mp_raise_TypeError(NULL);
         }
         mp_obj_type_t *t = MP_OBJ_TO_PTR(bases_items[i]);
-        // TODO: Verify with CPy, tested on function type
+#pragma message "TODO: Verify with CPy, tested on function type"
         if (t->make_new == NULL) {
             #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
             mp_raise_TypeError(MP_ERROR_TEXT("type isn't an acceptable base type"));
             #else
-            mp_raise_msg_varg(&mp_type_TypeError,
-                MP_ERROR_TEXT("type '%q' isn't an acceptable base type"), t->name);
+            mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
+                MP_ERROR_TEXT("type '%q' isn't an acceptable base type"), t->name));
             #endif
         }
         #if ENABLE_SPECIAL_ACCESSORS
@@ -1312,10 +1341,17 @@ const mp_obj_type_t mp_type_super = {
     .attr = super_attr,
 };
 
+#if NO_NLR
+mp_obj_t mp_load_super_method(qstr attr, mp_obj_t *dest) {
+    mp_obj_super_t super = {{&mp_type_super}, dest[1], dest[2]};
+    return mp_load_method(MP_OBJ_FROM_PTR(&super), attr, dest);
+}
+#else
 void mp_load_super_method(qstr attr, mp_obj_t *dest) {
     mp_obj_super_t super = {{&mp_type_super}, dest[1], dest[2]};
     mp_load_method(MP_OBJ_FROM_PTR(&super), attr, dest);
 }
+#endif
 
 /******************************************************************************/
 // subclassing and built-ins specific to types

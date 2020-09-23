@@ -83,8 +83,12 @@ mp_vfs_mount_t *mp_vfs_lookup_path(const char *path, const char **path_out) {
             }
         }
 
-        // if we get here then there's nothing mounted on /, so the path doesn't exist
-        return MP_VFS_NONE;
+        // if we get here then there's nothing mounted on /
+
+        if (is_abs) {
+            // path began with / and was not found
+            return MP_VFS_NONE;
+        }
     }
 
     // a relative path within a mounted device
@@ -137,12 +141,19 @@ mp_import_stat_t mp_vfs_import_stat(const char *path) {
 
     // delegate to vfs.stat() method
     mp_obj_t path_o = mp_obj_new_str(path_out, strlen(path_out));
+#if NO_NLR
+    mp_obj_t stat = mp_vfs_proxy_call(vfs, MP_QSTR_stat, 1, &path_o);
+    if (stat == MP_OBJ_NULL) {
+         // assume an exception means that the path is not found
+        MP_STATE_THREAD(active_exception) = NULL;
+#else
     mp_obj_t stat;
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
         stat = mp_vfs_proxy_call(vfs, MP_QSTR_stat, 1, &path_o);
         nlr_pop();
     } else {
+#endif
         // assume an exception means that the path is not found
         return MP_IMPORT_STAT_NO_EXIST;
     }
@@ -158,6 +169,9 @@ mp_import_stat_t mp_vfs_import_stat(const char *path) {
 
 STATIC mp_obj_t mp_vfs_autodetect(mp_obj_t bdev_obj) {
     #if MICROPY_VFS_LFS1 || MICROPY_VFS_LFS2
+#if NO_NLR
+#error LFS1/2 unsupported
+#endif
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
         mp_obj_t vfs = MP_OBJ_NULL;
