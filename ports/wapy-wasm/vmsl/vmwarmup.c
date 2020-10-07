@@ -48,6 +48,7 @@ if (VMOP < VMOP_WARMUP) {
         "import usys;usys.modules['sys']=usys;usys.modules['usys']=usys;"
         "import embed;"
         "import builtins;builtins.__WAPY__ = True;builtins.sys = usys;"
+        "usys.modules['builtins']=builtins;"
         "usys.path.append('/assets');"
         "import wapy_wasm_site as site;usys.modules['site']=site;"
         "usys.path.append('/assets/packages');"

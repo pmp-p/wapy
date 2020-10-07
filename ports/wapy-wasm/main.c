@@ -405,10 +405,13 @@ wasm-ld: error: duplicate symbol: mp_type_code
 #include "py/profile.h"
 #endif
 
-//extern
-int pyexec_friendly_repl_process_char(int c);
-int pyexec_repl_repl_restart(int ret);
+
+// #include "../wapy/repl.c"
+
+
 int handle_uncaught_exception(void);
+
+
 
 // entry point for implementing core vm parts in python, set via "embed" module
 extern void pyv(mp_obj_t value);
@@ -591,7 +594,8 @@ has_io() {
 }
 
 
-
+extern int pyexec_repl_repl_restart(int ret);
+extern int pyexec_friendly_repl_process_char(int c);
 
 int
 main_loop_or_step(void) {

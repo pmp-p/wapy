@@ -25,12 +25,13 @@ static char *stack_top;
 #include "../wapy/core/ringbuf_o.h"
 #include "../wapy/core/ringbuf_b.h"
 
-//static
+
+
 struct wPyInterpreterState i_main;
-//static
+
 struct wPyThreadState i_state;
 
-RBB_T(out_rbb, 16384);
+RBB_T(out_rbb, 2048);
 
 
 
@@ -276,13 +277,5 @@ PyRun_SimpleString(const char *command) {
     return retval;
 }
 
-/*
-EMSCRIPTEN_KEEPALIVE int
-repl_run(int warmup) {
-    if (warmup == 1)
-        return MP_IO_SHM_SIZE;
-    //wPy_NewInterpreter();
-    repl_started = MP_IO_SHM_SIZE;
-    return 1;
-}
-*/
+
+

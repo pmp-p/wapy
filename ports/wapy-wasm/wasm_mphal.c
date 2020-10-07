@@ -117,12 +117,12 @@ unsigned char out_push(unsigned char c) {
 
 //FIXME: libc print with valid json are likely to pass and get interpreted by pts
 //TODO: buffer all until render tick
-extern int g_argc;
+extern int io_encode_hex;
 //this one (over)cooks like _cooked
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 #if __EMSCRIPTEN__
 #else // WASI/node
-    if (g_argc) {
+    if (!io_encode_hex) {
         printf("%s", str);
         return;
     }

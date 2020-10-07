@@ -182,45 +182,11 @@ volatile int gil_divisor = MICROPY_PY_THREAD_GIL_VM_DIVISOR;
 
 
 
-// wasi support
-
-//static
+// =================== wasi support ===================================
 struct timespec t_timespec;
-//static
 struct timeval t_timeval;
-
-//static
 struct timeval wa_tv;
-//static
 unsigned int wa_ts_nsec;
-
-/*
-#include <time.h>
-#include <sched.h>
-
-static struct timeval wa_tv;
-static unsigned int wa_ts_nsec;
-
-int wa_clock_gettime(clockid_t clockid, struct timespec *ts) {
-    sched_yield();
-    ts->tv_sec = wa_tv.tv_sec;
-    ts->tv_nsec = wa_ts_nsec;
-    fprintf(sc,"[\"clock_gettime\", %d, %d, %lu]\n", (int)clockid, (int)&ts, ts->tv_nsec);
-    return 0;
-}
-
-
-int wa_gettimeofday(struct timeval *tv, struct timezone *tz) {
-
-    sched_yield();
-    memcpy( &tv, &wa_tv, sizeof(tv));
-
-    //tv->tv_sec = 9223372036854775807 ;//
-
-    fprintf(sc,"[\"gettimeofday\",%d,%d, %lld, %lld ]\n", (int)&tv, (int)&tz, tv->tv_sec, tv->tv_usec);
-    return 0;
-}
-*/
 
 void wa_setenv(const char *key, int value) {
     fprintf(kv,"{\"%s\":%d}\n", key, value);
@@ -228,7 +194,7 @@ void wa_setenv(const char *key, int value) {
 
 void wa_syscall(const char *code) {
     fprintf(sc," %s\n", code);
-    fflush(sc);
+    //fflush(sc);
 }
 
 void __wa_env(const char *key, unsigned int sign, unsigned int bitwidth, void* addr ) {
@@ -237,6 +203,17 @@ void __wa_env(const char *key, unsigned int sign, unsigned int bitwidth, void* a
 }
 
 #define wa_env(key,x) __wa_env(key, ( x >= 0 && ~x >= 0 ), sizeof(x)*8 , &x )
+
+//===========================================================================
+
+
+
+
+
+
+
+
+
 
 void Py_Init() {
     cc = fdopen(3, "r+");
@@ -443,7 +420,7 @@ int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
     return 0;
 }
 
-
+int io_encode_hex = 1;
 
 static int loops = 0;
 
@@ -459,6 +436,10 @@ main(int argc, char *argv[]) {
 
             g_argc = argc;
             g_argv = copy_argv(argc, argv);
+
+            if (argc)
+                io_encode_hex = !argc;
+
             KPANIC = 0;
             // init
             crash_point = &&VM_stackmess;

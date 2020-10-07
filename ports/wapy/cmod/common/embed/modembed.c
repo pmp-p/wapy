@@ -62,10 +62,18 @@ const char *nullbytes = "";
 // glue code will do its best to do the conversion or init.
 //
 
-
-#if  __EMSCRIPTEN__
+#ifndef wa_clock_gettime
     #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
     #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
+    static struct timespec t_timespec;
+    static struct timeval t_timeval;
+#else
+    extern struct timespec t_timespec;
+    extern struct timeval t_timeval;
+#endif
+
+
+#if  __EMSCRIPTEN__
 
     #define WAPY_VALUE (1)
     extern int VMFLAGS_IF;
@@ -88,9 +96,6 @@ const char *nullbytes = "";
 
 #include <time.h>
 #include <sys/time.h>
-
-extern struct timespec t_timespec;
-extern struct timeval t_timeval;
 
 
 #include "py/smallint.h"

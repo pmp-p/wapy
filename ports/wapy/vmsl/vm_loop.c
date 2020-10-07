@@ -438,6 +438,11 @@ def_func_bc_call_ret:
 VM_syscall:;
 // TODO: flush all at once
     // STDOUT flush before eventually filling it again
+
+#if __EMSCRIPTEN__
+
+    // use json  { "channel" : "hexdata" }\n
+
     if (!rbb_is_empty(&out_rbb)) {
         // flush stdout
         unsigned char out_c = 0;
@@ -447,3 +452,57 @@ VM_syscall:;
             fprintf(cc, "%c", out_c );
         fprintf(cc, "\"}\n");
     }
+#else
+
+    // @channel:hexdata\n
+
+    if (!rbb_is_empty(&out_rbb)) {
+        int cnt = 0;
+        unsigned char out_c = 0;
+
+        //TODO put a 0 at end and printf buffer directly via shm
+
+        while (rbb_pop(&out_rbb, &out_c)) {
+            if (!cnt--) {
+                fprintf(cc, "\n@%c:%c", 48+1,out_c);
+                cnt = 251;
+            } else
+                fprintf(cc, "%c", out_c );
+        }
+        fprintf(cc, "\n");
+    }
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//

@@ -299,7 +299,7 @@ $(PROG): lib-static lib-allshared
 endif
 
 
-ifdef STATIC
+ifdef STATIC_NOPANDA
 # ============ static + pic was SERIOUSLY BROKEN until clang 11 ==========
 # but this is the good one
 CFLAGS += -fPIC
@@ -314,6 +314,27 @@ $(PROG): lib-static
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 # ============================================================
 endif
+
+
+
+ifdef STATIC
+# ============ static + pic was SERIOUSLY BROKEN until clang 11 ==========
+# but this is the good one
+CFLAGS += -fPIC
+LD_PROG += $(CFLAGS) $(WASM_FLAGS) -s MAIN_MODULE=1 -s EXPORT_ALL=1 -s LZ4=1
+LD_LIB += $(WASM_FLAGS)
+
+#LD_EXTRA += -lbullet $(LnkP3D)
+
+$(PROG): lib-static
+	$(ECHO) "Building static executable $@"
+	$(Q)$(CC) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
+ -o $@ main.c  lib$(BASENAME)$(TARGET).a $(BLOBS) -lGL -lEGL -lGLESv2 -ldl -lm $(LD_EXTRA)
+	$(shell mv $(BASENAME).* $(BASENAME)/)
+# ============================================================
+endif
+
+
 
 ifdef NDK
 # ============ static + pic was SERIOUSLY BROKEN until clang 11 ==========
