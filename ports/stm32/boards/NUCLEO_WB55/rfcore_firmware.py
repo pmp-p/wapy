@@ -180,6 +180,12 @@ _PATH_WS_BLE_HCI = "ws_ble_hci.bin"
 _ADDR_FUS = 0x080EC000
 _ADDR_WS_BLE_HCI = 0x080DC000
 
+# When installing the FUS/WS it can take a long time to return to the first
+# GET_STATE HCI command.
+# e.g. Installing stm32wb5x_BLE_Stack_full_fw.bin takes 3600ms to respond.
+_INSTALLING_FUS_GET_STATE_TIMEOUT = const(1000)
+_INSTALLING_WS_GET_STATE_TIMEOUT = const(6000)
+
 
 def log(msg, *args, **kwargs):
     print("[rfcore update]", msg.format(*args, **kwargs))
@@ -189,23 +195,31 @@ class _Flash:
     _FLASH_KEY1 = 0x45670123
     _FLASH_KEY2 = 0xCDEF89AB
 
+    _FLASH_CR_STRT_MASK = 1 << 16
+    _FLASH_CR_LOCK_MASK = 1 << 31
+    _FLASH_SR_BSY_MASK = 1 << 16
+
     def wait_not_busy(self):
-        while machine.mem32[stm.FLASH + stm.FLASH_SR] & 1 << 16:
+        while machine.mem32[stm.FLASH + stm.FLASH_SR] & _Flash._FLASH_SR_BSY_MASK:
             machine.idle()
 
     def unlock(self):
-        machine.mem32[stm.FLASH + stm.FLASH_KEYR] = _Flash._FLASH_KEY1
-        machine.mem32[stm.FLASH + stm.FLASH_KEYR] = _Flash._FLASH_KEY2
+        if machine.mem32[stm.FLASH + stm.FLASH_CR] & _Flash._FLASH_CR_LOCK_MASK:
+            # Only unlock if already locked (i.e. FLASH_CR_LOCK is set).
+            machine.mem32[stm.FLASH + stm.FLASH_KEYR] = _Flash._FLASH_KEY1
+            machine.mem32[stm.FLASH + stm.FLASH_KEYR] = _Flash._FLASH_KEY2
+        else:
+            log("Flash was already unlocked.")
 
     def lock(self):
-        machine.mem32[stm.FLASH + stm.FLASH_CR] = 1 << 31  # LOCK
+        machine.mem32[stm.FLASH + stm.FLASH_CR] = _Flash._FLASH_CR_LOCK_MASK
 
     def erase_page(self, page):
         assert 0 <= page <= 255  # 1MiB range (4k page)
         self.wait_not_busy()
         cr = page << 3 | 1 << 1  # PNB  # PER
         machine.mem32[stm.FLASH + stm.FLASH_CR] = cr
-        machine.mem32[stm.FLASH + stm.FLASH_CR] = cr | 1 << 16  # STRT
+        machine.mem32[stm.FLASH + stm.FLASH_CR] = cr | _Flash._FLASH_CR_STRT_MASK
         self.wait_not_busy()
         machine.mem32[stm.FLASH + stm.FLASH_CR] = 0
 
@@ -264,10 +278,10 @@ def _parse_vendor_response(data):
     return (op >> 10, op & 0x3FF, data[6], data[7] if len(data) > 7 else 0)
 
 
-def _run_sys_hci_cmd(ogf, ocf, buf=b""):
+def _run_sys_hci_cmd(ogf, ocf, buf=b"", timeout=0):
     try:
         ogf_out, ocf_out, status, result = _parse_vendor_response(
-            stm.rfcore_sys_hci(ogf, ocf, buf)
+            stm.rfcore_sys_hci(ogf, ocf, buf, timeout)
         )
     except OSError:
         # Timeout or FUS not active.
@@ -277,8 +291,8 @@ def _run_sys_hci_cmd(ogf, ocf, buf=b""):
     return (status, result)
 
 
-def fus_get_state():
-    return _run_sys_hci_cmd(_OGF_VENDOR, _OCF_FUS_GET_STATE)
+def fus_get_state(timeout=0):
+    return _run_sys_hci_cmd(_OGF_VENDOR, _OCF_FUS_GET_STATE, timeout=timeout)
 
 
 def fus_is_idle():
@@ -362,18 +376,18 @@ def resume():
         return _write_failure_state(REASON_RFCORE_NOT_CONFIGURED)
 
     while True:
-        _STATE_id = _read_state()
+        state = _read_state()
 
-        if _STATE_id == _STATE_IDLE:
+        if state == _STATE_IDLE:
             log("Firmware update complete")
             return 0
 
-        elif _STATE_id == _STATE_FAILED:
+        elif state == _STATE_FAILED:
             log("Firmware update failed")
             return _read_failure_reason()
 
         # Keep calling GET_STATE until error or FUS.
-        elif _STATE_id == _STATE_WAITING_FOR_FUS:
+        elif state == _STATE_WAITING_FOR_FUS:
             log("Querying FUS state")
             status, result = fus_get_state()
             log("FUS state: {} {}", status, result)
@@ -387,7 +401,7 @@ def resume():
                 _write_state(_STATE_CHECK_UPDATES)
 
         # Keep trying to start the WS until !fus_active() (or error).
-        elif _STATE_id == _STATE_WAITING_FOR_WS:
+        elif state == _STATE_WAITING_FOR_WS:
             if stm.rfcore_status() != _MAGIC_FUS_ACTIVE:
                 log("WS active")
                 _write_state(_STATE_IDLE)
@@ -402,7 +416,7 @@ def resume():
                     _write_failure_state(REASON_NO_WS)
 
         # Sequence the FUS 1.0.2 -> FUS 1.1.0 -> WS (depending on what's available).
-        elif _STATE_id == _STATE_CHECK_UPDATES:
+        elif state == _STATE_CHECK_UPDATES:
             log("Checking for updates")
             fus_version = stm.rfcore_fw_version(_FW_VERSION_FUS)
             log("FUS version {}", fus_version)
@@ -440,13 +454,13 @@ def resume():
         # This shouldn't happen - the flash write should always complete and
         # move straight onto the COPIED state. Failure here indicates that
         # the rfcore is misconfigured or the WS firmware was not deleted first.
-        elif _STATE_id == _STATE_COPYING_FUS or _STATE_id == _STATE_COPYING_WS:
+        elif state == _STATE_COPYING_FUS or state == _STATE_COPYING_WS:
             log("Flash copy failed mid-write")
             _write_failure_state(REASON_FLASH_COPY_FAILED)
 
         # Flash write completed, we should immediately see GET_STATE return 0,0
         # so we can start the FUS install.
-        elif _STATE_id == _STATE_COPIED_FUS:
+        elif state == _STATE_COPIED_FUS:
             if fus_is_idle():
                 log("FUS copy complete, installing")
                 _write_state(_STATE_INSTALLING_FUS)
@@ -458,9 +472,9 @@ def resume():
         # Keep polling the state until we see a 0,0 (success) or non-transient
         # error. In general we should expect to see (16,0) several times,
         # followed by a (255,0), followed by (0, 0).
-        elif _STATE_id == _STATE_INSTALLING_FUS:
+        elif state == _STATE_INSTALLING_FUS:
             log("Installing FUS...")
-            status, result = fus_get_state()
+            status, result = fus_get_state(_INSTALLING_FUS_GET_STATE_TIMEOUT)
             log("FUS state: {} {}", status, result)
             if 0x20 <= status <= 0x2F and result == 0:
                 # FUS_STATE_FUS_UPGRD_ONGOING
@@ -472,8 +486,6 @@ def resume():
             elif status == 0:
                 log("FUS update successful")
                 _write_state(_STATE_CHECK_UPDATES)
-                # Need to force a reset after FUS install otherwise a subsequent flash copy will fail.
-                machine.reset()
             elif result == 0:
                 # See below (for equivalent path for WS install -- we
                 # sometimes see (255,0) right at the end).
@@ -486,7 +498,7 @@ def resume():
         # Keep polling the state until we see 0,0 or failure (1,0). Any other
         # result means retry (but the docs say that 0 and 1 are the only
         # status values).
-        elif _STATE_id == _STATE_DELETING_WS:
+        elif state == _STATE_DELETING_WS:
             log("Deleting WS...")
             status, result = fus_get_state()
             log("FUS state: {} {}", status, result)
@@ -502,7 +514,7 @@ def resume():
                 _write_failure_state(REASON_WS_DELETION_FAILED)
 
         # As for _STATE_COPIED_FUS above. We should immediately see 0,0.
-        elif _STATE_id == _STATE_COPIED_WS:
+        elif state == _STATE_COPIED_WS:
             if fus_is_idle():
                 log("WS copy complete, installing")
                 _write_state(_STATE_INSTALLING_WS)
@@ -512,9 +524,9 @@ def resume():
                 _write_failure_state(REASON_FLASH_WS_BAD_STATE)
 
         # As for _STATE_INSTALLING_FUS above.
-        elif _STATE_id == _STATE_INSTALLING_WS:
+        elif state == _STATE_INSTALLING_WS:
             log("Installing WS...")
-            status, result = fus_get_state()
+            status, result = fus_get_state(_INSTALLING_WS_GET_STATE_TIMEOUT)
             log("FUS state: {} {}", status, result)
             if 0x10 <= status <= 0x1F and result == 0:
                 # FUS_STATE_FW_UPGRD_ONGOING

@@ -75,6 +75,7 @@ STATIC int btstack_error_to_errno(int err) {
 #if MICROPY_PY_BLUETOOTH_ENABLE_CENTRAL_MODE
 STATIC mp_obj_bluetooth_uuid_t create_mp_uuid(uint16_t uuid16, const uint8_t *uuid128) {
     mp_obj_bluetooth_uuid_t result;
+    result.base.type = &mp_type_bluetooth_uuid;
     if (uuid16 != 0) {
         result.data[0] = uuid16 & 0xff;
         result.data[1] = (uuid16 >> 8) & 0xff;
@@ -413,30 +414,21 @@ STATIC void btstack_packet_handler(uint8_t packet_type, uint8_t *packet, uint8_t
         uint16_t value_handle = gatt_event_characteristic_value_query_result_get_value_handle(packet);
         uint16_t len = gatt_event_characteristic_value_query_result_get_value_length(packet);
         const uint8_t *data = gatt_event_characteristic_value_query_result_get_value(packet);
-        mp_uint_t atomic_state;
-        len = mp_bluetooth_gattc_on_data_available_start(MP_BLUETOOTH_IRQ_GATTC_READ_RESULT, conn_handle, value_handle, len, &atomic_state);
-        mp_bluetooth_gattc_on_data_available_chunk(data, len);
-        mp_bluetooth_gattc_on_data_available_end(atomic_state);
+        mp_bluetooth_gattc_on_data_available(MP_BLUETOOTH_IRQ_GATTC_READ_RESULT, conn_handle, value_handle, &data, &len, 1);
     } else if (event_type == GATT_EVENT_NOTIFICATION) {
         DEBUG_printf("  --> gatt notification\n");
         uint16_t conn_handle = gatt_event_notification_get_handle(packet);
         uint16_t value_handle = gatt_event_notification_get_value_handle(packet);
         uint16_t len = gatt_event_notification_get_value_length(packet);
         const uint8_t *data = gatt_event_notification_get_value(packet);
-        mp_uint_t atomic_state;
-        len = mp_bluetooth_gattc_on_data_available_start(MP_BLUETOOTH_IRQ_GATTC_NOTIFY, conn_handle, value_handle, len, &atomic_state);
-        mp_bluetooth_gattc_on_data_available_chunk(data, len);
-        mp_bluetooth_gattc_on_data_available_end(atomic_state);
+        mp_bluetooth_gattc_on_data_available(MP_BLUETOOTH_IRQ_GATTC_NOTIFY, conn_handle, value_handle, &data, &len, 1);
     } else if (event_type == GATT_EVENT_INDICATION) {
         DEBUG_printf("  --> gatt indication\n");
         uint16_t conn_handle = gatt_event_indication_get_handle(packet);
         uint16_t value_handle = gatt_event_indication_get_value_handle(packet);
         uint16_t len = gatt_event_indication_get_value_length(packet);
         const uint8_t *data = gatt_event_indication_get_value(packet);
-        mp_uint_t atomic_state;
-        len = mp_bluetooth_gattc_on_data_available_start(MP_BLUETOOTH_IRQ_GATTC_INDICATE, conn_handle, value_handle, len, &atomic_state);
-        mp_bluetooth_gattc_on_data_available_chunk(data, len);
-        mp_bluetooth_gattc_on_data_available_end(atomic_state);
+        mp_bluetooth_gattc_on_data_available(MP_BLUETOOTH_IRQ_GATTC_INDICATE, conn_handle, value_handle, &data, &len, 1);
     } else if (event_type == GATT_EVENT_CAN_WRITE_WITHOUT_RESPONSE) {
         uint16_t conn_handle = gatt_event_can_write_without_response_get_handle(packet);
         DEBUG_printf("  --> gatt can write without response %d\n", conn_handle);
@@ -846,15 +838,15 @@ STATIC uint16_t att_read_callback(hci_con_handle_t connection_handle, uint16_t a
         return 0;
     }
 
-    #if MICROPY_PY_BLUETOOTH_GATTS_ON_READ_CALLBACK
     // Allow Python code to override value (by using gatts_write), or deny (by returning false) the read.
+    // Note this will be a no-op if the ringbuffer implementation is being used, as the Python callback cannot
+    // be executed synchronously. This is currently always the case for btstack.
     if ((buffer == NULL) && (buffer_size == 0)) {
         if (!mp_bluetooth_gatts_on_read_request(connection_handle, att_handle)) {
             DEBUG_printf("att_read_callback: read request denied\n");
             return 0;
         }
     }
-    #endif
 
     uint16_t ret = att_read_callback_handle_blob(entry->data, entry->data_len, offset, buffer, buffer_size);
     return ret;

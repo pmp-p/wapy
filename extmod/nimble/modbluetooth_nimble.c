@@ -53,7 +53,6 @@
 STATIC uint8_t nimble_address_mode = BLE_OWN_ADDR_RANDOM;
 
 #define NIMBLE_STARTUP_TIMEOUT 2000
-STATIC struct ble_npl_sem startup_sem;
 
 // Any BLE_HS_xxx code not in this table will default to MP_EIO.
 STATIC int8_t ble_hs_err_to_errno_table[] = {
@@ -114,6 +113,7 @@ STATIC void reverse_addr_byte_order(uint8_t *addr_out, const uint8_t *addr_in) {
 
 STATIC mp_obj_bluetooth_uuid_t create_mp_uuid(const ble_uuid_any_t *uuid) {
     mp_obj_bluetooth_uuid_t result;
+    result.base.type = &mp_type_bluetooth_uuid;
     switch (uuid->u.type) {
         case BLE_UUID_TYPE_16:
             result.type = MP_BLUETOOTH_UUID_TYPE_16;
@@ -209,8 +209,6 @@ STATIC void sync_cb(void) {
     ble_svc_gap_device_name_set(MICROPY_PY_BLUETOOTH_DEFAULT_GAP_NAME);
 
     mp_bluetooth_nimble_ble_state = MP_BLUETOOTH_NIMBLE_BLE_STATE_ACTIVE;
-
-    ble_npl_sem_release(&startup_sem);
 }
 
 STATIC void gatts_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg) {
@@ -368,8 +366,6 @@ int mp_bluetooth_init(void) {
     ble_hs_cfg.gatts_register_cb = gatts_register_cb;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
-    ble_npl_sem_init(&startup_sem, 0);
-
     MP_STATE_PORT(bluetooth_nimble_root_pointers) = m_new0(mp_bluetooth_nimble_root_pointers_t, 1);
     mp_bluetooth_gatts_db_create(&MP_STATE_PORT(bluetooth_nimble_root_pointers)->gatts_db);
 
@@ -382,21 +378,32 @@ int mp_bluetooth_init(void) {
     // Otherwise default implementation above calls ble_hci_uart_init().
     mp_bluetooth_nimble_port_hci_init();
 
+    // Static initialization is complete, can start processing events.
+    mp_bluetooth_nimble_ble_state = MP_BLUETOOTH_NIMBLE_BLE_STATE_WAITING_FOR_SYNC;
+
     // Initialise NimBLE memory and data structures.
+    DEBUG_printf("mp_bluetooth_init: nimble_port_init\n");
     nimble_port_init();
 
     // Make sure that the HCI UART and event handling task is running.
     mp_bluetooth_nimble_port_start();
 
-    // Static initialization is complete, can start processing events.
-    mp_bluetooth_nimble_ble_state = MP_BLUETOOTH_NIMBLE_BLE_STATE_WAITING_FOR_SYNC;
-
-    ble_npl_sem_pend(&startup_sem, NIMBLE_STARTUP_TIMEOUT);
+    // Run the scheduler while we wait for stack startup.
+    // On non-ringbuffer builds (NimBLE on STM32/Unix) this will also poll the UART and run the event queue.
+    mp_uint_t timeout_start_ticks_ms = mp_hal_ticks_ms();
+    while (mp_bluetooth_nimble_ble_state != MP_BLUETOOTH_NIMBLE_BLE_STATE_ACTIVE) {
+        if (mp_hal_ticks_ms() - timeout_start_ticks_ms > NIMBLE_STARTUP_TIMEOUT) {
+            break;
+        }
+        MICROPY_EVENT_POLL_HOOK
+    }
 
     if (mp_bluetooth_nimble_ble_state != MP_BLUETOOTH_NIMBLE_BLE_STATE_ACTIVE) {
         mp_bluetooth_deinit();
         return MP_ETIMEDOUT;
     }
+
+    DEBUG_printf("mp_bluetooth_init: starting services\n");
 
     // By default, just register the default gap/gatt service.
     ble_svc_gap_init();
@@ -413,7 +420,7 @@ int mp_bluetooth_init(void) {
 }
 
 void mp_bluetooth_deinit(void) {
-    DEBUG_printf("mp_bluetooth_deinit\n");
+    DEBUG_printf("mp_bluetooth_deinit %d\n", mp_bluetooth_nimble_ble_state);
     if (mp_bluetooth_nimble_ble_state == MP_BLUETOOTH_NIMBLE_BLE_STATE_OFF) {
         return;
     }
@@ -582,12 +589,12 @@ static int characteristic_access_cb(uint16_t conn_handle, uint16_t value_handle,
     switch (ctxt->op) {
         case BLE_GATT_ACCESS_OP_READ_CHR:
         case BLE_GATT_ACCESS_OP_READ_DSC:
-            #if MICROPY_PY_BLUETOOTH_GATTS_ON_READ_CALLBACK
             // Allow Python code to override (by using gatts_write), or deny (by returning false) the read.
+            // Note this will be a no-op if the ringbuffer implementation is being used (i.e. the stack isn't
+            // run in the scheduler). The ringbuffer is not used on STM32 and Unix-H4 only.
             if (!mp_bluetooth_gatts_on_read_request(conn_handle, value_handle)) {
                 return BLE_ATT_ERR_READ_NOT_PERMITTED;
             }
-            #endif
 
             entry = mp_bluetooth_gatts_db_lookup(MP_STATE_PORT(bluetooth_nimble_root_pointers)->gatts_db, value_handle);
             if (!entry) {
@@ -797,16 +804,35 @@ int mp_bluetooth_set_preferred_mtu(uint16_t mtu) {
 #if MICROPY_PY_BLUETOOTH_ENABLE_CENTRAL_MODE
 
 STATIC void gattc_on_data_available(uint8_t event, uint16_t conn_handle, uint16_t value_handle, const struct os_mbuf *om) {
-    size_t len = OS_MBUF_PKTLEN(om);
-    mp_uint_t atomic_state;
-    len = mp_bluetooth_gattc_on_data_available_start(event, conn_handle, value_handle, len, &atomic_state);
-    while (len > 0 && om != NULL) {
-        size_t n = MIN(om->om_len, len);
-        mp_bluetooth_gattc_on_data_available_chunk(OS_MBUF_DATA(om, const uint8_t *), n);
-        len -= n;
+    // When the HCI data for an ATT payload arrives, the L2CAP channel will
+    // buffer it into its receive buffer. We set BLE_L2CAP_JOIN_RX_FRAGS=1 in
+    // syscfg.h so it should be rare that the mbuf is fragmented, but we do need
+    // to be able to handle it. We pass all the fragments up to modbluetooth.c
+    // which will create a temporary buffer on the MicroPython heap if necessary
+    // to re-assemble them.
+
+    // Count how many links are in the mbuf chain.
+    size_t n = 0;
+    const struct os_mbuf *elem = om;
+    while (elem) {
+        n += 1;
+        elem = SLIST_NEXT(elem, om_next);
+    }
+
+    // Grab data pointers and lengths for each of the links.
+    const uint8_t **data = mp_local_alloc(sizeof(uint8_t *) * n);
+    uint16_t *data_len = mp_local_alloc(sizeof(uint16_t) * n);
+    for (size_t i = 0; i < n; ++i) {
+        data[i] = OS_MBUF_DATA(om, const uint8_t *);
+        data_len[i] = om->om_len;
         om = SLIST_NEXT(om, om_next);
     }
-    mp_bluetooth_gattc_on_data_available_end(atomic_state);
+
+    // Pass all the fragments together.
+    mp_bluetooth_gattc_on_data_available(event, conn_handle, value_handle, data, data_len, n);
+
+    mp_local_free(data_len);
+    mp_local_free(data);
 }
 
 STATIC int gap_scan_cb(struct ble_gap_event *event, void *arg) {
