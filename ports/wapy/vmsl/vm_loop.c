@@ -49,7 +49,7 @@
     //then it is toplevel or TODO: it's sync top level ( tranpiled by aio on the heap)
         def_PyRun_SimpleString_is_repl = true;
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-        JUMP( def_PyRun_SimpleString, "main_loop_or_step_repl");
+        JUMP( def_PyRun_SimpleString, "main_iteration_repl");
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
         // mark done
         IO_CODE_DONE;
@@ -107,7 +107,7 @@ def_PyRun_SimpleString: {
     mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
 
     if (lex == NULL) {
-        clog("syntax error");
+        clog("110:syntax error");
         handle_uncaught_exception();
     } else {
         qstr source_name = lex->source_name;
@@ -142,10 +142,13 @@ def_PyRun_SimpleString: {
 
             if (type->call != NULL) {
                 if ( (int)*type->call == (int)&fun_bc_call ) {
+                    // >>>
                     ctx_get_next(CTX_COPY);
-                        GOSUB(def_func_bc_call, "mp_call_function_n_kw");
-                        exret = SUBVAL; //CTX.sub_value;
+                    GOSUB(def_func_bc_call, "mp_call_function_n_kw");
+                    exret = SUBVAL; //CTX.sub_value;
+                    // <<<
                 } else {
+                    clog("151: native call %p %p ?", *type->call , fun_bc_call);
                     exret = type->call(CTX.self_in, CTX.n_args, CTX.n_kw, CTX.args);
                 }
 
@@ -246,11 +249,11 @@ def_PyRun_SimpleString: {
 
 #else // MICROPY_PY_SYS_SETTRACE
 
-#define FRAME_SETUP()
-#define FRAME_ENTER()
-#define FRAME_LEAVE()
-#define FRAME_UPDATE()
-#define TRACE_TICK(current_ip, current_sp, is_exception)
+    #define FRAME_SETUP()
+    #define FRAME_ENTER()
+    #define FRAME_LEAVE()
+    #define FRAME_UPDATE()
+    #define TRACE_TICK(current_ip, current_sp, is_exception)
 
 #endif // MICROPY_PY_SYS_SETTRACE
 
@@ -260,10 +263,13 @@ def_mp_call_function_n_kw: {
 
     if (type->call != NULL) {
         if ( (int)*type->call == (int)&fun_bc_call ) {
+            // >>>
             ctx_get_next(CTX_COPY);
-                GOSUB(def_func_bc_call, "mp_call_function_n_kw");
-                RETVAL = SUBVAL; //CTX.sub_value;
+            GOSUB(def_func_bc_call, "mp_call_function_n_kw");
+            RETVAL = SUBVAL; //CTX.sub_value;
+            // <<<
         } else {
+            clog("      899: native call %p %p", *type->call , &fun_bc_call);
 #if VMTRACE
 clog("      899: native call");
 #endif

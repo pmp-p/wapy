@@ -94,6 +94,29 @@ _zipfile_ZipFile_print( const mp_print_t *print, mp_obj_t self_in, mp_print_kind
 
 
 
+STATIC mp_obj_t // void -> void
+_zipfile_ZipFile_open(size_t argc, const mp_obj_t *argv) {
+// opt: no finally void slot
+// opt : void return
+
+    _zipfile_ZipFile_obj_t *self = (_zipfile_ZipFile_obj_t *)MP_OBJ_TO_PTR(argv[0]);
+    (void)self;
+
+    // def open(name: const_char_p="")->void:
+    // ('const_char_p', '""') => const char * = ""
+    
+        const char *name; // ('const char *', 'name', '""')
+        if (argc>1) { name = mp_obj_str_get_str(argv[1]); } else { name = mp_obj_new_str_via_qstr("",0); }
+    
+
+    // ------- method body (try/finally) -----
+    zip_entry_open(self->zip, name);
+return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(_zipfile_ZipFile_open_obj, 0, 2, _zipfile_ZipFile_open);
+
+
+
 STATIC mp_obj_t // bytes -> bytes
 _zipfile_ZipFile_read(size_t argc, const mp_obj_t *argv) {
     mp_obj_t __preturn__;
@@ -102,15 +125,8 @@ _zipfile_ZipFile_read(size_t argc, const mp_obj_t *argv) {
     _zipfile_ZipFile_obj_t *self = (_zipfile_ZipFile_obj_t *)MP_OBJ_TO_PTR(argv[0]);
     (void)self;
 
-    // def read(name: const_char_p="") -> bytes:
-    // ('const_char_p', '""') => const char * = ""
-    
-        const char *name; // ('const char *', 'name', '""')
-        if (argc>1) { name = mp_obj_str_get_str(argv[1]); } else { name = mp_obj_new_str_via_qstr("",0); }
-    
 
     // ------- method body --------
-    zip_entry_open(self->zip, name);
     zip_entry_read(self->zip, &self->zbuf, &self->zbuf_size);
     zip_entry_close(self->zip);
     { //try:
@@ -124,19 +140,19 @@ _zipfile_ZipFile_read(size_t argc, const mp_obj_t *argv) {
     }
 return __preturn__;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(_zipfile_ZipFile_read_obj, 0, 2, _zipfile_ZipFile_read);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(_zipfile_ZipFile_read_obj, 0, 1, _zipfile_ZipFile_read);
 
 
 
 STATIC mp_obj_t // void -> void
-_zipfile_ZipFile_open(size_t argc, const mp_obj_t *argv) {
+_zipfile_ZipFile_init(size_t argc, const mp_obj_t *argv) {
 // opt: no finally void slot
 // opt : void return
 
     _zipfile_ZipFile_obj_t *self = (_zipfile_ZipFile_obj_t *)MP_OBJ_TO_PTR(argv[0]);
     (void)self;
 
-    // def open(path : const_char_p="") -> void:
+    // def init(path : const_char_p="") -> void:
     // ('const_char_p', '""') => const char * = ""
     
         const char *path; // ('const char *', 'path', '""')
@@ -150,7 +166,7 @@ _zipfile_ZipFile_open(size_t argc, const mp_obj_t *argv) {
     self->zip = zip_open(self->path, 0, 'r');
 return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(_zipfile_ZipFile_open_obj, 0, 2, _zipfile_ZipFile_open);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(_zipfile_ZipFile_init_obj, 0, 2, _zipfile_ZipFile_init);
 
 
 
@@ -239,8 +255,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(_zipfile_ZipFile_pouet2_obj, 0, 1, _z
 
 
 STATIC const mp_map_elem_t _zipfile_ZipFile_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_read), (mp_obj_t)&_zipfile_ZipFile_read_obj },
     {MP_OBJ_NEW_QSTR(MP_QSTR_open), (mp_obj_t)&_zipfile_ZipFile_open_obj },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_read), (mp_obj_t)&_zipfile_ZipFile_read_obj },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_init), (mp_obj_t)&_zipfile_ZipFile_init_obj },
     {MP_OBJ_NEW_QSTR(MP_QSTR_filename), (mp_obj_t)&_zipfile_ZipFile_filename_obj },
     {MP_OBJ_NEW_QSTR(MP_QSTR_close), (mp_obj_t)&_zipfile_ZipFile_close_obj },
     {MP_OBJ_NEW_QSTR(MP_QSTR_pouet), (mp_obj_t)&_zipfile_ZipFile_pouet_obj },

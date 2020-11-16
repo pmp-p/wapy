@@ -14,7 +14,7 @@
 #endif
 
 
-#if  __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__WASM__)
 
     #define WAPY_VALUE (1)
     extern int VMFLAGS_IF;
@@ -184,10 +184,10 @@ def run(runstr : const_char_p = "[]"):
 
 
 
-def CLI():
+def disable_irq():
     VMFLAGS_IF--;
 
-def STI():
+def enable_irq():
     VMFLAGS_IF++;
 
 def FLAGS_IF() -> _int_from_uint:

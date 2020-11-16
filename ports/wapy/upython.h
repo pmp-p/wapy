@@ -61,6 +61,7 @@ extern int VMFLAGS_IF;
 extern int SHOW_OS_LOOP;
 extern int show_os_loop(int state);
 
+
 struct
 wPyInterpreterState {
     char *shm_stdio ;

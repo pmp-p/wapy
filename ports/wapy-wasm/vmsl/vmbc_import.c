@@ -9,7 +9,8 @@ VM_ENTRY(MP_BC_IMPORT_NAME): {
     FRAME_UPDATE();
     VM_DECODE_QSTR;  // qst => import [name]
 
-#if DEBUG_BC
+#if 1 //DEBUG_BC
+    fprintf(stderr,"import\n");
     clog("BC_IMPORT_NAME(%d:%d): [%s]\n", ctx_current, CTX.sub_id, qstr_str(CTX.qst) );
 #endif
 

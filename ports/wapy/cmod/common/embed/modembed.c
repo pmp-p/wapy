@@ -73,7 +73,7 @@ const char *nullbytes = "";
 #endif
 
 
-#if  __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__WASM__)
 
     #define WAPY_VALUE (1)
     extern int VMFLAGS_IF;
@@ -288,7 +288,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_run_obj, 0, 1, embed_run);
 
 
 STATIC mp_obj_t // void -> void
-embed_CLI(size_t argc, const mp_obj_t *argv) {
+embed_disable_irq(size_t argc, const mp_obj_t *argv) {
 // opt: no finally void slot
 // opt : void return
 
@@ -296,12 +296,12 @@ embed_CLI(size_t argc, const mp_obj_t *argv) {
     VMFLAGS_IF--;
 return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_CLI_obj, 0, 0, embed_CLI);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_disable_irq_obj, 0, 0, embed_disable_irq);
 
 
 
 STATIC mp_obj_t // void -> void
-embed_STI(size_t argc, const mp_obj_t *argv) {
+embed_enable_irq(size_t argc, const mp_obj_t *argv) {
 // opt: no finally void slot
 // opt : void return
 
@@ -309,7 +309,7 @@ embed_STI(size_t argc, const mp_obj_t *argv) {
     VMFLAGS_IF++;
 return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_STI_obj, 0, 0, embed_STI);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_enable_irq_obj, 0, 0, embed_enable_irq);
 
 
 
@@ -888,8 +888,8 @@ STATIC const mp_map_elem_t embed_dict_table[] = {
 // __main__
     {MP_OBJ_NEW_QSTR(MP_QSTR_set_io_buffer), (mp_obj_t)&embed_set_io_buffer_obj },
     {MP_OBJ_NEW_QSTR(MP_QSTR_run), (mp_obj_t)&embed_run_obj },
-    {MP_OBJ_NEW_QSTR(MP_QSTR_CLI), (mp_obj_t)&embed_CLI_obj },
-    {MP_OBJ_NEW_QSTR(MP_QSTR_STI), (mp_obj_t)&embed_STI_obj },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_disable_irq), (mp_obj_t)&embed_disable_irq_obj },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_enable_irq), (mp_obj_t)&embed_enable_irq_obj },
     {MP_OBJ_NEW_QSTR(MP_QSTR_FLAGS_IF), (mp_obj_t)&embed_FLAGS_IF_obj },
     {MP_OBJ_NEW_QSTR(MP_QSTR_WAPY), (mp_obj_t)&embed_WAPY_obj },
     {MP_OBJ_NEW_QSTR(MP_QSTR_os_print), (mp_obj_t)&embed_os_print_obj },

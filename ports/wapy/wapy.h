@@ -1,4 +1,14 @@
 
+//need global interrupt state marker ( @syscall / @awaited / aio_suspend  )
+// to choose which VM to enter at top level
+// this is different from ctx interrupts ctx_if ( if used )
+
+int VMFLAGS_IF = 0;
+int SHOW_OS_LOOP=0;
+struct timespec t_timespec;
+struct timeval t_timeval;
+
+
 #include "../wapy/core/fdfile.h"
 
 #include "py/compile.h"
@@ -30,6 +40,11 @@
 #include "py/stackctrl.h"
 #include "py/gc.h"
 
+#include "upython.h"
+
+#define __MAIN__ (1)
+#include "emscripten.h"
+#undef __MAIN__
 
 
 

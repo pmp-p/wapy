@@ -1,5 +1,3 @@
-#define OUTER_INIT (0)
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,53 +10,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../wapy/core/fdfile.h"
 
-#include "py/compile.h"
-#include "py/emitglue.h"
-#include "py/objtype.h"
-#include "py/runtime.h"
-#include "py/parse.h"
-#include "py/bc0.h"
-// overwrite the "math" in bytecode value with plain integers
-// #include "bc_as_integers.h"
-#include "py/bc.h"
-#include "py/repl.h"
-#include "py/gc.h"
-#include "py/mperrno.h"
-#include "lib/utils/pyexec.h"
+#include "../wapy/wapy.h"
 
-
-// for mp_call_function_0
-#include "py/parsenum.h"
-#include "py/compile.h"
-#include "py/objstr.h"
-#include "py/objtuple.h"
-#include "py/objlist.h"
-#include "py/objmodule.h"  // <= function defined in
-#include "py/objgenerator.h"
-#include "py/smallint.h"
-#include "py/runtime.h"
-#include "py/builtin.h"
-#include "py/stackctrl.h"
-#include "py/gc.h"
-
-#define __MAIN__ (1)
-#include "emscripten.h"
-#undef __MAIN__
-
-
-struct timespec t_timespec;
-struct timeval t_timeval;
-
-
-#if 0 // OUTER_INIT
-    #pragma message " ============= FULL SHARED =============="
-#include "py/mpstate.h"  // mp_state_ctx
-mp_state_ctx_t mp_state_ctx;
-//const mp_obj_type_t mp_type_SystemExit;
-//const mp_obj_type_t mp_type_TypeError;
-#endif
 
 
 /*
@@ -290,7 +244,7 @@ CFLAGS="-Wfatal-errors -Wall -Wextra -Wunused -Werror -Wno-format-extra-args -Wn
 #error "need MICROPY_ENABLE_PYSTACK (1)
 #endif
 
-static int SHOW_OS_LOOP=0;
+//static int SHOW_OS_LOOP=0;
 
 static int g_argc;
 static char **g_argv; //[];
@@ -598,41 +552,29 @@ extern int pyexec_repl_repl_restart(int ret);
 extern int pyexec_friendly_repl_process_char(int c);
 
 int
-main_loop_or_step(void) {
-    #if OUTER_INIT
-        #pragma message "check for uncaught unwind "
+main_iteration(void) {
+    if (VMOP <= VMOP_INIT) {
         crash_point = &&VM_stackmess;
-    #else
-        if (VMOP <= VMOP_INIT) {
-            crash_point = &&VM_stackmess;
-            #include "vmsl/vmwarmup.c"
-            return 0;
-        }
-    #endif
+        #include "vmsl/vmwarmup.c"
+        return 0;
+    }
+
     #define cc stdout
     #include "../wapy/vmsl/vm_loop.c"
     #undef cc
     return 0;
 
-} // main_loop_or_step
+} // main_iteration
 
-
+/*
 int
 main_loop_warmup(void) {
     #include "vmsl/vmwarmup.c"
 } // main_loop_warmup
-
+*/
 
 //***************************************************************************************
 
-
-int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
-    va_list argptr;
-    va_start (argptr, fmt );
-    vfprintf(stdout,fmt,argptr);
-    va_end (argptr);
-    return 0;
-}
 
 
 #include <dlfcn.h>
@@ -656,10 +598,10 @@ main(int argc, char *argv[]) {
     g_argv = copy_argv(argc, argv);
 
     //assert(emscripten_run_preload_plugins(LIB_NAME, NULL, NULL) == 0);
-
     //void *lib_wapy = import( "libwapy.so");
     //void *lib_sdl2 = import( "libsdl2.so");
-    emscripten_set_main_loop( main_loop_or_step, 0, 1);
+
+    emscripten_set_main_loop( (em_callback_func)(void*)main_iteration, 0, 1);
     return 0;
 }
 

@@ -59,7 +59,7 @@ if (VMOP < VMOP_WARMUP) {
 
 #if __EMSCRIPTEN__
     emscripten_cancel_main_loop();
-    emscripten_set_main_loop( main_loop_or_step, 0, 1);
+    emscripten_set_main_loop( main_iteration, 0, 1);
     return 0;
 #else
     #pragma message "WASI startup"

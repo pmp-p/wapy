@@ -10,6 +10,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+
+#include "../wapy/wapy.h"
+
+/*
+
 #include "../wapy/core/fdfile.h"
 
 #include "py/compile.h"
@@ -44,6 +49,7 @@
 #define __MAIN__ (1)
 #include "emscripten.h"
 #undef __MAIN__
+*/
 
 #define DBG 0
 #define DLOPEN 0
@@ -52,7 +58,6 @@
 #error "need MICROPY_ENABLE_PYSTACK (1)
 #endif
 
-static int SHOW_OS_LOOP=0;
 
 static int g_argc;
 static char **g_argv; //[];
@@ -404,21 +409,11 @@ has_io() {
 
 
 //void
-//main_loop_or_step(void) {
+//main_iteration(void) {
 
 
 
 //***************************************************************************************
-
-
-
-int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
-    va_list argptr;
-    va_start (argptr, fmt );
-    vfprintf(stdout,fmt,argptr);
-    va_end (argptr);
-    return 0;
-}
 
 int io_encode_hex = 1;
 
@@ -483,7 +478,7 @@ while (!KPANIC) {
 }
 
     return 0;
-} // main_loop_or_step
+} // main_iteration
 
 
 
