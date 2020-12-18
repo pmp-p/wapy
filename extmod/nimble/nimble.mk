@@ -24,6 +24,11 @@ ifeq ($(MICROPY_BLUETOOTH_NIMBLE_BINDINGS_ONLY),0)
 # UART is also polled by the RX IRQ.
 CFLAGS_MOD += -DMICROPY_PY_BLUETOOTH_USE_SYNC_EVENTS=1
 
+# Without the ringbuffer, and with the full implementation, we can also
+# enable pairing and bonding. This requires both synchronous events and
+# some customisation of the key store.
+CFLAGS_MOD += -DMICROPY_PY_BLUETOOTH_ENABLE_PAIRING_BONDING=1
+
 NIMBLE_LIB_DIR = lib/mynewt-nimble
 
 LIB_SRC_C += $(addprefix $(NIMBLE_LIB_DIR)/, \
@@ -78,7 +83,6 @@ LIB_SRC_C += $(addprefix $(NIMBLE_LIB_DIR)/, \
 		ble_store_util.c \
 		ble_uuid.c \
 		) \
-	nimble/host/store/ram/src/ble_store_ram.c \
 	nimble/host/util/src/addr.c \
 	nimble/transport/uart/src/ble_hci_uart.c \
 	$(addprefix porting/nimble/src/, \
@@ -90,6 +94,7 @@ LIB_SRC_C += $(addprefix $(NIMBLE_LIB_DIR)/, \
 		os_msys_init.c \
 		) \
 	)
+	# nimble/host/store/ram/src/ble_store_ram.c \
 
 EXTMOD_SRC_C += $(addprefix $(NIMBLE_EXTMOD_DIR)/, \
 	nimble/nimble_npl_os.c \
