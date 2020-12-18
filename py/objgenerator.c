@@ -301,7 +301,11 @@ STATIC mp_obj_t gen_resume_and_raise(mp_obj_t self_in, mp_obj_t send_value, mp_o
     }
 }
 
-STATIC mp_obj_t gen_instance_iternext(mp_obj_t self_in) {
+#if __EMSCRIPTEN__
+#else
+STATIC
+#endif
+mp_obj_t gen_instance_iternext(mp_obj_t self_in) {
     return gen_resume_and_raise(self_in, mp_const_none, MP_OBJ_NULL);
 }
 

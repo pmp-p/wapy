@@ -221,12 +221,12 @@ COPT += -s TOTAL_MEMORY=512MB
 # -s LZ4=0
 COPT += $(JSFLAGS) $(WASM_FLAGS) -s ASSERTIONS=2
 
-LD_PROG += -s FORCE_FILESYSTEM=1
+LD_PROG += -s FORCE_FILESYSTEM=1 -s EXPORT_ALL=1
 LD_PROG += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_shm_get_ptr', '_show_os_loop']"
-#LD_PROG += -s EXTRA_EXPORTED_RUNTIME_METHODS="['addRunDependency','removeRunDependency']"
+LD_PROG += -s ERROR_ON_UNDEFINED_SYMBOLS=1 -s LLD_REPORT_UNDEFINED=1
 
-WASM_FLAGS += -s LZ4=1 -s WASM=1 -s EXPORT_ALL=1
-WASM_FLAGS += -s ERROR_ON_UNDEFINED_SYMBOLS=1
+
+WASM_FLAGS += -s LZ4=1 -s WASM=1
 WASM_FLAGS += -s ASSERTIONS=1 -s DEMANGLE_SUPPORT=1 -s DISABLE_EXCEPTION_CATCHING=1
 
 # -s USE_ZLIB=1 -s USE_LIBPNG=1 -s USE_OGG=1
@@ -275,7 +275,7 @@ $(PROG): lib-allshared
 	$(shell cp lib$(BASENAME)$(TARGET).wasm lib$(BASENAME)$(TARGET).so)
 	$(shell cp libsdl2.wasm libsdl2.so)
 	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) $(BLOBS)\
- -s BINARYEN_ASYNC_COMPILATION=1 -s FORCE_FILESYSTEM=1 --use-preload-plugins\
+ -s BINARYEN_ASYNC_COMPILATION=1 --use-preload-plugins\
  -o $@ main.c -l$(BASENAME)$(TARGET) -lSDL2 -lGL -lEGL -lGLESv2 -ldl -lm
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 #-L. lib$(BASENAME)$(TARGET).a
@@ -292,7 +292,7 @@ $(PROG): lib-static lib-allshared
 	$(shell cp lib$(BASENAME)$(TARGET).wasm lib$(BASENAME)$(TARGET).so)
 	$(shell cp libsdl2.wasm libsdl2.so)
 	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) $(BLOBS)\
- -s BINARYEN_ASYNC_COMPILATION=1 -s FORCE_FILESYSTEM=1 --use-preload-plugins\
+ -s BINARYEN_ASYNC_COMPILATION=1 --use-preload-plugins\
  -o $@ main.c -L. -lwapy -lsdl2 -ldl -lm
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
@@ -303,14 +303,14 @@ ifdef STATIC_NOPANDA
 # ============ static + pic was SERIOUSLY BROKEN until clang 11 ==========
 # but this is the good one
 CFLAGS += -fPIC
-LD_PROG += $(CFLAGS) $(WASM_FLAGS) -s MAIN_MODULE=1 -s EXPORT_ALL=1 -s LZ4=1
-LD_LIB += $(WASM_FLAGS)
+LD_PROG += $(CFLAGS) $(WASM_FLAGS) -s MAIN_MODULE=1 -s LZ4=1
+LD_LIB += $(WASM_FLAGS) -s LINKABLE=1 -s EXPORT_ALL=1
 
 
 $(PROG): lib-static
 	$(ECHO) "Building static executable $@"
 	$(Q)$(CC) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
- -o $@ main.c  lib$(BASENAME)$(TARGET).a $(BLOBS) -lGL -lEGL -lGLESv2 -ldl -lm $(LD_EXTRA)
+ -o $@ main.c $(OBJ) $(BLOBS) -ldl -lm $(LD_EXTRA)
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 # ============================================================
 endif
@@ -321,15 +321,15 @@ ifdef STATIC
 # ============ static + pic was SERIOUSLY BROKEN until clang 11 ==========
 # but this is the good one
 CFLAGS += -fPIC
-LD_PROG += $(CFLAGS) $(WASM_FLAGS) -s MAIN_MODULE=1 -s EXPORT_ALL=1 -s LZ4=1
-LD_LIB += $(WASM_FLAGS)
+LD_PROG += $(CFLAGS) $(WASM_FLAGS) -s MAIN_MODULE=1 -s LZ4=1
+LD_LIB += $(WASM_FLAGS) -s LINKABLE=1 -s EXPORT_ALL=1
 
 #LD_EXTRA += -lbullet $(LnkP3D)
 
 $(PROG): lib-static
 	$(ECHO) "Building static executable $@"
 	$(Q)$(CC) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
- -o $@ main.c  lib$(BASENAME)$(TARGET).a $(BLOBS) -lGL -lEGL -lGLESv2 -ldl -lm $(LD_EXTRA)
+ -o $@ main.c  lib$(BASENAME)$(TARGET).a $(BLOBS) -s USE_WEBGL2=1 -ldl -lm $(LD_EXTRA)
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 # ============================================================
 endif
