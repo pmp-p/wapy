@@ -48,6 +48,7 @@ if (VMOP < VMOP_WARMUP) {
         "import usys;usys.modules['sys']=usys;usys.modules['usys']=usys;"
         "import embed;"
         "import builtins;builtins.__WAPY__ = True;builtins.sys = usys;"
+        "usys.modules['builtins']=builtins;"
         "usys.path.append('/assets');"
         "import wapy_wasm_site as site;usys.modules['site']=site;"
         "usys.path.append('/assets/packages');"
@@ -58,7 +59,7 @@ if (VMOP < VMOP_WARMUP) {
 
 #if __EMSCRIPTEN__
     emscripten_cancel_main_loop();
-    emscripten_set_main_loop( main_loop_or_step, 0, 1);
+    emscripten_set_main_loop( main_iteration, 0, 1);
     return 0;
 #else
     #pragma message "WASI startup"

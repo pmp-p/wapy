@@ -22,6 +22,7 @@
 
 #if __EMSCRIPTEN__
 #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
+#include <sys/time.h>
 #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
 #endif
 
@@ -46,8 +47,11 @@ static unsigned long epoch_us = 0;
 
 
 uint64_t mp_hal_time_ns(void) {
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
-    return (uint64_t)( t_timespec.tv_sec + t_timespec.tv_sec );
+   // wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+   // return (uint64_t)( t_timespec.tv_sec + t_timespec.tv_sec );
+
+    wa_gettimeofday(&t_timeval, NULL);
+    return (uint64_t)t_timeval.tv_sec * 1000000000ULL + (uint64_t)t_timeval.tv_usec * 1000ULL;
 }
 
 
@@ -117,12 +121,12 @@ unsigned char out_push(unsigned char c) {
 
 //FIXME: libc print with valid json are likely to pass and get interpreted by pts
 //TODO: buffer all until render tick
-extern int g_argc;
+extern int io_encode_hex;
 //this one (over)cooks like _cooked
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 #if __EMSCRIPTEN__
 #else // WASI/node
-    if (g_argc) {
+    if (!io_encode_hex) {
         printf("%s", str);
         return;
     }

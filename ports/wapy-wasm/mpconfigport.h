@@ -6,10 +6,10 @@
 #define MICROPY_VM_HOOK_BC 1
 
 #ifdef STATIC
-    #undef STATIC
+    #pragam message "STATIC as static could lead to linking problems"
 #endif
 
-#define STATIC    // mpconfig.h:1402   => bad pointer cast and bad linking
+//#define STATIC    // mpconfig.h:1402   => bad pointer cast and bad linking
 #endif
 
 

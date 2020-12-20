@@ -291,7 +291,8 @@ mp_code_state_t *mp_obj_fun_bc_prepare_codestate(mp_obj_t self_in, size_t n_args
 #endif
 
 
-STATIC mp_obj_t fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+//STATIC <= NEVER !
+mp_obj_t __attribute__ ((noinline)) fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     if (MP_STACK_CHECK()) {
         return MP_OBJ_NULL;
     }
@@ -404,6 +405,12 @@ STATIC mp_obj_t fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const 
         return mp_raise_o(result);
     }
 }
+/*
+void * get_fun_bc_call_addr(){
+    return &fun_bc_call;
+}
+*/
+
 
 #if MICROPY_PY_FUNCTION_ATTRS
 void mp_obj_fun_bc_attr(mp_obj_t self_in, qstr attr, mp_obj_t *dest) {
@@ -423,7 +430,7 @@ const mp_obj_type_t mp_type_fun_bc = {
     #if MICROPY_CPYTHON_COMPAT
     .print = fun_bc_print,
     #endif
-    .call = fun_bc_call,
+    .call = &fun_bc_call,
     .unary_op = mp_generic_unary_op,
     #if MICROPY_PY_FUNCTION_ATTRS
     .attr = mp_obj_fun_bc_attr,

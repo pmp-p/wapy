@@ -3,10 +3,18 @@
 // glue code will do its best to do the conversion or init.
 //
 
-
-#if  __EMSCRIPTEN__
+#ifndef wa_clock_gettime
     #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
     #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
+    static struct timespec t_timespec;
+    static struct timeval t_timeval;
+#else
+    extern struct timespec t_timespec;
+    extern struct timeval t_timeval;
+#endif
+
+
+#if defined(__EMSCRIPTEN__) || defined(__WASM__)
 
     #define WAPY_VALUE (1)
     extern int VMFLAGS_IF;
@@ -29,9 +37,6 @@
 
 #include <time.h>
 #include <sys/time.h>
-
-extern struct timespec t_timespec;
-extern struct timeval t_timeval;
 
 
 #include "py/smallint.h"
@@ -114,7 +119,7 @@ pycore(const char *fn) {
     mp_obj_t qst = MP_OBJ_NEW_QSTR(qfn);
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"FFYPY[%p->%s]\n", ffpy, fn );
+    fprintf(stderr,"122:FFYPY[%p->%s]\n", ffpy, fn );
     if (ffpy) {
         mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &qst);
     }
@@ -174,15 +179,15 @@ def run(runstr : const_char_p = "[]"):
     if ( ln < cstr_max ) {
         strcpy(cstr,runstr);
     } else {
-        fprintf(stderr, "buffer overrun in embed.run %zu >= %zu", ln, cstr_max);
+        fprintf(stderr, "182:buffer overrun in embed.run %zu >= %zu", ln, cstr_max);
     }
 
 
 
-def CLI():
+def disable_irq():
     VMFLAGS_IF--;
 
-def STI():
+def enable_irq():
     VMFLAGS_IF++;
 
 def FLAGS_IF() -> _int_from_uint:
@@ -192,15 +197,13 @@ def WAPY() -> _int_from_uint:
     return WAPY_VALUE
 
 def os_print( data : const_char_p = "{}" ) -> void :
-    #fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
     fprintf( stdout , "%s\n" , data );
 
 def os_write( data : const_char_p = "{}" ) -> void :
-    #fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
     fprintf( stdout , "%s" , data );
 
 def os_stderr( data : const_char_p = "" ) -> void :
-    fprintf( stderr, "embed.os_stderr(%s)\n", data );
+    fprintf( stderr, "%s\n", data );
 
 def log( data : const_char_p = "" ) -> void :
     fprintf( stderr, "%s\n", data );
@@ -219,7 +222,6 @@ def os_showloop()->void :
 def os_hideloop()->void :
     fprintf(stderr,"will hide begin/end for os loop\n");
     show_os_loop(0);
-
 
 def os_hook() ->void:
     void (*void_ptr)(int) = MP_STATE_PORT(PyOS_InputHook);

@@ -10,40 +10,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../wapy/core/fdfile.h"
 
-#include "py/compile.h"
-#include "py/emitglue.h"
-#include "py/objtype.h"
-#include "py/runtime.h"
-#include "py/parse.h"
-#include "py/bc0.h"
-// overwrite the "math" in bytecode value with plain integers
-// #include "bc_as_integers.h"
-#include "py/bc.h"
-#include "py/repl.h"
-#include "py/gc.h"
-#include "py/mperrno.h"
-#include "lib/utils/pyexec.h"
-
-
-// for mp_call_function_0
-#include "py/parsenum.h"
-#include "py/compile.h"
-#include "py/objstr.h"
-#include "py/objtuple.h"
-#include "py/objlist.h"
-#include "py/objmodule.h"  // <= function defined in
-#include "py/objgenerator.h"
-#include "py/smallint.h"
-#include "py/runtime.h"
-#include "py/builtin.h"
-#include "py/stackctrl.h"
-#include "py/gc.h"
-
-#define __MAIN__ (1)
-#include "emscripten.h"
-#undef __MAIN__
+#include "../wapy/wapy.h"
 
 #define DBG 0
 #define DLOPEN 0
@@ -52,7 +20,6 @@
 #error "need MICROPY_ENABLE_PYSTACK (1)
 #endif
 
-static int SHOW_OS_LOOP=0;
 
 static int g_argc;
 static char **g_argv; //[];
@@ -104,7 +71,6 @@ copy_argv(int argc, char *argv[]) {
     new_argv[ptr_args-1] = NULL;
     return (new_argv);
 }
-
 
 
 #include "upython.c"
@@ -167,8 +133,8 @@ extern int trace_on;
 #define io_stdin i_main.shm_stdio
 
 FILE *cc;
-FILE *kv;
-FILE *sc;
+FILE *fd_keyvalue;
+FILE *fd_syscall;
 
 // to use kb buffer space for scripts
 // if (strlen(io_stdin)>=IO_KBD){ io_stdin[IO_KBD]  = 0;
@@ -182,66 +148,41 @@ volatile int gil_divisor = MICROPY_PY_THREAD_GIL_VM_DIVISOR;
 
 
 
-// wasi support
-
-//static
+// =================== wasi support ===================================
 struct timespec t_timespec;
-//static
 struct timeval t_timeval;
-
-//static
 struct timeval wa_tv;
-//static
 unsigned int wa_ts_nsec;
 
-/*
-#include <time.h>
-#include <sched.h>
-
-static struct timeval wa_tv;
-static unsigned int wa_ts_nsec;
-
-int wa_clock_gettime(clockid_t clockid, struct timespec *ts) {
-    sched_yield();
-    ts->tv_sec = wa_tv.tv_sec;
-    ts->tv_nsec = wa_ts_nsec;
-    fprintf(sc,"[\"clock_gettime\", %d, %d, %lu]\n", (int)clockid, (int)&ts, ts->tv_nsec);
-    return 0;
+void
+wa_setenv(const char *key, int value) {
+    fprintf(fd_keyvalue,"{\"%s\":%d}\n", key, value);
 }
 
-
-int wa_gettimeofday(struct timeval *tv, struct timezone *tz) {
-
-    sched_yield();
-    memcpy( &tv, &wa_tv, sizeof(tv));
-
-    //tv->tv_sec = 9223372036854775807 ;//
-
-    fprintf(sc,"[\"gettimeofday\",%d,%d, %lld, %lld ]\n", (int)&tv, (int)&tz, tv->tv_sec, tv->tv_usec);
-    return 0;
-}
-*/
-
-void wa_setenv(const char *key, int value) {
-    fprintf(kv,"{\"%s\":%d}\n", key, value);
+void
+wa_syscall(const char *code) {
+    fprintf(fd_syscall," %s\n", code);
 }
 
-void wa_syscall(const char *code) {
-    fprintf(sc," %s\n", code);
-    fflush(sc);
-}
-
-void __wa_env(const char *key, unsigned int sign, unsigned int bitwidth, void* addr ) {
+void
+__wa_env(const char *key, unsigned int sign, unsigned int bitwidth, void* addr ) {
     const char *csign[2] = { "i", "u" };
-    fprintf(kv,"{\"%s\": [\"%s%u\", %u]}\n", key, csign[sign], bitwidth, (unsigned int)addr);
+    fprintf(fd_keyvalue,"{\"%s\": [\"%s%u\", %u]}\n", key, csign[sign], bitwidth, (unsigned int)addr);
 }
 
 #define wa_env(key,x) __wa_env(key, ( x >= 0 && ~x >= 0 ), sizeof(x)*8 , &x )
 
+//===========================================================================
+
+
+
+
+
+
 void Py_Init() {
     cc = fdopen(3, "r+");
-    kv = fdopen(4, "r+");
-    sc = fdopen(5, "r+");
+    fd_keyvalue = fdopen(4, "r+");
+    fd_syscall = fdopen(5, "r+");
 
 // do not call cpython names directly
     wPy_Initialize();
@@ -276,16 +217,13 @@ void Py_Init() {
 
     wa_env("tsec", wa_tv.tv_sec);
     wa_env("tusec", wa_tv.tv_usec );
-
     wa_env("tnsec", wa_ts_nsec);
-
-
-
 
 
     wa_setenv("PyRun_SimpleString_MAXSIZE", IO_KBD);
     wa_setenv("io_port_kbd", (int)&io_stdin[IO_KBD]);
     wa_setenv("MP_IO_SIZE", MP_IO_SIZE);
+
     wa_syscall("window.setTimeout( init_repl_begin , 1000 )");
 
     IO_CODE_DONE;
@@ -354,7 +292,7 @@ int uncaught_exception_handler(void) {
 
 void
 dump_args2(const mp_obj_t *a, size_t sz) {
-    fprintf(stderr,"%p: ", a);
+    fprintf(stderr,"331: %p: ", a);
     for (size_t i = 0; i < sz; i++) {
         fprintf(stderr,"%p ", a[i]);
     }
@@ -424,26 +362,9 @@ has_io() {
 }
 
 
-
-
-//void
-//main_loop_or_step(void) {
-
-
-
 //***************************************************************************************
 
-
-
-int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
-    va_list argptr;
-    va_start (argptr, fmt );
-    vfprintf(stdout,fmt,argptr);
-    va_end (argptr);
-    return 0;
-}
-
-
+int io_encode_hex = 1;
 
 static int loops = 0;
 
@@ -459,6 +380,10 @@ main(int argc, char *argv[]) {
 
             g_argc = argc;
             g_argv = copy_argv(argc, argv);
+
+            if (argc)
+                io_encode_hex = !argc;
+
             KPANIC = 0;
             // init
             crash_point = &&VM_stackmess;
@@ -502,7 +427,7 @@ while (!KPANIC) {
 }
 
     return 0;
-} // main_loop_or_step
+} // main_iteration
 
 
 

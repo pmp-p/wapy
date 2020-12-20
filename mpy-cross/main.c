@@ -409,7 +409,7 @@ MP_NOINLINE int main_(int argc, char **argv) {
 
     char pytmpfile[1024];
 
-    sprintf(pytmpfile, "future-fstrings-show %s > /tmp/mpy-cross.py", input_file);
+    sprintf(pytmpfile, "f2format --simple %s > /tmp/mpy-cross.py", input_file);
     system(pytmpfile);
     sprintf(pytmpfile, "/tmp/mpy-cross.py");
 

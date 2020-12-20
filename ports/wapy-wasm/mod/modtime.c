@@ -101,8 +101,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_obj, mod_time_time);
 
 STATIC mp_obj_t mod_time_time_ns(void) {
     wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
-    //unsigned long ul = ts.tv_nsec ;
-    return mp_obj_new_int_from_ull( t_timespec.tv_nsec );
+    return mp_obj_new_int_from_ull( t_timespec.tv_sec * 1000000000ULL + t_timespec.tv_nsec );
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_ns_obj, mod_time_time_ns);
 

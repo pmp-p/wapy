@@ -21,8 +21,8 @@
 #define MICROPY_STACK_CHECK         (1)
 #define MICROPY_ENABLE_EMERGENCY_EXCEPTION_BUF (1)
 #define MICROPY_KBD_EXCEPTION       (1)
-#define MICROPY_REPL_EVENT_DRIVEN   (0)
-#define MICROPY_REPL_AUTO_INDENT    (1)
+#define MICROPY_REPL_EVENT_DRIVEN   (1)
+#define MICROPY_REPL_AUTO_INDENT    (0)
 #define MICROPY_HELPER_REPL         (1)
 #define MICROPY_HELPER_LEXER_UNIX   (0)
 #define MICROPY_ENABLE_SOURCE_LINE  (1)
@@ -182,7 +182,7 @@ extern const struct _mp_obj_module_t mp_module_onewire;
 #define MP_STATE_PORT MP_STATE_VM
 
 #define MICROPY_PORT_ROOT_POINTERS \
-    const char *readline_hist[8]; \
+    const char *readline_hist[4]; \
     mp_obj_t pin_irq_handler[16]; \
     byte *uart0_rxbuf; \
 
@@ -199,3 +199,5 @@ extern const struct _mp_obj_module_t mp_module_onewire;
 #define MICROPY_WRAP_MP_SCHED_SCHEDULE(f) MP_FASTCODE(f)
 
 #define _assert(expr) ((expr) ? (void)0 : __assert_func(__FILE__, __LINE__, __func__, #expr))
+
+

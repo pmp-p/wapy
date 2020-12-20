@@ -49,7 +49,7 @@
     //then it is toplevel or TODO: it's sync top level ( tranpiled by aio on the heap)
         def_PyRun_SimpleString_is_repl = true;
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-        JUMP( def_PyRun_SimpleString, "main_loop_or_step_repl");
+        JUMP( def_PyRun_SimpleString, "main_iteration_repl");
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
         // mark done
         IO_CODE_DONE;
@@ -106,13 +106,15 @@ def_PyRun_SimpleString: {
 //code
     mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
 
+    //default is return EX
+    mp_obj_t exret = MP_OBJ_NULL;
+
     if (lex == NULL) {
-        clog("syntax error");
-        handle_uncaught_exception();
+        clog("113:syntax error");
+        //handle_uncaught_exception();
     } else {
         qstr source_name = lex->source_name;
 
-        mp_obj_t exret = MP_OBJ_NULL;
 
         #if MICROPY_PY___FILE__
         if (input_kind == MP_PARSE_FILE_INPUT) {
@@ -142,10 +144,13 @@ def_PyRun_SimpleString: {
 
             if (type->call != NULL) {
                 if ( (int)*type->call == (int)&fun_bc_call ) {
+                    // >>>
                     ctx_get_next(CTX_COPY);
-                        GOSUB(def_func_bc_call, "mp_call_function_n_kw");
-                        exret = SUBVAL; //CTX.sub_value;
+                    GOSUB(def_func_bc_call, "mp_call_function_n_kw");
+                    exret = SUBVAL; //CTX.sub_value;
+                    // <<<
                 } else {
+                    clog("151: native call %p %p ?", *type->call , fun_bc_call);
                     exret = type->call(CTX.self_in, CTX.n_args, CTX.n_kw, CTX.args);
                 }
 
@@ -170,19 +175,25 @@ def_PyRun_SimpleString: {
 
         // ex check
         if (MP_STATE_THREAD(active_exception) != NULL) {
-            clog("656: uncaught exception")
+            clog("178: uncaught exception");
+        }
+        /*
+        if (MP_STATE_THREAD(active_exception) != NULL) {
+            clog("176: uncaught exception")
             //mp_hal_set_interrupt_char(-1);
             mp_handle_pending(false);
             //handle_uncaught_exception();
             if (uncaught_exception_handler()) {
-                clog("689:SystemExit");
+                clog("181:SystemExit");
             } else {
-                clog("691: exception done");
+                clog("183: exception done");
             }
-        }
-        RETVAL = exret ;
-    }
 
+        }
+            */
+
+    }
+    RETVAL = exret ;
     COME_FROM;
 } // PyRun_SimpleString
 
@@ -246,11 +257,11 @@ def_PyRun_SimpleString: {
 
 #else // MICROPY_PY_SYS_SETTRACE
 
-#define FRAME_SETUP()
-#define FRAME_ENTER()
-#define FRAME_LEAVE()
-#define FRAME_UPDATE()
-#define TRACE_TICK(current_ip, current_sp, is_exception)
+    #define FRAME_SETUP()
+    #define FRAME_ENTER()
+    #define FRAME_LEAVE()
+    #define FRAME_UPDATE()
+    #define TRACE_TICK(current_ip, current_sp, is_exception)
 
 #endif // MICROPY_PY_SYS_SETTRACE
 
@@ -260,10 +271,13 @@ def_mp_call_function_n_kw: {
 
     if (type->call != NULL) {
         if ( (int)*type->call == (int)&fun_bc_call ) {
+            // >>>
             ctx_get_next(CTX_COPY);
-                GOSUB(def_func_bc_call, "mp_call_function_n_kw");
-                RETVAL = SUBVAL; //CTX.sub_value;
+            GOSUB(def_func_bc_call, "mp_call_function_n_kw");
+            RETVAL = SUBVAL; //CTX.sub_value;
+            // <<<
         } else {
+            clog("      899: native call %p %p", *type->call , &fun_bc_call);
 #if VMTRACE
 clog("      899: native call");
 #endif
@@ -438,6 +452,11 @@ def_func_bc_call_ret:
 VM_syscall:;
 // TODO: flush all at once
     // STDOUT flush before eventually filling it again
+
+#if __EMSCRIPTEN__
+
+    // use json  { "channel" : "hexdata" }\n
+
     if (!rbb_is_empty(&out_rbb)) {
         // flush stdout
         unsigned char out_c = 0;
@@ -447,3 +466,57 @@ VM_syscall:;
             fprintf(cc, "%c", out_c );
         fprintf(cc, "\"}\n");
     }
+#else
+
+    // @channel:hexdata\n
+
+    if (!rbb_is_empty(&out_rbb)) {
+        int cnt = 0;
+        unsigned char out_c = 0;
+
+        //TODO put a 0 at end and printf buffer directly via shm
+
+        while (rbb_pop(&out_rbb, &out_c)) {
+            if (!cnt--) {
+                fprintf(cc, "\n@%c:%c", 48+1,out_c);
+                cnt = 251;
+            } else
+                fprintf(cc, "%c", out_c );
+        }
+        fprintf(cc, "\n");
+    }
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//

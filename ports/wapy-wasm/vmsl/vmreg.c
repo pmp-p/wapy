@@ -85,10 +85,6 @@ static void* entry_point[MAX_BRANCHING];
 static void* exit_point[MAX_BRANCHING];
 
 
-//need global interrupt state marker ( @syscall / @awaited  ) to choose which VM to enter
-// this is different from ctx interrupts ctx_if ( if used )
-
-int VMFLAGS_IF = 0;
 
 static struct mp_registers mpi_ctx[SYS_MAX_RECURSION];
 

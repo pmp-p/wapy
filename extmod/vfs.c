@@ -83,12 +83,8 @@ mp_vfs_mount_t *mp_vfs_lookup_path(const char *path, const char **path_out) {
             }
         }
 
-        // if we get here then there's nothing mounted on /
-
-        if (is_abs) {
-            // path began with / and was not found
-            return MP_VFS_NONE;
-        }
+        // if we get here then there's nothing mounted on /, so the path doesn't exist
+        return MP_VFS_NONE;
     }
 
     // a relative path within a mounted device
@@ -205,7 +201,8 @@ STATIC mp_obj_t mp_vfs_autodetect(mp_obj_t bdev_obj) {
     return mp_fat_vfs_type.make_new(&mp_fat_vfs_type, 1, 0, &bdev_obj);
     #endif
 
-    return bdev_obj;
+    // no filesystem found
+    mp_raise_OSError(MP_ENODEV);
 }
 
 mp_obj_t mp_vfs_mount(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {

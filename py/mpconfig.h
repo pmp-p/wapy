@@ -461,6 +461,11 @@
 #endif
 #endif
 
+// Whether to print parse rule names (rather than integers) in mp_parse_node_print
+#ifndef MICROPY_DEBUG_PARSE_RULE_NAME
+#define MICROPY_DEBUG_PARSE_RULE_NAME (0)
+#endif
+
 // Whether to enable a simple VM stack overflow check
 #ifndef MICROPY_DEBUG_VM_STACK_OVERFLOW
 #define MICROPY_DEBUG_VM_STACK_OVERFLOW (0)
@@ -1643,6 +1648,13 @@ typedef double mp_float_t;
 #else
 #define MP_UNREACHABLE for (;;);
 #endif
+#endif
+
+// Explicitly annotate switch case fall throughs
+#if defined(__GNUC__) && __GNUC__ >= 7
+#define MP_FALLTHROUGH __attribute__((fallthrough));
+#else
+#define MP_FALLTHROUGH
 #endif
 
 #ifndef MP_HTOBE16
