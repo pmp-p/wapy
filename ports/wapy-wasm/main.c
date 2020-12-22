@@ -359,13 +359,7 @@ wasm-ld: error: duplicate symbol: mp_type_code
 #include "py/profile.h"
 #endif
 
-
-// #include "../wapy/repl.c"
-
-
 int handle_uncaught_exception(void);
-
-
 
 // entry point for implementing core vm parts in python, set via "embed" module
 extern void pyv(mp_obj_t value);
@@ -488,14 +482,14 @@ dump_args2(const mp_obj_t *a, size_t sz) {
 
 // this is reserved to max speed asynchronous code
 
-void
+int
 noint_aio_fsync() {
 
     if (!io_stdin[0])
-        return;
+        return 0;
 
     if (!endswith(io_stdin, "#aio.step\n"))
-        return;
+        return 0;
 
     int ex=-1;
     async_state = VMFLAGS_IF;
@@ -519,6 +513,7 @@ noint_aio_fsync() {
 
 // TODO:    here we may able to tranform toplevel sync code to async and re eval
 // WARNING: it may have side effects because could have run until async exception is caught
+/*
     if (ex>=0) {
         if (MP_STATE_THREAD(active_exception) != NULL) {
             clog("646: uncaught exception")
@@ -533,8 +528,10 @@ noint_aio_fsync() {
         }
     }
     IO_CODE_DONE;
+    */
     // STI
     VMFLAGS_IF = async_state;
+    return ex;
 }
 
 
