@@ -73,22 +73,19 @@
 
             JUMP( def_PyRun_SimpleString, "main_iteration_repl");
 
-
-
-
-
-            if (def_PyRun_SimpleString_is_repl) {
-                cdbg("REPL-INPUT-END");
-            } else {
-                cdbg("REPL-RAW-END");
-            }
-
             if (RETVAL == MP_OBJ_NULL) {
                 if (MP_STATE_THREAD(active_exception) != NULL) {
                     clog("64: RT Exception");
+                    goto VM_exhandler;
                 }
             }
 
+            if (def_PyRun_SimpleString_is_repl) {
+                cdbg("REPL-INPUT-END");
+                pyexec_repl_repl_restart(0);
+            } else {
+                cdbg("REPL-RAW-END");
+            }
 
             // mark done
             IO_CODE_DONE;
@@ -109,7 +106,6 @@
                 //if (rx>127) cdbg("FIXME:stdin-utf8:%u", rx );
                 //pyexec_event_repl_process_char(rx);
                 if (pyexec_friendly_repl_process_char(rx)<0) {
-                    pyexec_repl_repl_restart(0);
                     cdbg("REPL-INPUT-SET[%s]", io_stdin);
                     def_PyRun_SimpleString_is_repl = true;
                     break; // goto repl loop execution
@@ -499,10 +495,9 @@ def_func_bc_call_ret:
 //    puts("-syscall-");
 
 VM_exhandler:;
-    cdbg("457: EXCEPTION");
     // IO_CODE_DONE; follows
     if (MP_STATE_THREAD(active_exception) != NULL) {
-        clog("646: uncaught exception")
+        clog("501: uncaught exception")
         //mp_hal_set_interrupt_char(-1);
         mp_handle_pending(false);
         if (uncaught_exception_handler()) {
@@ -512,6 +507,14 @@ VM_exhandler:;
         }
         async_loop = 0;
     }
+
+    if (def_PyRun_SimpleString_is_repl) {
+        cdbg("EX-REPL-INPUT-END");
+        pyexec_repl_repl_restart(0);
+    } else {
+        cdbg("EX-END");
+    }
+
 
 VM_syscall:;
     IO_CODE_DONE;
