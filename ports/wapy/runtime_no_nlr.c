@@ -661,7 +661,7 @@ mp_obj_t mp_call_function_n_kw(mp_obj_t fun_in, size_t n_args, size_t n_kw, cons
     DEBUG_OP_printf("calling function %p(n_args=" UINT_FMT ", n_kw=" UINT_FMT ", args=%p)\n", fun_in, n_args, n_kw, args);
 
     if (!fun_in) {
-#if defined(__WASM__) || defined(__EMSCRIPTEN__)
+#if defined(__WASI__) || defined(__EMSCRIPTEN__)
         cdbg("660:calling function %p(n_args=" UINT_FMT ", n_kw=" UINT_FMT ", args=%p)\n", fun_in, (unsigned int)n_args, (unsigned int)n_kw, args);
 #else
 // x64

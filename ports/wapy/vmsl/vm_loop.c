@@ -222,20 +222,6 @@ def_PyRun_SimpleString: {
         if (MP_STATE_THREAD(active_exception) != NULL) {
             clog("178: uncaught exception");
         }
-        /*
-        if (MP_STATE_THREAD(active_exception) != NULL) {
-            clog("176: uncaught exception")
-            //mp_hal_set_interrupt_char(-1);
-            mp_handle_pending(false);
-            //handle_uncaught_exception();
-            if (uncaught_exception_handler()) {
-                clog("181:SystemExit");
-            } else {
-                clog("183: exception done");
-            }
-
-        }
-            */
 
     }
     RETVAL = exret ;
@@ -521,7 +507,7 @@ VM_syscall:;
 // TODO: flush all at once
     // STDOUT flush before eventually filling it again
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 
     // use json  { "channel" : "hexdata" }\n
 

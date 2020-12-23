@@ -43,7 +43,7 @@ show_os_loop(int state) {
         if (state > 0) {
 
             fprintf(
-#if __WASM__
+#if __WASI__
             stderr,
 #else
             stdout,
@@ -250,7 +250,7 @@ pyeval(const char *src, mp_parse_input_kind_t input_kind) {
     return 0;
 }
 
-#if defined(__EMSCRIPTEN__) || defined(__WASM__)
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
     #include "../wapy-wasm/wasm_mphal.c"
 #endif
 

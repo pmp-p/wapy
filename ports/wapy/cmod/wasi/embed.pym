@@ -193,7 +193,7 @@ def FLAGS_IF() -> int:
     return mp_obj_new_int_from_uint(VMFLAGS_IF);
 
 def WAPY() -> int:
-#if defined(__EMSCRIPTEN__) || defined(__WASM__)
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
     return mp_obj_new_int_from_uint(1);
 #else
     return mp_obj_new_int_from_uint(0);

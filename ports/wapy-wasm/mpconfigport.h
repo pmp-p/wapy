@@ -17,8 +17,9 @@
 #define MICROPY_PY_FSTRING          (1)
 
 #ifndef NO_NLR
-#define NO_NLR (1)
-#define WAPY (1)
+    #define NO_NLR (1)
+    #define WAPY (1)
+    #define __WASI__ 1
 #endif
 
 #define MICROPY_EPOCH_IS_1970 (0)
@@ -124,10 +125,12 @@
 // nlr.h  MICROPY_NLR_* must match a supported arch
 // define or autodetect will fail to select WASM
 
-#if __WASM__
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
+    #define MICROPY_NLR_SETJMP          (0)
 #else
-#define MICROPY_NLR_SETJMP          (1)
+    #define MICROPY_NLR_SETJMP          (1)
 #endif
+
 #define MICROPY_DYNAMIC_COMPILER    (0)
 
 #if MICROPY_NLR_SETJMP
@@ -242,9 +245,14 @@
 #define MICROPY_PY_CMATH            (1)
 
 //? TEST THAT THING !
-#ifndef MICROPY_PY_FFI
-#define MICROPY_PY_FFI              (1) // <========================== NON STANDARD NOT CPY
+#if defined(__EMSCRIPTEN__)
+    #ifndef MICROPY_PY_FFI
+        #define MICROPY_PY_FFI              (1) // <========================== NON STANDARD NOT CPY
+    #endif
+#else
+    #define MICROPY_PY_FFI              (0)
 #endif
+
 
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)

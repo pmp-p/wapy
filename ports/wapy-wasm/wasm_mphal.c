@@ -10,7 +10,7 @@
 
 #include <stdarg.h>
 
-#if defined(__EMSCRIPTEN__) || defined(__WASM__)
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
     #include "emscripten.h"
 #elif __CPP__
     #define EMSCRIPTEN_KEEPALIVE
@@ -20,7 +20,7 @@
 
 #include <time.h>
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
 #include <sys/time.h>
 #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
@@ -124,7 +124,7 @@ unsigned char out_push(unsigned char c) {
 extern int io_encode_hex;
 //this one (over)cooks like _cooked
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #else // WASI/node
     if (!io_encode_hex) {
         printf("%s", str);
@@ -140,7 +140,7 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 }
 
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 
 EMSCRIPTEN_KEEPALIVE static PyObject *
 embed_run_script(PyObject *self, PyObject *argv) {

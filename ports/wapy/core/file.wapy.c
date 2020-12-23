@@ -180,14 +180,14 @@ STATIC const mp_arg_t file_open_args[] = {
 };
 #define FILE_OPEN_NUM_ARGS MP_ARRAY_SIZE(file_open_args)
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 extern int wasm_file_open(const char *url);
 #endif
 
 STATIC mp_obj_t fdfile_open(const mp_obj_type_t *type, mp_arg_val_t *args) {
     mp_obj_fdfile_t *o = m_new_obj(mp_obj_fdfile_t);
     const char *mode_s = mp_obj_str_get_str(args[1].u_obj);
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 int can_online = 0;
 #endif
 
@@ -233,7 +233,7 @@ int can_online = 0;
     const char *fname = mp_obj_str_get_str(fid);
     int fd = 0;
     MP_THREAD_GIL_EXIT();
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
     if (can_online)
         fd = wasm_file_open( fname );
 #endif

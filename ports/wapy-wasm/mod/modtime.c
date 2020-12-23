@@ -32,7 +32,7 @@
 #include <string.h>
 #include <time.h>
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
     #include <sys/time.h>
     #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
     #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)

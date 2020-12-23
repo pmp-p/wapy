@@ -73,7 +73,7 @@ const char *nullbytes = "";
 #endif
 
 
-#if defined(__EMSCRIPTEN__) || defined(__WASM__)
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
 
     #define WAPY_VALUE (1)
     extern int VMFLAGS_IF;
