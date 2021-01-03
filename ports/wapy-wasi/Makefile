@@ -28,11 +28,11 @@ include ../../py/mkenv.mk
 QSTR_DEFS = qstrdefsport.h
 
 
-CX = --target=wasm32-unknow-wasi -D__WASM__=1 -DNO_NLR=1
+CX = --target=wasm32-unknow-wasi -D__WASI__=1 -DNO_NLR=1
 
 CC ?= clang
 CC += $(CX)
-CPP=clang $(CX) -E -D__CPP__ -D__WASM__=1 -DNO_NLR=1
+CPP=clang $(CX) -E -D__CPP__ -D__WASI__=1 -DNO_NLR=1
 
 CPPFLAGS += $(CX) $(INC) $(WARN) -ansi -std=gnu11 -Wno-unused-variable
 

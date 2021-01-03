@@ -18,6 +18,9 @@ static int show_os_loop(int state) {
 extern struct timespec t_timespec;
 extern struct timeval t_timeval;
 
+#if defined(__WASI__)
+    extern FILE *fd_logger;
+#endif
 
 #include "py/emitglue.h"
 
@@ -113,7 +116,7 @@ pycore(const char *fn) {
     mp_obj_t qst = MP_OBJ_NEW_QSTR(qfn);
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"FFYPY[%p->%s]\n", ffpy, fn );
+    fprintf(fd_logger, "FFYPY[%p->%s]\n", ffpy, fn );
     if (ffpy) {
         mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &qst);
     }
@@ -177,7 +180,7 @@ def run(runstr : const_char_p = "[]"):
     if ( ln < cstr_max ) {
         strcpy(cstr,runstr);
     } else {
-        fprintf(stderr, "buffer overrun in embed.run %zu >= %zu", ln, cstr_max);
+        fprintf(fd_logger, "buffer overrun in embed.run %zu >= %zu", ln, cstr_max);
     }
 
 
@@ -193,7 +196,7 @@ def FLAGS_IF() -> int:
     return mp_obj_new_int_from_uint(VMFLAGS_IF);
 
 def WAPY() -> int:
-#if defined(__EMSCRIPTEN__) || defined(__WASM__)
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
     return mp_obj_new_int_from_uint(1);
 #else
     return mp_obj_new_int_from_uint(0);
@@ -201,18 +204,18 @@ def WAPY() -> int:
 
 
 def os_print( data : const_char_p = "{}" ) -> void :
-    #fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
+    #fprintf(fd_logger, "embed.os_write(%lu)\n", strlen(data) );
     fprintf( stdout , "%s\n" , data );
 
 def os_write( data : const_char_p = "{}" ) -> void :
-    #fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
+    #fprintf(fd_logger, "embed.os_write(%lu)\n", strlen(data) );
     fprintf( stdout , "%s" , data );
 
 def os_stderr( data : const_char_p = "" ) -> void :
-    fprintf( stderr, "embed.os_stderr(%s)\n", data );
+    fprintf(stderr, "embed.os_stderr(%s)\n", data );
 
 def log( data : const_char_p = "" ) -> void :
-    fprintf( stderr, "%s\n", data );
+    fprintf(fd_logger, "py: %s\n", data );
 
 
 def builtins_vars(module_obj : mp_obj_t = None ) -> dict:
@@ -245,18 +248,18 @@ def os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> voi
 
     // mp_raw_code_save_file(rc, mpy_file);
     #else
-    fprintf(stderr,"os_compile: MICROPY_PERSISTENT_CODE_SAVE not enabled\n");
+    fprintf(fd_logger, "os_compile: MICROPY_PERSISTENT_CODE_SAVE not enabled\n");
     #endif
 
 def os_state_loop(state:int = 0)->int:
     return mp_obj_new_int( state_os_loop(state) );
 
 def os_showloop()->void :
-    fprintf(stderr,"will show begin/end for os loop\n");
+    fprintf(fd_logger, "will show begin/end for os loop\n");
     show_os_loop(1);
 
 def os_hideloop()->void :
-    fprintf(stderr,"will hide begin/end for os loop\n");
+    fprintf(fd_logger, "will hide begin/end for os loop\n");
     show_os_loop(0);
 
 
@@ -299,19 +302,19 @@ def ticks_period() -> int:
 
 
 def callpy(fn: const_char_p ="") -> void:
-    fprintf(stderr,"embed.callpy[%s]\n", fn )
+    fprintf(fd_logger, "embed.callpy[%s]\n", fn )
     pycore(fn)
 
 def hash_djb2(cstr : const_char_p = "") -> _int_from_unsigned_long:
-        unsigned long hash = 5381
-        int c
-        while ((c = *cstr++)):
-            hash = ((hash << 5) + hash) + c
-        return hash % 0xFFFFFFFF
+    unsigned long hash = 5381
+    int c
+    while ((c = *cstr++)):
+        hash = ((hash << 5) + hash) + c
+    return hash % 0xFFFFFFFF
 
 def show_trace() -> int:
     trace_on = 1
-    fprintf(stderr,"TRACE[%s:%zu -> %s:%zu]\n", qstr_str(trace_prev_file), trace_prev_line, qstr_str(trace_file), trace_line)
+    fprintf(fd_logger, "TRACE[%s:%zu -> %s:%zu]\n", qstr_str(trace_prev_file), trace_prev_line, qstr_str(trace_file), trace_line)
     return trace_prev_line-1
 
 
@@ -321,16 +324,16 @@ def address_of(ptr : void_p = NULL ) -> _int_from_ptr:
     return ptrvalue;
 
 def set_ffpy(fn: void_p) -> void:
-    fprintf(stderr,"embed.ffpy[%p]\n", fn );
+    fprintf(fd_logger, "embed.ffpy[%p]\n", fn );
     ffpy = (mp_obj_t *)fn ;
 
 def set_ffpy_add(fn: void_p) -> void:
-    fprintf(stderr,"embed.ffpy[%p]\n", fn );
+    fprintf(fd_logger, "embed.ffpy[%p]\n", fn );
     ffpy_add = (mp_obj_t *)fn ;
 
 
 def corepy(fn: const_char_p = "") -> _int_from_ptr:
-    fprintf(stderr,"embed.ffipy[%p(%s)]\n", ffpy, fn );
+    fprintf(fd_logger, "embed.ffipy[%p(%s)]\n", ffpy, fn );
     if (ffpy):
         mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &argv[0]);
 

@@ -121,10 +121,12 @@
 
 // nlr.h  MICROPY_NLR_* must match a supported arch
 // define or autodetect will fail to select WASM
-#if __WASM__
+#if defined(__WASI__) || defined(__EMSCRIPTEN__)
+    #define MICROPY_NLR_SETJMP          (0)
 #else
-#define MICROPY_NLR_SETJMP          (1)
+    #define MICROPY_NLR_SETJMP          (1)
 #endif
+
 #define MICROPY_DYNAMIC_COMPILER    (0)
 
 #if MICROPY_NLR_SETJMP
@@ -238,10 +240,12 @@
 #define MICROPY_PY_CMATH            (1)
 
 //? TEST THAT THING !
-#if __WASM__
-    #define MICROPY_PY_FFI              (0)
+#if defined(__EMSCRIPTEN__)
+    #define MICROPY_PY_FFI              (1)
+#elif  defined(__WASI__)
+    #define MICROPY_PY_FFI              (0) // <== UNSUPPORTED #FIXME:
 #else
-#define MICROPY_PY_FFI              (1) // <========================== NON STANDARD NOT CPY
+    #define MICROPY_PY_FFI              (1) // <======================= NON STANDARD NOT CPY
 #endif
 
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
@@ -252,7 +256,7 @@
 #define MICROPY_PY_SYS_GETSIZEOF    (1)
 #define MICROPY_PY_SYS_MODULES      (1)
 #define MICROPY_PY_SYS_MAXSIZE      (1)
-#define MICROPY_PY_SYS_PLATFORM     "wasm"
+#define MICROPY_PY_SYS_PLATFORM     "wasi"
 
 // IO is cooked and multiplexed via mp_hal_stdout_tx_strn in file.c
 // so do not modify those
@@ -452,7 +456,7 @@ extern const struct _mp_obj_module_t mp_module_os;
 #include <alloca.h>
 
 #define MICROPY_HW_BOARD_NAME "WaPy"
-#define MICROPY_HW_MCU_NAME "wasm"
+#define MICROPY_HW_MCU_NAME "wasi"
 
 #ifdef __linux__
 #define MICROPY_MIN_USE_STDOUT (1)

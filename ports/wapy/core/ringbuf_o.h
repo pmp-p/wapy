@@ -44,7 +44,7 @@
     #define RB_ATOMIC_END xt_wsr_ps(_savedIS) ;} while(0);
 #else
 
-    #if __EMSCRIPTEN__ || __WASM__ || __ANDROID__
+    #if defined(__EMSCRIPTEN__) || defined(__WASI__) || defined(__ANDROID__)
 
     #else
         #if __ARDUINO__

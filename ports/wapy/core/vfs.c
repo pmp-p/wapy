@@ -22,26 +22,26 @@ extern mp_import_stat_t
 wasm_find_module(const char *modname);
 
 mp_import_stat_t mp_import_stat(const char *path) {
-    fprintf(stderr,"stat(%s) : ", path);
+    cdbg("25:stat(%s) : ", path);
     return wasm_find_module(path);
 }
 #endif
 
 
 #if !MICROPY_READER_POSIX && MICROPY_EMIT_WASM
-extern size_t bsd_strlen(const char *str);
+
 
 mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
     FILE *file = fopen(filename,"r");
     if (!file) {
-        printf("404: fopen(%s)\n", filename);
-        fprintf(stderr, "404: fopen(%s)\n", filename);
+        //printf("404: fopen(%s)\n", filename);
+        clog("404: fopen(%s)\n", filename);
         return NULL;
     }
     fseek(file, 0, SEEK_END);
     long long size_of_file = ftell(file);
-    fprintf(stderr, "mp_lexer_new_from_file(%s size=%lld)\n", filename, (long long)size_of_file );
+    //cdbg("mp_lexer_new_from_file(%s size=%lld)\n", filename, (long long)size_of_file );
     fseek(file, 0, SEEK_SET);
 
     char * cbuf = malloc(size_of_file+1);
@@ -49,11 +49,10 @@ mp_lexer_new_from_file(const char *filename) {
     cbuf[size_of_file]=0;
 
     if (cbuf == NULL) {
-        fprintf(stderr, "READ ERROR: mp_lexer_new_from_file(%s size=%lld)\n", filename, (long long)size_of_file );
+        cdbg("READ ERROR: mp_lexer_new_from_file(%s size=%lld)\n", filename, (long long)size_of_file );
         return NULL;
     }
-    mp_lexer_t* lex = mp_lexer_new_from_str_len(qstr_from_str(filename), cbuf, bsd_strlen(cbuf), 0);
-    //fprintf(stderr, "===== EXPECT FAILURE =====\n%s\n===== EXPECT FAILURE ========\n" ,  cbuf);
+    mp_lexer_t* lex = mp_lexer_new_from_str_len(qstr_from_str(filename), cbuf, strlen(cbuf), 0);
     free(cbuf); // <- remove that and emcc -shared will break
     return lex;
 }

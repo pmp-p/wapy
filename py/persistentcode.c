@@ -864,11 +864,11 @@ void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename) {
 }
 
 #else
-#if __WASM__
-#pragma message "#error mp_raw_code_save_file not implemented for this platform"
-#else
-#error mp_raw_code_save_file not implemented for this platform
-#endif
+    #if defined(__EMSCRIPTEN__) || defined(__WASI__)
+        #pragma message "#error mp_raw_code_save_file not implemented for this platform"
+    #else
+        #error mp_raw_code_save_file not implemented for this platform
+    #endif
 #endif
 
 #endif // MICROPY_PERSISTENT_CODE_SAVE

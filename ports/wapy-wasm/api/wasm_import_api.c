@@ -16,15 +16,15 @@ wasm_find_module(const char *modname) {
         int dl = EM_ASM_INT({return vm.fsync.open(UTF8ToString($0),UTF8ToString($0)); }, modname );
 
         if (found==1) {
-            fprintf(stderr,"wasm_find_module: DL FILE %s size=%d ", modname, dl);
+            cdbg("19: wasm_find_module: DL FILE %s size=%d ", modname, dl);
             return MP_IMPORT_STAT_FILE;
         }
         if (found==2) {
-            fprintf(stderr,"wasm_find_module: IS DIR %s size=%d ", modname, dl);
+            cdbg("23: wasm_find_module: IS DIR %s size=%d ", modname, dl);
             return MP_IMPORT_STAT_DIR;
         }
     }
-    fprintf(stderr,"404:wasm_find_module '%s' (%d)\n", modname, found);
+    cdbg("404:wasm_find_module '%s' (%d)\n", modname, found);
     return MP_IMPORT_STAT_NO_EXIST;
 }
 

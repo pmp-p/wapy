@@ -125,7 +125,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_os_remove_obj, mod_os_remove);
 
 STATIC mp_obj_t mod_os_system(mp_obj_t cmd_in) {
     const char *cmd = mp_obj_str_get_str(cmd_in);
-#if __EMSCRIPTEN__ || __WASM__
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
     int r = 1;
 #else
     int r = system(cmd);

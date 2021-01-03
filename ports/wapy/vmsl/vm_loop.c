@@ -5,7 +5,12 @@
         if ( (iolen = has_io()) ) {
             // we have a chance to process pending Inputs, so ...
             cdbg("syscall/pause WITH IO=%lu", iolen );
-            noint_aio_fsync();
+            if (noint_aio_fsync()>0)
+                goto VM_exhandler;
+            else {
+                IO_CODE_DONE;
+            }
+
         } else {
             clog("syscall/pause -> io flush");
             // else just jump to flush Outputs
@@ -25,7 +30,15 @@
 
 // ==========================================================================================
     // this call the async loop , no preemption should be allowed in there.
-    noint_aio_fsync();
+    int aioerr = noint_aio_fsync();
+    if (aioerr>0)
+        goto VM_exhandler;
+
+    // do not erase stdin buffer in case it's repl or script data
+    if (!aioerr) {
+        IO_CODE_DONE;
+    }
+
 // ==========================================================================================
 
     // return to where we were going just before giving hand to host
@@ -41,43 +54,90 @@
             COME_FROM;
     }
 
-
 // All I/O stuff IS WRONG and should use a circular buffer.
-    //fprintf(stdout," runloop\n");
 
-    if (io_stdin[0]) {
+    while (1){
+
+/// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
+        // process pending repl data
+        if (io_stdin[0]) {
     //then it is toplevel or TODO: it's sync top level ( tranpiled by aio on the heap)
-        def_PyRun_SimpleString_is_repl = true;
+
+/*
+            if (def_PyRun_SimpleString_is_repl) {
+                cdbg("REPL-INPUT-BEGIN[%s]", io_stdin);
+            } else {
+                cdbg("REPL-RAW-BEGIN[%s]", io_stdin);
+            }
+*/
+            // keep some space for moving labels
+
+
+
+
+
+
+            JUMP( def_PyRun_SimpleString, "main_iteration_repl");
+
+
+
+
+
+
+
+            if (RETVAL == MP_OBJ_NULL) {
+                if (MP_STATE_THREAD(active_exception) != NULL) {
+                    clog("64: RT Exception");
+                    goto VM_exhandler;
+                }
+            }
+
+/*
+            if (def_PyRun_SimpleString_is_repl) {
+                cdbg("REPL-INPUT-END");
+                pyexec_repl_repl_restart(0);
+            } else {
+                cdbg("REPL-RAW-END");
+            }
+*/
+            // mark done
+            IO_CODE_DONE;
+            // chances to have both stdin and repl input at same time are low
+            // so display the prompt
+            pyexec_repl_repl_restart(0);
+        }
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-        JUMP( def_PyRun_SimpleString, "main_iteration_repl");
-/// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-        // mark done
-        IO_CODE_DONE;
-        pyexec_repl_repl_restart(0);
+        //only flush kbd port on idle stdin
+
+        char *keybuf;
+        keybuf =  shm_get_ptr( IO_KBD, 0);
+
         def_PyRun_SimpleString_is_repl = false;
+        while (!KPANIC) {
+            // should give a way here to discard repl events feeding  "await input()" instead
+            int rx =  keybuf[0] ; //& 0xFF;
+            if (rx) {
+
+                // if (rx==12) fprintf(stdout,"IO(12): Form Feed "); //clear screen
+                //if (rx>127) cdbg("FIXME:stdin-utf8:%u", rx );
+                //pyexec_event_repl_process_char(rx);
+                if (pyexec_friendly_repl_process_char(rx)<0) {
+                    cdbg("REPL-INPUT-SET[%s]", io_stdin);
+                    def_PyRun_SimpleString_is_repl = true;
+                    break; // goto repl loop execution
+                }
+
+                *keybuf++ = 0;
+            } else break; // no more input
+        }
+
+        // always reset io buffer no matter what since io_stdin can overwrite it in script mode
+        keybuf[0]=0;
+
+        // exit repl loop
+        if (!io_stdin[0])
+            break;
     }
-
-
-
-    //now flush kbd port
-    char *keybuf;
-    keybuf =  shm_get_ptr( IO_KBD, 0);
-    // only when scripting interface is idle and repl ready
-    while (!KPANIC) {
-        // should give a way here to discard repl events feeding  "await input()" instead
-        int rx =  keybuf[0] ; //& 0xFF;
-        if (rx) {
-            // if (rx==12) fprintf(stdout,"IO(12): Form Feed "); //clear screen
-            //if (rx>127) cdbg("FIXME:stdin-utf8:%u", rx );
-            //pyexec_event_repl_process_char(rx);
-            if (pyexec_friendly_repl_process_char(rx)<0)
-                cdbg("REPL[%s]", io_stdin);
-            *keybuf++ = 0;
-        } else break;
-    }
-
-    // always reset io buffer no matter what since io_stdin can overwrite it in script mode
-    keybuf[0]=0;
 
 
     if (VMOP==VM_HCF) {
@@ -87,8 +147,9 @@ VM_stackmess:;
         emscripten_cancel_main_loop();
         #endif
     }
-goto VM_syscall;
 
+
+goto VM_syscall;
 //==================================================================
 
 
@@ -106,13 +167,15 @@ def_PyRun_SimpleString: {
 //code
     mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
 
+    //default is return EX
+    mp_obj_t exret = MP_OBJ_NULL;
+
     if (lex == NULL) {
-        clog("110:syntax error");
-        handle_uncaught_exception();
+        clog("113:syntax error");
+        //handle_uncaught_exception();
     } else {
         qstr source_name = lex->source_name;
 
-        mp_obj_t exret = MP_OBJ_NULL;
 
         #if MICROPY_PY___FILE__
         if (input_kind == MP_PARSE_FILE_INPUT) {
@@ -173,19 +236,11 @@ def_PyRun_SimpleString: {
 
         // ex check
         if (MP_STATE_THREAD(active_exception) != NULL) {
-            clog("656: uncaught exception")
-            //mp_hal_set_interrupt_char(-1);
-            mp_handle_pending(false);
-            //handle_uncaught_exception();
-            if (uncaught_exception_handler()) {
-                clog("689:SystemExit");
-            } else {
-                clog("691: exception done");
-            }
+            clog("178: uncaught exception");
         }
-        RETVAL = exret ;
-    }
 
+    }
+    RETVAL = exret ;
     COME_FROM;
 } // PyRun_SimpleString
 
@@ -441,11 +496,34 @@ def_func_bc_call_ret:
 // VM_syscall_verbose:;
 //    puts("-syscall-");
 
+VM_exhandler:;
+    // IO_CODE_DONE; follows
+    if (MP_STATE_THREAD(active_exception) != NULL) {
+        clog("501: uncaught exception")
+        //mp_hal_set_interrupt_char(-1);
+        mp_handle_pending(false);
+        if (uncaught_exception_handler()) {
+            clog("651:SystemExit");
+        } else {
+            clog("653: exception done");
+        }
+        async_loop = 0;
+    }
+
+    if (def_PyRun_SimpleString_is_repl) {
+        //cdbg("EX-REPL-INPUT-END");
+        pyexec_repl_repl_restart(0);
+    } /* else {
+        cdbg("EX-END");
+    } */
+
+
 VM_syscall:;
+    IO_CODE_DONE;
 // TODO: flush all at once
     // STDOUT flush before eventually filling it again
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 
     // use json  { "channel" : "hexdata" }\n
 

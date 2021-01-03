@@ -13,44 +13,6 @@
 
 #include "../wapy/wapy.h"
 
-/*
-
-#include "../wapy/core/fdfile.h"
-
-#include "py/compile.h"
-#include "py/emitglue.h"
-#include "py/objtype.h"
-#include "py/runtime.h"
-#include "py/parse.h"
-#include "py/bc0.h"
-// overwrite the "math" in bytecode value with plain integers
-// #include "bc_as_integers.h"
-#include "py/bc.h"
-#include "py/repl.h"
-#include "py/gc.h"
-#include "py/mperrno.h"
-#include "lib/utils/pyexec.h"
-
-
-// for mp_call_function_0
-#include "py/parsenum.h"
-#include "py/compile.h"
-#include "py/objstr.h"
-#include "py/objtuple.h"
-#include "py/objlist.h"
-#include "py/objmodule.h"  // <= function defined in
-#include "py/objgenerator.h"
-#include "py/smallint.h"
-#include "py/runtime.h"
-#include "py/builtin.h"
-#include "py/stackctrl.h"
-#include "py/gc.h"
-
-#define __MAIN__ (1)
-#include "emscripten.h"
-#undef __MAIN__
-*/
-
 #define DBG 0
 #define DLOPEN 0
 
@@ -62,22 +24,7 @@
 static int g_argc;
 static char **g_argv; //[];
 
-size_t
-bsd_strlen(const char *str) {
-        const char *s;
-        for (s = str; *s; ++s);
-        return (s - str);
-}
 
-
-int
-endswith(const char * str, const char * suffix) {
-  int str_len = strlen(str);
-  int suffix_len = strlen(suffix);
-
-  return
-    (str_len >= suffix_len) && (0 == strcmp(str + (str_len-suffix_len), suffix));
-}
 
 #include "api/wasm_file_api.c"
 #include "api/wasm_import_api.c"
@@ -94,7 +41,7 @@ copy_argv(int argc, char *argv[]) {
 
     size_t ptr_args = argc + 1;
     for (int i = 0; i < argc; i++) {
-        length += (bsd_strlen(argv[i]) + 1);
+        length += (strlen(argv[i]) + 1);
     }
     char** new_argv = (char**)malloc((ptr_args) * sizeof(char*) + length);
     // copy argv into the contiguous buffer
@@ -102,14 +49,13 @@ copy_argv(int argc, char *argv[]) {
     for (int i = 0; i < argc; i++) {
         new_argv[i] = &(((char*)new_argv)[(ptr_args * sizeof(char*)) + length]);
         strcpy(new_argv[i], argv[i]);
-        fprintf(stderr,"argv[%d] = %s\n", i, argv[i]);
-        length += (bsd_strlen(argv[i]) + 1);
+        cdbg("52: argv[%d] = %s\n", i, argv[i]);
+        length += (strlen(argv[i]) + 1);
     }
     // insert NULL terminating ptr at the end of the ptr array
     new_argv[ptr_args-1] = NULL;
     return (new_argv);
 }
-
 
 
 #include "upython.c"
@@ -172,8 +118,9 @@ extern int trace_on;
 #define io_stdin i_main.shm_stdio
 
 FILE *cc;
-FILE *kv;
-FILE *sc;
+FILE *fd_keyvalue;
+FILE *fd_syscall;
+FILE *fd_logger;
 
 // to use kb buffer space for scripts
 // if (strlen(io_stdin)>=IO_KBD){ io_stdin[IO_KBD]  = 0;
@@ -193,18 +140,20 @@ struct timeval t_timeval;
 struct timeval wa_tv;
 unsigned int wa_ts_nsec;
 
-void wa_setenv(const char *key, int value) {
-    fprintf(kv,"{\"%s\":%d}\n", key, value);
+void
+wa_setenv(const char *key, int value) {
+    fprintf(fd_keyvalue,"{\"%s\":%d}\n", key, value);
 }
 
-void wa_syscall(const char *code) {
-    fprintf(sc," %s\n", code);
-    //fflush(sc);
+void
+wa_syscall(const char *code) {
+    fprintf(fd_syscall," %s\n", code);
 }
 
-void __wa_env(const char *key, unsigned int sign, unsigned int bitwidth, void* addr ) {
+void
+__wa_env(const char *key, unsigned int sign, unsigned int bitwidth, void* addr ) {
     const char *csign[2] = { "i", "u" };
-    fprintf(kv,"{\"%s\": [\"%s%u\", %u]}\n", key, csign[sign], bitwidth, (unsigned int)addr);
+    fprintf(fd_keyvalue,"{\"%s\": [\"%s%u\", %u]}\n", key, csign[sign], bitwidth, (unsigned int)addr);
 }
 
 #define wa_env(key,x) __wa_env(key, ( x >= 0 && ~x >= 0 ), sizeof(x)*8 , &x )
@@ -216,14 +165,11 @@ void __wa_env(const char *key, unsigned int sign, unsigned int bitwidth, void* a
 
 
 
-
-
-
-
 void Py_Init() {
     cc = fdopen(3, "r+");
-    kv = fdopen(4, "r+");
-    sc = fdopen(5, "r+");
+    fd_keyvalue = fdopen(4, "r+");
+    fd_syscall = fdopen(5, "r+");
+    fd_logger =  fdopen(6, "r+");
 
 // do not call cpython names directly
     wPy_Initialize();
@@ -258,16 +204,13 @@ void Py_Init() {
 
     wa_env("tsec", wa_tv.tv_sec);
     wa_env("tusec", wa_tv.tv_usec );
-
     wa_env("tnsec", wa_ts_nsec);
-
-
-
 
 
     wa_setenv("PyRun_SimpleString_MAXSIZE", IO_KBD);
     wa_setenv("io_port_kbd", (int)&io_stdin[IO_KBD]);
     wa_setenv("MP_IO_SIZE", MP_IO_SIZE);
+
     wa_syscall("window.setTimeout( init_repl_begin , 1000 )");
 
     IO_CODE_DONE;
@@ -279,7 +222,6 @@ static int async_loop = 1;
 static int async_state;
 
 
-extern int emscripten_GetProcAddress(const char * name);
 
 
 #if MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE
@@ -299,131 +241,17 @@ static inline mp_map_elem_t *mp_map_cached_lookup(mp_map_t *map, qstr qst, uint8
 }
 #endif
 
-
-STATIC void stderr_print_strn2(void *env, const char *str, size_t len) {
-    (void)env;
-    mp_hal_stdout_tx_strn(str,len);
-}
-
-const mp_print_t mp_stderr_print2 = {NULL, stderr_print_strn2};
-
-int uncaught_exception_handler(void) {
-    mp_obj_base_t *exc = MP_STATE_THREAD(active_exception);
-    // check for SystemExit
-    if (mp_obj_is_subclass_fast(MP_OBJ_FROM_PTR(exc->type), MP_OBJ_FROM_PTR(&mp_type_SystemExit))) {
-        // None is an exit value of 0; an int is its value; anything else is 1
-        /*
-        mp_obj_t exit_val = mp_obj_exception_get_value(MP_OBJ_FROM_PTR(exc));
-        mp_int_t val = 0;
-        if (exit_val != mp_const_none && !mp_obj_get_int_maybe(exit_val, &val)) {
-            val = 1;
-        }
-        return FORCED_EXIT | (val & 255);
-        */
-        #if __EMSCRIPTEN__
-                EM_ASM({console.log("91:SystemExit");});
-        #endif
-
-        return 1;
-    }
-    MP_STATE_THREAD(active_exception) = NULL;
-    // Report all other exceptions
-    cdbg("mp_stderr_print2=%p",exc)
-    cdbg("mp_obj=%p", MP_OBJ_FROM_PTR(exc) );
-    mp_obj_print_exception(&mp_stderr_print2, MP_OBJ_FROM_PTR(exc));
-    return 0;
-}
-
-void
-dump_args2(const mp_obj_t *a, size_t sz) {
-    fprintf(stderr,"%p: ", a);
-    for (size_t i = 0; i < sz; i++) {
-        fprintf(stderr,"%p ", a[i]);
-    }
-    fprintf(stderr,"\n");
-}
-
-
-// this is reserved to max speed asynchronous code
-
-void
-noint_aio_fsync() {
-
-    if (!io_stdin[0])
-        return;
-
-    if (!endswith(io_stdin, "#aio.step\n"))
-        return;
-
-    int ex=-1;
-    async_state = VMFLAGS_IF;
-    // CLI
-    VMFLAGS_IF = 0;
-
-    //TODO: maybe somehow consumme kbd data for async inputs ?
-    //expect script to be properly async programmed and run them full speed via C stack ?
-
-    if (async_loop) {
-
-        if ( (async_loop = pyeval(i_main.shm_stdio, MP_PARSE_FILE_INPUT))  ) {
-            ex=0;
-        } else {
-            fprintf(stdout, "ERROR[%s]\n", io_stdin);
-            // ex check
-            ex=1;
-        }
-
-    }
-
-// TODO:    here we may able to tranform toplevel sync code to async and re eval
-// WARNING: it may have side effects because could have run until async exception is caught
-    if (ex>=0) {
-        if (MP_STATE_THREAD(active_exception) != NULL) {
-            clog("646: uncaught exception")
-            //mp_hal_set_interrupt_char(-1);
-            mp_handle_pending(false);
-            if (uncaught_exception_handler()) {
-                clog("651:SystemExit");
-            } else {
-                clog("653: exception done");
-            }
-            async_loop = 0;
-        }
-    }
-    IO_CODE_DONE;
-    // STI
-    VMFLAGS_IF = async_state;
-}
-
-
-
-size_t
-has_io() {
-    size_t check = strlen(io_stdin);
-  if (io_stdin[0] && (check != 38))
-      return check;
-  return 0;
-}
-
-
-
-
-//void
-//main_iteration(void) {
+#include "../wapy/wapy.c"
 
 
 
 //***************************************************************************************
 
 int io_encode_hex = 1;
-
-static int loops = 0;
-
-//unsigned long long TV_NS = 16000;
+//static int loops = 0;
 
 int
 main(int argc, char *argv[]) {
-    //TV_NS += 16000;
 
     if (KPANIC!=0) {
 
@@ -439,7 +267,7 @@ main(int argc, char *argv[]) {
             // init
             crash_point = &&VM_stackmess;
 
-            fprintf(stderr, "argv[0..%d] env=%s memory=%p\n", argc, getenv("WAPY"), shm_ptr() );
+            cdbg("270: argv[0..%d] env=%s memory=%p\n", argc, getenv("WAPY"), shm_ptr() );
 
             if (argc) {
                 printf("\nnode.js detected, running repl in infinite loop ...\n");
@@ -462,20 +290,22 @@ main(int argc, char *argv[]) {
 
     }
 
-while (!KPANIC) {
 
-    #include "../wapy/vmsl/vm_loop.c"
+
+    while (!KPANIC) {
+
+        #include "../wapy/vmsl/vm_loop.c"
 
 // node.js
-    if(argc) {
-        fflush(stdout);
-        fgets( io_stdin, MP_IO_SHM_SIZE, stdin );
-        continue;
-    }
+        if(argc) {
+            fflush(stdout);
+            fgets( io_stdin, MP_IO_SHM_SIZE, stdin );
+            continue;
+        }
 
 // wasi
-    break;
-}
+        break;
+    }
 
     return 0;
 } // main_iteration

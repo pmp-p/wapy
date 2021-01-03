@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <dlfcn.h>
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) // N/I || defined(__WASI__)
     #include <mod/ffi/ffi.h>
 #else
     #include "ffi.h"

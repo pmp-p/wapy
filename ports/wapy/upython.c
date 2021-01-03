@@ -43,16 +43,22 @@ show_os_loop(int state) {
         if (state > 0) {
 
             fprintf(
-#if __WASM__
-            stderr,
+#if defined(__WASI__)
+                fd_logger,
 #else
-            stdout,
+                stdout,
 #endif
 "------------- showing os loop / starting repl --------------\n");
             //repl_started = 1;
         } else {
             if (last != state)
-                fprintf(stdout, "------------- hiding os loop --------------\n");
+                fprintf(
+#if defined(__WASI__)
+                    fd_logger,
+#else
+                    stdout,
+#endif
+"------------- hiding os loop --------------\n");
         }
     }
     return (last > 0);
@@ -250,7 +256,7 @@ pyeval(const char *src, mp_parse_input_kind_t input_kind) {
     return 0;
 }
 
-#if defined(__EMSCRIPTEN__) || defined(__WASM__)
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
     #include "../wapy-wasm/wasm_mphal.c"
 #endif
 

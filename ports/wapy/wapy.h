@@ -46,7 +46,17 @@ struct timeval t_timeval;
 #include "emscripten.h"
 #undef __MAIN__
 
+extern int emscripten_GetProcAddress(const char * name);
 
+int uncaught_exception_handler(void);
+
+void dump_args2(const mp_obj_t *a, size_t sz);
+
+int noint_aio_fsync();
+
+int endswith(const char * str, const char * suffix);
+
+size_t has_io();
 
 int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
     va_list argptr;
@@ -55,3 +65,5 @@ int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
     va_end (argptr);
     return 0;
 }
+
+

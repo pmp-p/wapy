@@ -67,10 +67,10 @@ STATIC bool repl_display_debugging_info = 0;
 #if NO_NLR
     #include "../wapy/upython.h"
 
-#if __EMSCRIPTEN__
-    #pragma message "TODO: pyexec->no_nlr is crude"
-    #include "emscripten.h"
-#endif
+    #if defined(__EMSCRIPTEN__)
+        #pragma message "TODO: pyexec->no_nlr is crude"
+        #include "emscripten.h"
+    #endif
 
 
     #define FORCED_EXIT (0x100)
@@ -100,7 +100,7 @@ STATIC bool repl_display_debugging_info = 0;
             }
             return FORCED_EXIT | (val & 255);
             */
-            #if __EMSCRIPTEN__
+            #if defined(__EMSCRIPTEN__)
                     EM_ASM({console.log("91:SystemExit");});
             #endif
 

@@ -10,7 +10,7 @@
 
 #include <stdarg.h>
 
-#if defined(__EMSCRIPTEN__) || defined(__WASM__)
+#if defined(__EMSCRIPTEN__) || defined(__WASI__)
     #include "emscripten.h"
 #elif __CPP__
     #define EMSCRIPTEN_KEEPALIVE
@@ -20,8 +20,9 @@
 
 #include <time.h>
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
+#include <sys/time.h>
 #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
 #endif
 
@@ -46,8 +47,11 @@ static unsigned long epoch_us = 0;
 
 
 uint64_t mp_hal_time_ns(void) {
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
-    return (uint64_t)( t_timespec.tv_sec + t_timespec.tv_sec );
+   // wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+   // return (uint64_t)( t_timespec.tv_sec + t_timespec.tv_sec );
+
+    wa_gettimeofday(&t_timeval, NULL);
+    return (uint64_t)t_timeval.tv_sec * 1000000000ULL + (uint64_t)t_timeval.tv_usec * 1000ULL;
 }
 
 
@@ -78,7 +82,7 @@ mp_uint_t mp_hal_ticks_us(void) {
 // Receive single character
 int mp_hal_stdin_rx_chr(void) {
 
-    fprintf(stderr,"mp_hal_stdin_rx_chr");
+    cdbg("mp_hal_stdin_rx_chr");
     unsigned char c = fgetc(stdin);
     return c;
 }
@@ -102,11 +106,11 @@ unsigned char hex_lo(unsigned char b) {
 
 unsigned char out_push(unsigned char c) {
     if (last>127) {
-        if (c>127)
-            fprintf(stderr," -- utf-8(2/2) %u --\n", c );
+        //if (c>127)
+          //  fprintf(stderr," -- utf-8(2/2) %u --\n", c );
     } else {
-        if (c>127)
-            fprintf(stderr," -- utf-8(1/2) %u --\n", c );
+        //if (c>127)
+          //  fprintf(stderr," -- utf-8(1/2) %u --\n", c );
     }
     rbb_append(&out_rbb, hex_hi(c));
     rbb_append(&out_rbb, hex_lo(c));
@@ -120,7 +124,7 @@ unsigned char out_push(unsigned char c) {
 extern int io_encode_hex;
 //this one (over)cooks like _cooked
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #else // WASI/node
     if (!io_encode_hex) {
         printf("%s", str);
@@ -136,7 +140,7 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 }
 
 
-#if __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 
 EMSCRIPTEN_KEEPALIVE static PyObject *
 embed_run_script(PyObject *self, PyObject *argv) {
@@ -158,7 +162,7 @@ embed_run_script(PyObject *self, PyObject *argv) {
 #else
 
 char *prompt(char *p) {
-    fprintf(stderr,"61:simple read string\n");
+    cdbg("165: simple read string\n");
     static char buf[256];
     fputs(p, stderr);
     char *s = fgets(buf, sizeof(buf), stdin);
