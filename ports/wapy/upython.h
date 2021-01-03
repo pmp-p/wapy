@@ -76,11 +76,14 @@ wPyThreadState {
 extern struct wPyInterpreterState i_main ;
 extern struct wPyThreadState i_state ;
 
-
-
-#define cdbg(...) if (1){ fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
-#define clog(...) if (show_os_loop(-1)){ fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
-
+#if defined(__WASI__)
+    extern FILE *fd_logger;
+    #define cdbg(...) if (1){ fprintf(fd_logger, __VA_ARGS__ );fprintf(fd_logger, "\n"); }
+    #define clog(...) if (show_os_loop(-1)){ fprintf(fd_logger, __VA_ARGS__ );fprintf(fd_logger, "\n"); }
+#else
+    #define cdbg(...) if (1){ fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
+    #define clog(...) if (show_os_loop(-1)){ fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
+#endif
 
 
 

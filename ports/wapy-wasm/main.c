@@ -427,10 +427,11 @@ void *
 import(const char * LIB_NAME) {
     void *lib_handle = dlopen(LIB_NAME, RTLD_NOW | RTLD_GLOBAL);
 
-    if (!lib_handle)
-        fprintf(stderr,"\n\nDL ======> cannot load %s module\n\n\n", LIB_NAME);
-    else
-        fprintf(stderr,"\n\nDL ======> %s module OK !!!!! \n\n\n", LIB_NAME);
+    if (!lib_handle) {
+        cdbg("\n\nDL ======> cannot load %s module\n\n\n", LIB_NAME);
+    } else {
+        cdbg("\n\nDL ======> %s module OK !!!!! \n\n\n", LIB_NAME);
+    }
     return lib_handle;
 }
 

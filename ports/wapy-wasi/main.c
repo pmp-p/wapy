@@ -49,7 +49,7 @@ copy_argv(int argc, char *argv[]) {
     for (int i = 0; i < argc; i++) {
         new_argv[i] = &(((char*)new_argv)[(ptr_args * sizeof(char*)) + length]);
         strcpy(new_argv[i], argv[i]);
-        fprintf(stderr,"argv[%d] = %s\n", i, argv[i]);
+        cdbg("52: argv[%d] = %s\n", i, argv[i]);
         length += (strlen(argv[i]) + 1);
     }
     // insert NULL terminating ptr at the end of the ptr array
@@ -120,6 +120,7 @@ extern int trace_on;
 FILE *cc;
 FILE *fd_keyvalue;
 FILE *fd_syscall;
+FILE *fd_logger;
 
 // to use kb buffer space for scripts
 // if (strlen(io_stdin)>=IO_KBD){ io_stdin[IO_KBD]  = 0;
@@ -168,6 +169,7 @@ void Py_Init() {
     cc = fdopen(3, "r+");
     fd_keyvalue = fdopen(4, "r+");
     fd_syscall = fdopen(5, "r+");
+    fd_logger =  fdopen(6, "r+");
 
 // do not call cpython names directly
     wPy_Initialize();
@@ -265,7 +267,7 @@ main(int argc, char *argv[]) {
             // init
             crash_point = &&VM_stackmess;
 
-            fprintf(stderr, "argv[0..%d] env=%s memory=%p\n", argc, getenv("WAPY"), shm_ptr() );
+            cdbg("270: argv[0..%d] env=%s memory=%p\n", argc, getenv("WAPY"), shm_ptr() );
 
             if (argc) {
                 printf("\nnode.js detected, running repl in infinite loop ...\n");

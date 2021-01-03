@@ -30,11 +30,15 @@
 
 // ==========================================================================================
     // this call the async loop , no preemption should be allowed in there.
-    if (noint_aio_fsync()>0)
+    int aioerr = noint_aio_fsync();
+    if (aioerr>0)
         goto VM_exhandler;
-    else {
+
+    // do not erase stdin buffer in case it's repl or script data
+    if (!aioerr) {
         IO_CODE_DONE;
     }
+
 // ==========================================================================================
 
     // return to where we were going just before giving hand to host
@@ -50,9 +54,7 @@
             COME_FROM;
     }
 
-
 // All I/O stuff IS WRONG and should use a circular buffer.
-
 
     while (1){
 
@@ -61,17 +63,27 @@
         if (io_stdin[0]) {
     //then it is toplevel or TODO: it's sync top level ( tranpiled by aio on the heap)
 
-
+/*
             if (def_PyRun_SimpleString_is_repl) {
                 cdbg("REPL-INPUT-BEGIN[%s]", io_stdin);
             } else {
-                cdbg("REPL-RAW-BEBIN[%s]", io_stdin);
+                cdbg("REPL-RAW-BEGIN[%s]", io_stdin);
             }
-
+*/
             // keep some space for moving labels
 
 
+
+
+
+
             JUMP( def_PyRun_SimpleString, "main_iteration_repl");
+
+
+
+
+
+
 
             if (RETVAL == MP_OBJ_NULL) {
                 if (MP_STATE_THREAD(active_exception) != NULL) {
@@ -80,15 +92,19 @@
                 }
             }
 
+/*
             if (def_PyRun_SimpleString_is_repl) {
                 cdbg("REPL-INPUT-END");
                 pyexec_repl_repl_restart(0);
             } else {
                 cdbg("REPL-RAW-END");
             }
-
+*/
             // mark done
             IO_CODE_DONE;
+            // chances to have both stdin and repl input at same time are low
+            // so display the prompt
+            pyexec_repl_repl_restart(0);
         }
 /// *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
         //only flush kbd port on idle stdin
@@ -495,11 +511,11 @@ VM_exhandler:;
     }
 
     if (def_PyRun_SimpleString_is_repl) {
-        cdbg("EX-REPL-INPUT-END");
+        //cdbg("EX-REPL-INPUT-END");
         pyexec_repl_repl_restart(0);
-    } else {
+    } /* else {
         cdbg("EX-END");
-    }
+    } */
 
 
 VM_syscall:;

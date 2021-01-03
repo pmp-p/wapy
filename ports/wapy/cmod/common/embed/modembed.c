@@ -40,7 +40,7 @@ void print(mp_obj_t str) {
 
 void
 null_pointer_exception(void) {
-    fprintf(stderr, "null pointer exception in function pointer call\n");
+    fprintf(stderr, "59: null pointer exception in function pointer call\n");
 }
 
 mp_obj_t
@@ -74,12 +74,18 @@ const char *nullbytes = "";
 
 
 #if defined(__EMSCRIPTEN__) || defined(__WASI__)
+    #if defined(__WASI__)
+        #error "wasi cannot use emsdk"
+    #else
+        #define fd_logger stderr
+    #endif
 
     #define WAPY_VALUE (1)
     extern int VMFLAGS_IF;
     extern int show_os_loop(int state);
     extern int state_os_loop(int state);
 #else
+    #define fd_logger stderr
     #define WAPY_VALUE (0)
     int VMFLAGS_IF = 0;
     int show_os_loop(int state) {return 0;}
@@ -184,7 +190,7 @@ pycore(const char *fn) {
     mp_obj_t qst = MP_OBJ_NEW_QSTR(qfn);
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"122:FFYPY[%p->%s]\n", ffpy, fn );
+    fprintf(fd_logger,"122:FFYPY[%p->%s]\n", ffpy, fn );
     if (ffpy) {
         mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &qst);
     }
@@ -389,7 +395,7 @@ embed_os_stderr(size_t argc, const mp_obj_t *argv) {
     
 
     // ------- method body (try/finally) -----
-    fprintf( stderr, "%s\n", data );
+    fprintf(stderr, "%s\n", data );
 return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_stderr_obj, 0, 1, embed_os_stderr);
@@ -408,7 +414,7 @@ embed_log(size_t argc, const mp_obj_t *argv) {
     
 
     // ------- method body (try/finally) -----
-    fprintf( stderr, "%s\n", data );
+    fprintf(fd_logger, "py: %s\n", data );
 return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_log_obj, 0, 1, embed_log);
@@ -461,7 +467,7 @@ embed_os_showloop(size_t argc, const mp_obj_t *argv) {
 // opt : void return
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"will show begin/end for os loop\n");
+    fprintf(stderr, "will show begin/end for os loop\n");
     show_os_loop(1);
 return mp_const_none;
 }
@@ -475,7 +481,7 @@ embed_os_hideloop(size_t argc, const mp_obj_t *argv) {
 // opt : void return
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"will hide begin/end for os loop\n");
+    fprintf(stderr, "will hide begin/end for os loop\n");
     show_os_loop(0);
 return mp_const_none;
 }
@@ -643,7 +649,7 @@ embed_os_read_useless(size_t argc, const mp_obj_t *argv) {
     char *s = fgets(buf, sizeof(buf), stdin);
     if (!s) {
         buf[0]=0;
-        fprintf(stderr,"embed.os_read EOF\n" );
+        fprintf(fd_logger,"embed.os_read EOF\n" );
     } else {
         int l = strlen(buf);
         if (buf[l - 1] == '\n') {
@@ -716,7 +722,7 @@ embed_callpy(size_t argc, const mp_obj_t *argv) {
     
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"embed.callpy[%s]\n", fn );
+    fprintf(fd_logger, "embed.callpy[%s]\n", fn );
     pycore(fn);
 return mp_const_none;
 }
@@ -755,7 +761,7 @@ embed_show_trace(size_t argc, const mp_obj_t *argv) {
 
     // ------- method body (try/finally) -----
     trace_on = 1;
-    fprintf(stderr,"TRACE[%s:%zu -> %s:%zu]\n", qstr_str(trace_prev_file), trace_prev_line, qstr_str(trace_file), trace_line);
+    fprintf(fd_logger, "TRACE[%s:%zu -> %s:%zu]\n", qstr_str(trace_prev_file), trace_prev_line, qstr_str(trace_file), trace_line);
     { __creturn__ = (long)trace_prev_line-1; goto lreturn__; };
 lreturn__: return mp_obj_new_int(__creturn__);
 }
@@ -798,7 +804,7 @@ embed_set_ffpy(size_t argc, const mp_obj_t *argv) {
     
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"embed.ffpy[%p]\n", fn );
+    fprintf(fd_logger, "embed.ffpy[%p]\n", fn );
     ffpy = (mp_obj_t *)fn;
 return mp_const_none;
 }
@@ -819,7 +825,7 @@ embed_set_ffpy_add(size_t argc, const mp_obj_t *argv) {
     
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"embed.ffpy[%p]\n", fn );
+    fprintf(fd_logger, "embed.ffpy[%p]\n", fn );
     ffpy_add = (mp_obj_t *)fn;
 return mp_const_none;
 }
@@ -839,7 +845,7 @@ embed_corepy(size_t argc, const mp_obj_t *argv) {
     
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"embed.ffipy[%p(%s)]\n", ffpy, fn );
+    fprintf(fd_logger, "embed.ffipy[%p(%s)]\n", ffpy, fn );
     if (ffpy) {
         mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &argv[0]);
     }
@@ -861,7 +867,7 @@ embed_somecall(size_t argc, const mp_obj_t *argv) {
     
 
     // ------- method body (try/finally) -----
-    fprintf(stderr, "FPRINTF[%s]\n", mp_obj_str_get_str((char *)s) );
+    fprintf(fd_logger, "FPRINTF[%s]\n", mp_obj_str_get_str((char *)s) );
     print( (char *)s);
 return mp_const_none;
 }

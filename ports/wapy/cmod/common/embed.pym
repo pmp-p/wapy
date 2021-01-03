@@ -15,12 +15,18 @@
 
 
 #if defined(__EMSCRIPTEN__) || defined(__WASI__)
+    #if defined(__WASI__)
+        #error "wasi cannot use emsdk"
+    #else
+        #define fd_logger stderr
+    #endif
 
     #define WAPY_VALUE (1)
     extern int VMFLAGS_IF;
     extern int show_os_loop(int state);
     extern int state_os_loop(int state);
 #else
+    #define fd_logger stderr
     #define WAPY_VALUE (0)
     int VMFLAGS_IF = 0;
     int show_os_loop(int state) {return 0;}
@@ -119,7 +125,7 @@ pycore(const char *fn) {
     mp_obj_t qst = MP_OBJ_NEW_QSTR(qfn);
 
     // ------- method body (try/finally) -----
-    fprintf(stderr,"122:FFYPY[%p->%s]\n", ffpy, fn );
+    fprintf(fd_logger,"122:FFYPY[%p->%s]\n", ffpy, fn );
     if (ffpy) {
         mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &qst);
     }
@@ -203,10 +209,10 @@ def os_write( data : const_char_p = "{}" ) -> void :
     fprintf( stdout , "%s" , data );
 
 def os_stderr( data : const_char_p = "" ) -> void :
-    fprintf( stderr, "%s\n", data );
+    fprintf(stderr, "%s\n", data );
 
 def log( data : const_char_p = "" ) -> void :
-    fprintf( stderr, "%s\n", data );
+    fprintf(fd_logger, "py: %s\n", data );
 
 def builtins_vars(module_obj : mp_obj_t = None ) -> dict:
     mp_obj_dict_t *mod_globals = mp_obj_module_get_globals(module_obj);
@@ -216,11 +222,11 @@ def os_state_loop(state:int = 0)->int:
     return mp_obj_new_int( state_os_loop(state) );
 
 def os_showloop()->void :
-    fprintf(stderr,"will show begin/end for os loop\n");
+    fprintf(stderr, "will show begin/end for os loop\n");
     show_os_loop(1);
 
 def os_hideloop()->void :
-    fprintf(stderr,"will hide begin/end for os loop\n");
+    fprintf(stderr, "will hide begin/end for os loop\n");
     show_os_loop(0);
 
 def os_hook() ->void:
@@ -285,7 +291,7 @@ def os_read_useless() -> bytes:
     if (!s) {
         //return mp_obj_new_int(0);
         buf[0]=0;
-        fprintf(stderr,"embed.os_read EOF\n" );
+        fprintf(fd_logger,"embed.os_read EOF\n" );
     } else {
         int l = strlen(buf);
         if (buf[l - 1] == '\n') {
@@ -313,7 +319,7 @@ def callsome(fnptr : void_p=npe) -> void:
     (*fn)();
 
 def callpy(fn: const_char_p ="") -> void:
-    fprintf(stderr,"embed.callpy[%s]\n", fn )
+    fprintf(fd_logger, "embed.callpy[%s]\n", fn )
     pycore(fn)
 
 def hash_djb2(cstr : const_char_p = "") -> _int_from_unsigned_long:
@@ -325,7 +331,7 @@ def hash_djb2(cstr : const_char_p = "") -> _int_from_unsigned_long:
 
 def show_trace() -> int:
     trace_on = 1
-    fprintf(stderr,"TRACE[%s:%zu -> %s:%zu]\n", qstr_str(trace_prev_file), trace_prev_line, qstr_str(trace_file), trace_line)
+    fprintf(fd_logger, "TRACE[%s:%zu -> %s:%zu]\n", qstr_str(trace_prev_file), trace_prev_line, qstr_str(trace_file), trace_line)
     return trace_prev_line-1
 
 
@@ -335,21 +341,21 @@ def address_of(ptr : void_p = NULL ) -> _int_from_ptr:
     return ptrvalue;
 
 def set_ffpy(fn: void_p) -> void:
-    fprintf(stderr,"embed.ffpy[%p]\n", fn );
+    fprintf(fd_logger, "embed.ffpy[%p]\n", fn );
     ffpy = (mp_obj_t *)fn ;
 
 def set_ffpy_add(fn: void_p) -> void:
-    fprintf(stderr,"embed.ffpy[%p]\n", fn );
+    fprintf(fd_logger, "embed.ffpy[%p]\n", fn );
     ffpy_add = (mp_obj_t *)fn ;
 
 
 def corepy(fn: const_char_p = "") -> _int_from_ptr:
-    fprintf(stderr,"embed.ffipy[%p(%s)]\n", ffpy, fn );
+    fprintf(fd_logger, "embed.ffipy[%p(%s)]\n", ffpy, fn );
     if (ffpy):
         mp_call_function_n_kw((mp_obj_t *)ffpy, 1, 0, &argv[0]);
 
 def somecall(s:str='pouet'):
-    fprintf(stderr, "FPRINTF[%s]\n", mp_obj_str_get_str((char *)s) );
+    fprintf(fd_logger, "FPRINTF[%s]\n", mp_obj_str_get_str((char *)s) );
     print( (char *)s);
 
 

@@ -1,3 +1,9 @@
+#if defined(__EMSCRIPTEN__)
+    #define fd_logger stderr
+    #if defined(__WASI__)
+        #error "wasi-emscripten"
+    #endif
+#endif
 
 STATIC void stderr_print_strn2(void *env, const char *str, size_t len) {
     (void)env;
@@ -54,7 +60,7 @@ const mp_print_t mp_stderr_print2 = {NULL, stderr_print_strn2};
         MP_STATE_THREAD(active_exception) = NULL;
 
         // fake sys.excepthook via pythons.__init__
-        fprintf(stderr, "*** EXCEPTION ***\n");
+        cdbg("57: *** EXCEPTION ***\n");
         pyv( mp_obj_get_type(ex) );
         pyv( MP_OBJ_FROM_PTR(ex) );
         pyv( MP_ROM_NONE );
@@ -65,11 +71,11 @@ const mp_print_t mp_stderr_print2 = {NULL, stderr_print_strn2};
 
 void
 dump_args2(const mp_obj_t *a, size_t sz) {
-    fprintf(stderr,"331: %p: ", a);
+    cdbg("331: %p: ", a);
     for (size_t i = 0; i < sz; i++) {
-        fprintf(stderr,"%p ", a[i]);
+        fprintf(fd_logger,"%p ", a[i]);
     }
-    fprintf(stderr,"\n");
+    fprintf(fd_logger,"\n");
 }
 
 
@@ -80,10 +86,10 @@ int
 noint_aio_fsync() {
 
     if (!io_stdin[0])
-        return 0;
+        return -1;
 
     if (!endswith(io_stdin, "#aio.step\n"))
-        return 0;
+        return -1;
 
     int ex=-1;
     async_state = VMFLAGS_IF;
