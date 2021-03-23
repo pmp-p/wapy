@@ -163,8 +163,8 @@ mp_obj_t mp_import_name(qstr name, mp_obj_t fromlist, mp_obj_t level);
 mp_obj_t mp_import_from(mp_obj_t module, qstr name);
 void mp_import_all(mp_obj_t module);
 
-#define mp_raise_type(exc_type) mp_raise_msg(exc_type, NULL)
-void mp_raise_msg(const mp_obj_type_t *exc_type, const char *msg);
+//#define mp_raise_type(exc_type) mp_raise_msg(exc_type, NULL)
+//void mp_raise_msg(const mp_obj_type_t *exc_type, const char *msg);
 void mp_raise_msg_varg(const mp_obj_type_t *exc_type, const char *fmt, ...);
 void mp_raise_ValueError(const char *msg);
 void mp_raise_TypeError(const char *msg);
@@ -206,16 +206,16 @@ void mp_warning(const char *category, const char *msg, ...);
 #define mp_warning(...)
 #endif
 
-#define mp_raise_or_return(exc) { return mp_raise_o(exc) }
+#define mp_raise_or_return(exc) { return mp_raise_o(exc); }
 #define mp_raise_or_return_value(exc, retval) { mp_raise_o(exc); return retval; }
 #define mp_raise_OSError(errno) { return mp_raise_OSError_o(errno); }
 #define mp_raise_OSError_or_return(errno, retval) { mp_raise_OSError_o(errno); return retval; }
 #define mp_raise_type(extype) { return mp_raise_o(mp_obj_new_exception(extype)); }
-#define mp_raise_type_or_return(extype, retval) { mp_raise_o(mp_obj_new_exception(extype)); return retval }
+#define mp_raise_type_or_return(extype, retval) { mp_raise_o(mp_obj_new_exception(extype)); return retval; }
 #define mp_raise_ValueError(v) { return mp_raise_ValueError_o(v); }
 #define mp_raise_msg(extype, mpt) { return mp_raise_msg_o( mp_obj_new_exception(extype), mpt ); }
 #define mp_raise_TypeError(mpt) { return mp_raise_TypeError_o(mpt); }
-#define mp_raise_TypeError_or_return(mpt, retval) { mp_raise_TypeError_o(mpt); return retval }
+#define mp_raise_TypeError_or_return(mpt, retval) { mp_raise_TypeError_o(mpt); return retval; }
 #define mp_raise_NotImplementedError(mpt) { return mp_raise_NotImplementedError_o(mpt); }
 
 

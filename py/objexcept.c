@@ -439,7 +439,7 @@ STATIC void exc_add_strn(void *data, const char *str, size_t len) {
     memcpy(pr->buf + pr->len, str, len);
     pr->len += len;
 }
-
+mp_obj_t mp_obj_new_exception_msg_vlist(const mp_obj_type_t *exc_type, mp_rom_error_text_t fmt, va_list args);
 mp_obj_t mp_obj_new_exception_msg_varg(const mp_obj_type_t *exc_type, mp_rom_error_text_t fmt, ...) {
     va_list args;
     va_start(args, fmt);

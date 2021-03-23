@@ -34,6 +34,9 @@
 #include "py/runtime.h"
 #include "py/mpprint.h"
 
+#pragma message "missing fwd decl of mp_vprintf"
+extern int mp_vprintf(const mp_print_t *print, const char *fmt, va_list args);
+
 // returned value is always at least 1 greater than argument
 #define ROUND_ALLOC(a) (((a) & ((~0U) - 7)) + 8)
 

@@ -28,7 +28,7 @@ include ../../py/mkenv.mk
 QSTR_DEFS = qstrdefsport.h
 
 
-CX = --target=wasm32-unknow-wasi -D__WASI__=1 -DNO_NLR=1
+CX = --sysroot=/data/git/wapy-pack/wasi-sdk/share/wasi-sysroot --target=wasm32-unknow-wasi -D__WASI__=1 -DNO_NLR=1
 
 CC ?= clang
 CC += $(CX)

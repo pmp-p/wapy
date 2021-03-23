@@ -37,6 +37,8 @@
 typedef unsigned char byte;
 typedef unsigned int uint;
 
+//#include <mpconfigport.h> // for mpuint_t
+
 /** generic ops *************************************************/
 
 #ifndef MIN

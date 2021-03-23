@@ -346,7 +346,7 @@ mp_obj_t mp_import_name(qstr name, mp_obj_t fromlist, mp_obj_t level);
 mp_obj_t mp_import_from(mp_obj_t module, qstr name);
 void mp_import_all(mp_obj_t module);
 
-#define mp_raise_type(exc_type) mp_raise_msg(exc_type, NULL)
+//#define mp_raise_type(exc_type) mp_raise_msg(exc_type, NULL)
 NORETURN void mp_raise_msg(const mp_obj_type_t *exc_type, mp_rom_error_text_t msg);
 NORETURN void mp_raise_msg_varg(const mp_obj_type_t *exc_type, mp_rom_error_text_t fmt, ...);
 NORETURN void mp_raise_ValueError(mp_rom_error_text_t msg);

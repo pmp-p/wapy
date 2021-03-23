@@ -2006,99 +2006,104 @@ STATIC void compile_expr_stmt(compiler_t *comp, mp_parse_node_struct_t *pns) {
                 EMIT(pop_top); // discard last result since this is a statement and leaves nothing on the stack
             }
         }
-    } else if (MP_PARSE_NODE_IS_STRUCT(pn_rhs)) {
-        mp_parse_node_struct_t *pns1 = (mp_parse_node_struct_t *)pn_rhs;
-        int kind = MP_PARSE_NODE_STRUCT_KIND(pns1);
-        if (kind == PN_annassign) {
-            // the annotation is in pns1->nodes[0] and is ignored
-            if (MP_PARSE_NODE_IS_NULL(pns1->nodes[1])) {
-                // an annotation of the form "x: y"
-                // inside a function this declares "x" as a local
-                if (comp->scope_cur->kind == SCOPE_FUNCTION) {
-                    if (MP_PARSE_NODE_IS_ID(pns->nodes[0])) {
-                        qstr lhs = MP_PARSE_NODE_LEAF_ARG(pns->nodes[0]);
-                        scope_find_or_add_id(comp->scope_cur, lhs, ID_INFO_KIND_LOCAL);
-                    }
+        return;
+    }
+    if (!MP_PARSE_NODE_IS_STRUCT(pn_rhs))
+        goto plain_assign;
+
+    mp_parse_node_struct_t *pns1 = (mp_parse_node_struct_t *)pn_rhs;
+    int kind = MP_PARSE_NODE_STRUCT_KIND(pns1);
+    if (kind == PN_annassign) {
+        // the annotation is in pns1->nodes[0] and is ignored
+        if (MP_PARSE_NODE_IS_NULL(pns1->nodes[1])) {
+            // an annotation of the form "x: y"
+            // inside a function this declares "x" as a local
+            if (comp->scope_cur->kind == SCOPE_FUNCTION) {
+                if (MP_PARSE_NODE_IS_ID(pns->nodes[0])) {
+                    qstr lhs = MP_PARSE_NODE_LEAF_ARG(pns->nodes[0]);
+                    scope_find_or_add_id(comp->scope_cur, lhs, ID_INFO_KIND_LOCAL);
                 }
-            } else {
-                // an assigned annotation of the form "x: y = z"
-                pn_rhs = pns1->nodes[1];
-                goto plain_assign;
-            }
-        } else if (kind == PN_expr_stmt_augassign) {
-            c_assign(comp, pns->nodes[0], ASSIGN_AUG_LOAD); // lhs load for aug assign
-            compile_node(comp, pns1->nodes[1]); // rhs
-            assert(MP_PARSE_NODE_IS_TOKEN(pns1->nodes[0]));
-            mp_token_kind_t tok = MP_PARSE_NODE_LEAF_ARG(pns1->nodes[0]);
-            mp_binary_op_t op = MP_BINARY_OP_INPLACE_OR + (tok - MP_TOKEN_DEL_PIPE_EQUAL);
-            EMIT_ARG(binary_op, op);
-            c_assign(comp, pns->nodes[0], ASSIGN_AUG_STORE); // lhs store for aug assign
-        } else if (kind == PN_expr_stmt_assign_list) {
-            int rhs = MP_PARSE_NODE_STRUCT_NUM_NODES(pns1) - 1;
-            compile_node(comp, pns1->nodes[rhs]); // rhs
-            // following CPython, we store left-most first
-            if (rhs > 0) {
-                EMIT(dup_top);
-            }
-            c_assign(comp, pns->nodes[0], ASSIGN_STORE); // lhs store
-            for (int i = 0; i < rhs; i++) {
-                if (i + 1 < rhs) {
-                    EMIT(dup_top);
-                }
-                c_assign(comp, pns1->nodes[i], ASSIGN_STORE); // middle store
             }
         } else {
-        plain_assign:
-            #if MICROPY_COMP_DOUBLE_TUPLE_ASSIGN
-            if (MP_PARSE_NODE_IS_STRUCT_KIND(pn_rhs, PN_testlist_star_expr)
-                && MP_PARSE_NODE_IS_STRUCT_KIND(pns->nodes[0], PN_testlist_star_expr)) {
-                mp_parse_node_struct_t *pns0 = (mp_parse_node_struct_t *)pns->nodes[0];
-                pns1 = (mp_parse_node_struct_t *)pn_rhs;
-                uint32_t n_pns0 = MP_PARSE_NODE_STRUCT_NUM_NODES(pns0);
-                // Can only optimise a tuple-to-tuple assignment when all of the following hold:
-                //  - equal number of items in LHS and RHS tuples
-                //  - 2 or 3 items in the tuples
-                //  - there are no star expressions in the LHS tuple
-                if (n_pns0 == MP_PARSE_NODE_STRUCT_NUM_NODES(pns1)
-                    && (n_pns0 == 2
-                        #if MICROPY_COMP_TRIPLE_TUPLE_ASSIGN
-                        || n_pns0 == 3
-                        #endif
-                        )
-                    && !MP_PARSE_NODE_IS_STRUCT_KIND(pns0->nodes[0], PN_star_expr)
-                    && !MP_PARSE_NODE_IS_STRUCT_KIND(pns0->nodes[1], PN_star_expr)
-                    #if MICROPY_COMP_TRIPLE_TUPLE_ASSIGN
-                    && (n_pns0 == 2 || !MP_PARSE_NODE_IS_STRUCT_KIND(pns0->nodes[2], PN_star_expr))
-                    #endif
-                    ) {
-                    // Optimisation for a, b = c, d or a, b, c = d, e, f
-                    compile_node(comp, pns1->nodes[0]); // rhs
-                    compile_node(comp, pns1->nodes[1]); // rhs
-                    #if MICROPY_COMP_TRIPLE_TUPLE_ASSIGN
-                    if (n_pns0 == 3) {
-                        compile_node(comp, pns1->nodes[2]); // rhs
-                        EMIT(rot_three);
-                    }
-                    #endif
-                    EMIT(rot_two);
-                    c_assign(comp, pns0->nodes[0], ASSIGN_STORE); // lhs store
-                    c_assign(comp, pns0->nodes[1], ASSIGN_STORE); // lhs store
-                    #if MICROPY_COMP_TRIPLE_TUPLE_ASSIGN
-                    if (n_pns0 == 3) {
-                        c_assign(comp, pns0->nodes[2], ASSIGN_STORE); // lhs store
-                    }
-                    #endif
-                    return;
-                }
+            // an assigned annotation of the form "x: y = z"
+            pn_rhs = pns1->nodes[1];
+            goto plain_assign;
+        }
+        return;
+    } else if (kind == PN_expr_stmt_augassign) {
+        c_assign(comp, pns->nodes[0], ASSIGN_AUG_LOAD); // lhs load for aug assign
+        compile_node(comp, pns1->nodes[1]); // rhs
+        assert(MP_PARSE_NODE_IS_TOKEN(pns1->nodes[0]));
+        mp_token_kind_t tok = (mp_token_kind_t)MP_PARSE_NODE_LEAF_ARG(pns1->nodes[0]);
+        mp_binary_op_t op = (mp_binary_op_t)(MP_BINARY_OP_INPLACE_OR + (tok - MP_TOKEN_DEL_PIPE_EQUAL));
+        EMIT_ARG(binary_op, op);
+        c_assign(comp, pns->nodes[0], ASSIGN_AUG_STORE); // lhs store for aug assign
+        return;
+    } else if (kind == PN_expr_stmt_assign_list) {
+        int rhs = MP_PARSE_NODE_STRUCT_NUM_NODES(pns1) - 1;
+        compile_node(comp, pns1->nodes[rhs]); // rhs
+        // following CPython, we store left-most first
+        if (rhs > 0) {
+            EMIT(dup_top);
+        }
+        c_assign(comp, pns->nodes[0], ASSIGN_STORE); // lhs store
+        for (int i = 0; i < rhs; i++) {
+            if (i + 1 < rhs) {
+                EMIT(dup_top);
+            }
+            c_assign(comp, pns1->nodes[i], ASSIGN_STORE); // middle store
+        }
+        return;
+    }
+
+plain_assign:
+    #if MICROPY_COMP_DOUBLE_TUPLE_ASSIGN
+    if (MP_PARSE_NODE_IS_STRUCT_KIND(pn_rhs, PN_testlist_star_expr)
+        && MP_PARSE_NODE_IS_STRUCT_KIND(pns->nodes[0], PN_testlist_star_expr)) {
+        mp_parse_node_struct_t *pns0 = (mp_parse_node_struct_t *)pns->nodes[0];
+        pns1 = (mp_parse_node_struct_t *)pn_rhs;
+        uint32_t n_pns0 = MP_PARSE_NODE_STRUCT_NUM_NODES(pns0);
+        // Can only optimise a tuple-to-tuple assignment when all of the following hold:
+        //  - equal number of items in LHS and RHS tuples
+        //  - 2 or 3 items in the tuples
+        //  - there are no star expressions in the LHS tuple
+        if (n_pns0 == MP_PARSE_NODE_STRUCT_NUM_NODES(pns1)
+            && (n_pns0 == 2
+                #if MICROPY_COMP_TRIPLE_TUPLE_ASSIGN
+                || n_pns0 == 3
+                #endif
+                )
+            && !MP_PARSE_NODE_IS_STRUCT_KIND(pns0->nodes[0], PN_star_expr)
+            && !MP_PARSE_NODE_IS_STRUCT_KIND(pns0->nodes[1], PN_star_expr)
+            #if MICROPY_COMP_TRIPLE_TUPLE_ASSIGN
+            && (n_pns0 == 2 || !MP_PARSE_NODE_IS_STRUCT_KIND(pns0->nodes[2], PN_star_expr))
+            #endif
+            ) {
+            // Optimisation for a, b = c, d or a, b, c = d, e, f
+            compile_node(comp, pns1->nodes[0]); // rhs
+            compile_node(comp, pns1->nodes[1]); // rhs
+            #if MICROPY_COMP_TRIPLE_TUPLE_ASSIGN
+            if (n_pns0 == 3) {
+                compile_node(comp, pns1->nodes[2]); // rhs
+                EMIT(rot_three);
             }
             #endif
-
-            compile_node(comp, pn_rhs); // rhs
-            c_assign(comp, pns->nodes[0], ASSIGN_STORE); // lhs store
+            EMIT(rot_two);
+            c_assign(comp, pns0->nodes[0], ASSIGN_STORE); // lhs store
+            c_assign(comp, pns0->nodes[1], ASSIGN_STORE); // lhs store
+            #if MICROPY_COMP_TRIPLE_TUPLE_ASSIGN
+            if (n_pns0 == 3) {
+                c_assign(comp, pns0->nodes[2], ASSIGN_STORE); // lhs store
+            }
+            #endif
+            return;
         }
-    } else {
-        goto plain_assign;
     }
+    #endif
+
+    compile_node(comp, pn_rhs); // rhs
+    c_assign(comp, pns->nodes[0], ASSIGN_STORE); // lhs store
+
 }
 
 STATIC void compile_test_if_expr(compiler_t *comp, mp_parse_node_struct_t *pns) {

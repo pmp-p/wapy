@@ -58,7 +58,7 @@ copy_argv(int argc, char *argv[]) {
 }
 
 
-#include "upython.c"
+#include "../wapy/upython.c"
 
 
 #include "vmsl/vmreg.h"
@@ -249,6 +249,18 @@ static inline mp_map_elem_t *mp_map_cached_lookup(mp_map_t *map, qstr qst, uint8
 
 int io_encode_hex = 1;
 //static int loops = 0;
+
+
+#ifdef __ARDUINO__
+    #ifndef __CPP__
+        #include ARDUINO_HAL
+    #endif
+#endif
+
+
+
+
+
 
 int
 main(int argc, char *argv[]) {

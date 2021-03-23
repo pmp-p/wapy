@@ -26,33 +26,54 @@
 
 // options to control how WAPY is built
 
-#define NO_NLR (1)
+#define MICROPY_ALLOC_PATH_MAX      (PATH_MAX)
+#define MICROPY_PERSISTENT_CODE_LOAD (0)
+#define MICROPY_PERSISTENT_CODE_SAVE (1)
+
+#ifndef MICROPY_PERSISTENT_CODE_SAVE_FILE
+    #if defined(__i386__) || defined(__x86_64__) || defined(_WIN32) || defined(__unix__) || defined(__APPLE__)
+        #define MICROPY_PERSISTENT_CODE_SAVE_FILE (1)
+    #else
+        #define MICROPY_PERSISTENT_CODE_SAVE_FILE (0)
+    #endif
+#endif
+
+#ifndef NO_NLR
+    //#pragma message "NO_NLR was NOT SET !"
+    #define NO_NLR (1)
+#endif
 #if NO_NLR
     #define MICROPY_ROM_TEXT_COMPRESSION (0)
     #define MICROPY_PY_FUNCTION_ATTRS (1)
     #define MICROPY_EMIT_WASM (1)
     #define MICROPY_PY_BUILTINS_NEXT2 (1)
     #define MICROPY_PY_FSTRING (1)
+
+    #define MICROPY_EMIT_X64            (0)
+    #define MICROPY_EMIT_X86            (0)
+    #define MICROPY_EMIT_THUMB          (0)
+    #define MICROPY_EMIT_INLINE_THUMB   (0)
+    #define MICROPY_EMIT_INLINE_THUMB_ARMV7M (0)
+    #define MICROPY_EMIT_INLINE_THUMB_FLOAT (0)
+    #define MICROPY_EMIT_ARM            (0)
+    #define MICROPY_EMIT_XTENSA         (0)
+    #define MICROPY_EMIT_INLINE_XTENSA  (0)
+    #define MICROPY_EMIT_XTENSAWIN      (0)
+    #define MICROPY_DYNAMIC_COMPILER    (0)
+#else
+    #define MICROPY_EMIT_X64            (1)
+    #define MICROPY_EMIT_X86            (1)
+    #define MICROPY_EMIT_THUMB          (1)
+    #define MICROPY_EMIT_INLINE_THUMB   (1)
+    #define MICROPY_EMIT_INLINE_THUMB_ARMV7M (1)
+    #define MICROPY_EMIT_INLINE_THUMB_FLOAT (1)
+    #define MICROPY_EMIT_ARM            (1)
+    #define MICROPY_EMIT_XTENSA         (1)
+    #define MICROPY_EMIT_INLINE_XTENSA  (1)
+    #define MICROPY_EMIT_XTENSAWIN      (1)
+    #define MICROPY_DYNAMIC_COMPILER    (1)
 #endif
 
-// options to control how MicroPython is built
-
-#define MICROPY_ALLOC_PATH_MAX      (PATH_MAX)
-#define MICROPY_PERSISTENT_CODE_LOAD (0)
-#define MICROPY_PERSISTENT_CODE_SAVE (1)
-
-#define MICROPY_EMIT_X64            (0)
-#define MICROPY_EMIT_X86            (0)
-#define MICROPY_EMIT_THUMB          (0)
-#define MICROPY_EMIT_INLINE_THUMB   (0)
-#define MICROPY_EMIT_INLINE_THUMB_ARMV7M (0)
-#define MICROPY_EMIT_INLINE_THUMB_FLOAT (0)
-#define MICROPY_EMIT_ARM            (0)
-#define MICROPY_EMIT_XTENSA         (0)
-#define MICROPY_EMIT_INLINE_XTENSA  (0)
-#define MICROPY_EMIT_XTENSAWIN      (0)
-
-#define MICROPY_DYNAMIC_COMPILER    (0)
 #define MICROPY_COMP_CONST_FOLDING  (1)
 #define MICROPY_COMP_MODULE_CONST   (1)
 #define MICROPY_COMP_CONST          (1)

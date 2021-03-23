@@ -38,7 +38,7 @@
 #ifdef _WIN32
 #include "ports/windows/fmode.h"
 #endif
-
+mp_state_ctx_t mp_state_ctx;
 // Command line options, with their defaults
 STATIC uint emit_opt = MP_EMIT_OPT_NONE;
 mp_uint_t mp_verbose_flag = 0;
@@ -249,7 +249,7 @@ STATIC void pre_process_options(int argc, char **argv) {
                         heap_size *= 1024 * 1024;
                     }
                     if (word_adjust) {
-                        heap_size = heap_size * BYTES_PER_WORD / 4;
+                        heap_size = heap_size * MP_BYTES_PER_OBJ_WORD / 4;
                     }
                 } else {
                     exit(usage(argv));
@@ -261,7 +261,7 @@ STATIC void pre_process_options(int argc, char **argv) {
 }
 
 MP_NOINLINE int main_(int argc, char **argv) {
-    mp_stack_set_limit(40000 * (BYTES_PER_WORD / 4));
+    mp_stack_set_limit(40000 * (sizeof(void *) / 4));
 
     pre_process_options(argc, argv);
 

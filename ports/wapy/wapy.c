@@ -1,3 +1,7 @@
+#include "py/mpstate.h"
+
+mp_state_ctx_t mp_state_ctx;
+
 #if defined(__EMSCRIPTEN__)
     #define fd_logger stderr
     #if defined(__WASI__)
@@ -137,62 +141,6 @@ has_io() {
         return check;
     return 0;
 }
-
-
-
-
-
-
-
-
-#if 0 // for old esp broken SDK strcmp
-    size_t
-    bsd_strlen(const char *str) {
-            const char *s;
-            for (s = str; *s; ++s);
-            return (s - str);
-    }
-
-    int
-    bsd_strcmp(const char *s1, const char *s2) {
-        while (*s1 == *s2++)
-            if (*s1++ == '\0')
-                return (0);
-        return (*(const unsigned char *)s1 - *(const unsigned char *)(s2 - 1));
-    }
-
-    int
-    endswith(const char * str, const char * suffix) {
-      int str_len = bsd_strlen(str);
-      int suffix_len = bsd_strlen(suffix);
-
-      return
-        (str_len >= suffix_len) && (0 == bsd_strcmp(str + (str_len-suffix_len), suffix));
-    }
-
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

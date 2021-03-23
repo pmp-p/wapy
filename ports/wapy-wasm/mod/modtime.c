@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 
 #if defined(__EMSCRIPTEN__)
     #include <sys/time.h>

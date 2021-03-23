@@ -98,16 +98,16 @@
 
 #define BS_JmpBoot          0       /* x86 jump instruction (3-byte) */
 #define BS_OEMName          3       /* OEM name (8-byte) */
-#define BPB_BytsPerSec      11      /* Sector size [byte] (WORD) */
+#define BPB_BytsPerSec      11      /* Sector size [byte] (WORD16) */
 #define BPB_SecPerClus      13      /* Cluster size [sector] (BYTE) */
-#define BPB_RsvdSecCnt      14      /* Size of reserved area [sector] (WORD) */
+#define BPB_RsvdSecCnt      14      /* Size of reserved area [sector] (WORD16) */
 #define BPB_NumFATs         16      /* Number of FATs (BYTE) */
-#define BPB_RootEntCnt      17      /* Size of root directory area for FAT [entry] (WORD) */
-#define BPB_TotSec16        19      /* Volume size (16-bit) [sector] (WORD) */
+#define BPB_RootEntCnt      17      /* Size of root directory area for FAT [entry] (WORD16) */
+#define BPB_TotSec16        19      /* Volume size (16-bit) [sector] (WORD16) */
 #define BPB_Media           21      /* Media descriptor byte (BYTE) */
-#define BPB_FATSz16         22      /* FAT size (16-bit) [sector] (WORD) */
-#define BPB_SecPerTrk       24      /* Number of sectors per track for int13h [sector] (WORD) */
-#define BPB_NumHeads        26      /* Number of heads for int13h (WORD) */
+#define BPB_FATSz16         22      /* FAT size (16-bit) [sector] (WORD16) */
+#define BPB_SecPerTrk       24      /* Number of sectors per track for int13h [sector] (WORD16) */
+#define BPB_NumHeads        26      /* Number of heads for int13h (WORD16) */
 #define BPB_HiddSec         28      /* Volume offset from top of the drive (DWORD) */
 #define BPB_TotSec32        32      /* Volume size (32-bit) [sector] (DWORD) */
 #define BS_DrvNum           36      /* Physical drive number for int13h (BYTE) */
@@ -117,14 +117,14 @@
 #define BS_VolLab           43      /* Volume label string (8-byte) */
 #define BS_FilSysType       54      /* Filesystem type string (8-byte) */
 #define BS_BootCode         62      /* Boot code (448-byte) */
-#define BS_55AA             510     /* Signature word (WORD) */
+#define BS_55AA             510     /* Signature WORD16 (WORD16) */
 
 #define BPB_FATSz32         36      /* FAT32: FAT size [sector] (DWORD) */
-#define BPB_ExtFlags32      40      /* FAT32: Extended flags (WORD) */
-#define BPB_FSVer32         42      /* FAT32: Filesystem version (WORD) */
+#define BPB_ExtFlags32      40      /* FAT32: Extended flags (WORD16) */
+#define BPB_FSVer32         42      /* FAT32: Filesystem version (WORD16) */
 #define BPB_RootClus32      44      /* FAT32: Root directory cluster (DWORD) */
-#define BPB_FSInfo32        48      /* FAT32: Offset of FSINFO sector (WORD) */
-#define BPB_BkBootSec32     50      /* FAT32: Offset of backup boot sector (WORD) */
+#define BPB_FSInfo32        48      /* FAT32: Offset of FSINFO sector (WORD16) */
+#define BPB_BkBootSec32     50      /* FAT32: Offset of backup boot sector (WORD16) */
 #define BS_DrvNum32         64      /* FAT32: Physical drive number for int13h (BYTE) */
 #define BS_NTres32          65      /* FAT32: Error flag (BYTE) */
 #define BS_BootSig32        66      /* FAT32: Extended boot signature (BYTE) */
@@ -142,8 +142,8 @@
 #define BPB_NumClusEx       92      /* exFAT: Number of clusters (DWORD) */
 #define BPB_RootClusEx      96      /* exFAT: Root directory start cluster (DWORD) */
 #define BPB_VolIDEx         100     /* exFAT: Volume serial number (DWORD) */
-#define BPB_FSVerEx         104     /* exFAT: Filesystem version (WORD) */
-#define BPB_VolFlagEx       106     /* exFAT: Volume flags (WORD) */
+#define BPB_FSVerEx         104     /* exFAT: Filesystem version (WORD16) */
+#define BPB_VolFlagEx       106     /* exFAT: Volume flags (WORD16) */
 #define BPB_BytsPerSecEx    108     /* exFAT: Log2 of sector size in unit of byte (BYTE) */
 #define BPB_SecPerClusEx    109     /* exFAT: Log2 of cluster size in unit of sector (BYTE) */
 #define BPB_NumFATsEx       110     /* exFAT: Number of FATs (BYTE) */
@@ -157,23 +157,23 @@
 #define DIR_NTres           12      /* Lower case flag (BYTE) */
 #define DIR_CrtTime10       13      /* Created time sub-second (BYTE) */
 #define DIR_CrtTime         14      /* Created time (DWORD) */
-#define DIR_LstAccDate      18      /* Last accessed date (WORD) */
-#define DIR_FstClusHI       20      /* Higher 16-bit of first cluster (WORD) */
+#define DIR_LstAccDate      18      /* Last accessed date (WORD16) */
+#define DIR_FstClusHI       20      /* Higher 16-bit of first cluster (WORD16) */
 #define DIR_ModTime         22      /* Modified time (DWORD) */
-#define DIR_FstClusLO       26      /* Lower 16-bit of first cluster (WORD) */
+#define DIR_FstClusLO       26      /* Lower 16-bit of first cluster (WORD16) */
 #define DIR_FileSize        28      /* File size (DWORD) */
 #define LDIR_Ord            0       /* LFN: LFN order and LLE flag (BYTE) */
 #define LDIR_Attr           11      /* LFN: LFN attribute (BYTE) */
 #define LDIR_Type           12      /* LFN: Entry type (BYTE) */
 #define LDIR_Chksum         13      /* LFN: Checksum of the SFN (BYTE) */
-#define LDIR_FstClusLO      26      /* LFN: MBZ field (WORD) */
+#define LDIR_FstClusLO      26      /* LFN: MBZ field (WORD16) */
 #define XDIR_Type           0       /* exFAT: Type of exFAT directory entry (BYTE) */
 #define XDIR_NumLabel       1       /* exFAT: Number of volume label characters (BYTE) */
-#define XDIR_Label          2       /* exFAT: Volume label (11-WORD) */
+#define XDIR_Label          2       /* exFAT: Volume label (11-WORD16) */
 #define XDIR_CaseSum        4       /* exFAT: Sum of case conversion table (DWORD) */
 #define XDIR_NumSec         1       /* exFAT: Number of secondary entries (BYTE) */
-#define XDIR_SetSum         2       /* exFAT: Sum of the set of directory entries (WORD) */
-#define XDIR_Attr           4       /* exFAT: File attribute (WORD) */
+#define XDIR_SetSum         2       /* exFAT: Sum of the set of directory entries (WORD16) */
+#define XDIR_Attr           4       /* exFAT: File attribute (WORD16) */
 #define XDIR_CrtTime        8       /* exFAT: Created time (DWORD) */
 #define XDIR_ModTime        12      /* exFAT: Modified time (DWORD) */
 #define XDIR_AccTime        16      /* exFAT: Last accessed time (DWORD) */
@@ -184,7 +184,7 @@
 #define XDIR_AccTZ          24      /* exFAT: Last accessed timezone (BYTE) */
 #define XDIR_GenFlags       33      /* exFAT: General secondary flags (BYTE) */
 #define XDIR_NumName        35      /* exFAT: Number of file name characters (BYTE) */
-#define XDIR_NameHash       36      /* exFAT: Hash of file name (WORD) */
+#define XDIR_NameHash       36      /* exFAT: Hash of file name (WORD16) */
 #define XDIR_ValidFileSize  40      /* exFAT: Valid file size (QWORD) */
 #define XDIR_FstClus        52      /* exFAT: First cluster of the file data (DWORD) */
 #define XDIR_FileSize       56      /* exFAT: File/Directory size (QWORD) */
@@ -267,7 +267,7 @@ typedef struct {
     FATFS *fs;      /* Object ID 1, volume (NULL:blank entry) */
     DWORD clu;      /* Object ID 2, containing directory (0:root) */
     DWORD ofs;      /* Object ID 3, offset in the directory */
-    WORD ctr;       /* Object open counter, 0:none, 0x01..0xFF:read mode open count, 0x100:write mode */
+    WORD16 ctr;       /* Object open counter, 0:none, 0x01..0xFF:read mode open count, 0x100:write mode */
 } FILESEM;
 #endif
 
@@ -441,7 +441,7 @@ typedef struct {
 #if FF_VOLUMES < 1 || FF_VOLUMES > 10
 #error Wrong FF_VOLUMES setting
 #endif
-static WORD Fsid;                   /* Filesystem mount ID */
+static WORD16 Fsid;                   /* Filesystem mount ID */
 
 #if FF_FS_LOCK != 0
 static FILESEM Files[FF_FS_LOCK];   /* Open object lock semaphores */
@@ -529,7 +529,7 @@ static WCHAR LfnBuf[FF_MAX_LFN + 1];        /* LFN working buffer */
 
 #if FF_CODE_PAGE == 0       /* Run-time code page configuration */
 #define CODEPAGE CodePage
-static WORD CodePage;   /* Current code page */
+static WORD16 CodePage;   /* Current code page */
 static const BYTE *ExCvt, *DbcTbl;  /* Pointer to current SBCS up-case table and DBCS code range table below */
 
 static const BYTE Ct437[] = TBL_CT437;
@@ -575,19 +575,19 @@ static const BYTE DbcTbl[] = MKCVTBL(TBL_DC, FF_CODE_PAGE);
 
 
 /*-----------------------------------------------------------------------*/
-/* Load/Store multi-byte word in the FAT structure                       */
+/* Load/Store multi-byte WORD16 in the FAT structure                       */
 /*-----------------------------------------------------------------------*/
 
-static WORD ld_word (const BYTE* ptr)   /*   Load a 2-byte little-endian word */
+static WORD16 ld_WORD16 (const BYTE* ptr)   /*   Load a 2-byte little-endian WORD16 */
 {
-    WORD rv;
+    WORD16 rv;
 
     rv = ptr[1];
     rv = rv << 8 | ptr[0];
     return rv;
 }
 
-static DWORD ld_dword (const BYTE* ptr) /* Load a 4-byte little-endian word */
+static DWORD ld_dword (const BYTE* ptr) /* Load a 4-byte little-endian WORD16 */
 {
     DWORD rv;
 
@@ -599,7 +599,7 @@ static DWORD ld_dword (const BYTE* ptr) /* Load a 4-byte little-endian word */
 }
 
 #if FF_FS_EXFAT
-static QWORD ld_qword (const BYTE* ptr) /* Load an 8-byte little-endian word */
+static QWORD ld_qword (const BYTE* ptr) /* Load an 8-byte little-endian WORD16 */
 {
     QWORD rv;
 
@@ -616,13 +616,13 @@ static QWORD ld_qword (const BYTE* ptr) /* Load an 8-byte little-endian word */
 #endif
 
 #if !FF_FS_READONLY
-static void st_word (BYTE* ptr, WORD val)   /* Store a 2-byte word in little-endian */
+static void st_WORD16 (BYTE* ptr, WORD16 val)   /* Store a 2-byte WORD16 in little-endian */
 {
     *ptr++ = (BYTE)val; val >>= 8;
     *ptr++ = (BYTE)val;
 }
 
-static void st_dword (BYTE* ptr, DWORD val) /* Store a 4-byte word in little-endian */
+static void st_dword (BYTE* ptr, DWORD val) /* Store a 4-byte WORD16 in little-endian */
 {
     *ptr++ = (BYTE)val; val >>= 8;
     *ptr++ = (BYTE)val; val >>= 8;
@@ -631,7 +631,7 @@ static void st_dword (BYTE* ptr, DWORD val) /* Store a 4-byte word in little-end
 }
 
 #if FF_FS_EXFAT
-static void st_qword (BYTE* ptr, QWORD val) /* Store an 8-byte word in little-endian */
+static void st_qword (BYTE* ptr, QWORD val) /* Store an 8-byte WORD16 in little-endian */
 {
     *ptr++ = (BYTE)val; val >>= 8;
     *ptr++ = (BYTE)val; val >>= 8;
@@ -972,7 +972,7 @@ static FRESULT dec_lock (   /* Decrement object open counter */
     UINT i          /* Semaphore index (1..) */
 )
 {
-    WORD n;
+    WORD16 n;
     FRESULT res;
 
 
@@ -1074,7 +1074,7 @@ static FRESULT sync_fs (    /* Returns FR_OK or FR_DISK_ERR */
         if (fs->fs_type == FS_FAT32 && fs->fsi_flag == 1) { /* FAT32: Update FSInfo sector if needed */
             /* Create FSInfo structure */
             mem_set(fs->win, 0, sizeof fs->win);
-            st_word(fs->win + BS_55AA, 0xAA55);
+            st_WORD16(fs->win + BS_55AA, 0xAA55);
             st_dword(fs->win + FSI_LeadSig, 0x41615252);
             st_dword(fs->win + FSI_StrucSig, 0x61417272);
             st_dword(fs->win + FSI_Free_Count, fs->free_clst);
@@ -1144,7 +1144,7 @@ static DWORD get_fat (      /* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FF
 
         case FS_FAT16 :
             if (move_window(fs, fs->fatbase + (clst / (SS(fs) / 2))) != FR_OK) break;
-            val = ld_word(fs->win + clst * 2 % SS(fs));     /* Simple WORD array */
+            val = ld_WORD16(fs->win + clst * 2 % SS(fs));     /* Simple WORD16 array */
             break;
 
         case FS_FAT32 :
@@ -1223,7 +1223,7 @@ static FRESULT put_fat (    /* FR_OK(0):succeeded, !=0:error */
         case FS_FAT16 :
             res = move_window(fs, fs->fatbase + (clst / (SS(fs) / 2)));
             if (res != FR_OK) break;
-            st_word(fs->win + clst * 2 % SS(fs), (WORD)val);    /* Simple WORD array */
+            st_WORD16(fs->win + clst * 2 % SS(fs), (WORD16)val);    /* Simple WORD16 array */
             fs->wflag = 1;
             break;
 
@@ -1808,9 +1808,9 @@ static DWORD ld_clust ( /* Returns the top cluster value of the SFN entry */
 {
     DWORD cl;
 
-    cl = ld_word(dir + DIR_FstClusLO);
+    cl = ld_WORD16(dir + DIR_FstClusLO);
     if (fs->fs_type == FS_FAT32) {
-        cl |= (DWORD)ld_word(dir + DIR_FstClusHI) << 16;
+        cl |= (DWORD)ld_WORD16(dir + DIR_FstClusHI) << 16;
     }
 
     return cl;
@@ -1824,9 +1824,9 @@ static void st_clust (
     DWORD cl    /* Value to be set */
 )
 {
-    st_word(dir + DIR_FstClusLO, (WORD)cl);
+    st_WORD16(dir + DIR_FstClusLO, (WORD16)cl);
     if (fs->fs_type == FS_FAT32) {
-        st_word(dir + DIR_FstClusHI, (WORD)(cl >> 16));
+        st_WORD16(dir + DIR_FstClusHI, (WORD16)(cl >> 16));
     }
 }
 #endif
@@ -1847,12 +1847,12 @@ static int cmp_lfn (        /* 1:matched, 0:not matched */
     WCHAR wc, uc;
 
 
-    if (ld_word(dir + LDIR_FstClusLO) != 0) return 0;   /* Check LDIR_FstClusLO */
+    if (ld_WORD16(dir + LDIR_FstClusLO) != 0) return 0;   /* Check LDIR_FstClusLO */
 
     i = ((dir[LDIR_Ord] & 0x3F) - 1) * 13;  /* Offset in the LFN buffer */
 
     for (wc = 1, s = 0; s < 13; s++) {      /* Process all characters in the entry */
-        uc = ld_word(dir + LfnOfs[s]);      /* Pick an LFN character */
+        uc = ld_WORD16(dir + LfnOfs[s]);      /* Pick an LFN character */
         if (wc != 0) {
             if (i >= FF_MAX_LFN + 1 || ff_wtoupper(uc) != ff_wtoupper(lfnbuf[i++])) { /* Compare it */
                 return 0;                   /* Not matched */
@@ -1883,12 +1883,12 @@ static int pick_lfn (   /* 1:succeeded, 0:buffer overflow or invalid LFN entry *
     WCHAR wc, uc;
 
 
-    if (ld_word(dir + LDIR_FstClusLO) != 0) return 0;   /* Check LDIR_FstClusLO is 0 */
+    if (ld_WORD16(dir + LDIR_FstClusLO) != 0) return 0;   /* Check LDIR_FstClusLO is 0 */
 
     i = ((dir[LDIR_Ord] & ~LLEF) - 1) * 13; /* Offset in the LFN buffer */
 
     for (wc = 1, s = 0; s < 13; s++) {      /* Process all characters in the entry */
-        uc = ld_word(dir + LfnOfs[s]);      /* Pick an LFN character */
+        uc = ld_WORD16(dir + LfnOfs[s]);      /* Pick an LFN character */
         if (wc != 0) {
             if (i >= FF_MAX_LFN + 1) return 0; /* Buffer overflow? */
             lfnbuf[i++] = wc = uc;          /* Store it */
@@ -1926,13 +1926,13 @@ static void put_lfn (
     dir[LDIR_Chksum] = sum;         /* Set checksum */
     dir[LDIR_Attr] = AM_LFN;        /* Set attribute. LFN entry */
     dir[LDIR_Type] = 0;
-    st_word(dir + LDIR_FstClusLO, 0);
+    st_WORD16(dir + LDIR_FstClusLO, 0);
 
     i = (ord - 1) * 13;             /* Get offset in the LFN working buffer */
     s = wc = 0;
     do {
         if (wc != 0xFFFF) wc = lfn[i++];    /* Get an effective character */
-        st_word(dir + LfnOfs[s], wc);       /* Put it */
+        st_WORD16(dir + LfnOfs[s], wc);       /* Put it */
         if (wc == 0) wc = 0xFFFF;       /* Padding characters for left locations */
     } while (++s < 13);
     if (wc == 0xFFFF || !lfn[i]) ord |= LLEF;   /* Last LFN part is the start of LFN sequence */
@@ -2029,12 +2029,12 @@ static BYTE sum_sfn (
 /* exFAT: Checksum                                                       */
 /*-----------------------------------------------------------------------*/
 
-static WORD xdir_sum (  /* Get checksum of the directoly entry block */
+static WORD16 xdir_sum (  /* Get checksum of the directoly entry block */
     const BYTE* dir     /* Directory entry block to be calculated */
 )
 {
     UINT i, szblk;
-    WORD sum;
+    WORD16 sum;
 
 
     szblk = (dir[XDIR_NumSec] + 1) * SZDIRE;    /* Number of bytes of the entry block */
@@ -2050,12 +2050,12 @@ static WORD xdir_sum (  /* Get checksum of the directoly entry block */
 
 
 
-static WORD xname_sum ( /* Get check sum (to be used as hash) of the file name */
+static WORD16 xname_sum ( /* Get check sum (to be used as hash) of the file name */
     const WCHAR* name   /* File name to be calculated */
 )
 {
     WCHAR chr;
-    WORD sum = 0;
+    WORD16 sum = 0;
 
 
     while ((chr = *name++) != 0) {
@@ -2098,7 +2098,7 @@ static void get_xfileinfo (
     while (nc < dirb[XDIR_NumName]) {
         if (si >= MAXDIRB(FF_MAX_LFN)) { di = 0; break; }   /* Truncated directory block? */
         if ((si % SZDIRE) == 0) si += 2;        /* Skip entry type field */
-        wc = ld_word(dirb + si); si += 2; nc++; /* Get a character */
+        wc = ld_WORD16(dirb + si); si += 2; nc++; /* Get a character */
         if (hs == 0 && IsSurrogate(wc)) {   /* Is it a surrogate? */
             hs = wc; continue;  /* Get low surrogate */
         }
@@ -2114,8 +2114,8 @@ static void get_xfileinfo (
 
     fno->fattrib = dirb[XDIR_Attr];         /* Attribute */
     fno->fsize = (fno->fattrib & AM_DIR) ? 0 : ld_qword(dirb + XDIR_FileSize);  /* Size */
-    fno->ftime = ld_word(dirb + XDIR_ModTime + 0);  /* Time */
-    fno->fdate = ld_word(dirb + XDIR_ModTime + 2);  /* Date */
+    fno->ftime = ld_WORD16(dirb + XDIR_ModTime + 0);  /* Time */
+    fno->fdate = ld_WORD16(dirb + XDIR_ModTime + 2);  /* Date */
 }
 
 #endif  /* FF_FS_MINIMIZE <= 1 || FF_FS_RPATH >= 2 */
@@ -2166,7 +2166,7 @@ static FRESULT load_xdir (  /* FR_INT_ERR: invalid entry block */
 
     /* Sanity check (do it for only accessible object) */
     if (i <= MAXDIRB(FF_MAX_LFN)) {
-        if (xdir_sum(dirb) != ld_word(dirb + XDIR_SetSum)) return FR_INT_ERR;
+        if (xdir_sum(dirb) != ld_WORD16(dirb + XDIR_SetSum)) return FR_INT_ERR;
     }
     return FR_OK;
 }
@@ -2232,7 +2232,7 @@ static FRESULT store_xdir (
     BYTE* dirb = dp->obj.fs->dirbuf;    /* Pointer to the direcotry entry block 85+C0+C1s */
 
     /* Create set sum */
-    st_word(dirb + XDIR_SetSum, xdir_sum(dirb));
+    st_WORD16(dirb + XDIR_SetSum, xdir_sum(dirb));
     nent = dirb[XDIR_NumSec] + 1;
 
     /* Store the direcotry entry block to the directory */
@@ -2277,7 +2277,7 @@ static void create_xdir (
         dirb[i++] = ET_FILENAME; dirb[i++] = 0;
         do {    /* Fill name field */
             if (wc != 0 && (wc = lfn[nlen]) != 0) nlen++;   /* Get a character if exist */
-            st_word(dirb + i, wc);      /* Store it */
+            st_WORD16(dirb + i, wc);      /* Store it */
             i += 2;
         } while (i % SZDIRE != 0);
         nc1++;
@@ -2285,7 +2285,7 @@ static void create_xdir (
 
     dirb[XDIR_NumName] = nlen;      /* Set name length */
     dirb[XDIR_NumSec] = 1 + nc1;    /* Set secondary count (C0 + C1s) */
-    st_word(dirb + XDIR_NameHash, xname_sum(lfn));  /* Set name hash */
+    st_WORD16(dirb + XDIR_NameHash, xname_sum(lfn));  /* Set name hash */
 }
 
 #endif  /* !FF_FS_READONLY */
@@ -2396,16 +2396,16 @@ static FRESULT dir_find (   /* FR_OK(0):succeeded, !=0:error */
     if (fs->fs_type == FS_EXFAT) {  /* On the exFAT volume */
         BYTE nc;
         UINT di, ni;
-        WORD hash = xname_sum(fs->lfnbuf);      /* Hash value of the name to find */
+        WORD16 hash = xname_sum(fs->lfnbuf);      /* Hash value of the name to find */
 
         while ((res = DIR_READ_FILE(dp)) == FR_OK) {    /* Read an item */
 #if FF_MAX_LFN < 255
             if (fs->dirbuf[XDIR_NumName] > FF_MAX_LFN) continue;            /* Skip comparison if inaccessible object name */
 #endif
-            if (ld_word(fs->dirbuf + XDIR_NameHash) != hash) continue;  /* Skip comparison if hash mismatched */
+            if (ld_WORD16(fs->dirbuf + XDIR_NameHash) != hash) continue;  /* Skip comparison if hash mismatched */
             for (nc = fs->dirbuf[XDIR_NumName], di = SZDIRE * 2, ni = 0; nc; nc--, di += 2, ni++) { /* Compare the name */
                 if ((di % SZDIRE) == 0) di += 2;
-                if (ff_wtoupper(ld_word(fs->dirbuf + di)) != ff_wtoupper(fs->lfnbuf[ni])) break;
+                if (ff_wtoupper(ld_WORD16(fs->dirbuf + di)) != ff_wtoupper(fs->lfnbuf[ni])) break;
             }
             if (nc == 0 && !fs->lfnbuf[ni]) break;  /* Name matched? */
         }
@@ -2705,8 +2705,8 @@ static void get_fileinfo (
 
     fno->fattrib = dp->dir[DIR_Attr];                   /* Attribute */
     fno->fsize = ld_dword(dp->dir + DIR_FileSize);      /* Size */
-    fno->ftime = ld_word(dp->dir + DIR_ModTime + 0);    /* Time */
-    fno->fdate = ld_word(dp->dir + DIR_ModTime + 2);    /* Date */
+    fno->ftime = ld_WORD16(dp->dir + DIR_ModTime + 0);    /* Time */
+    fno->fdate = ld_WORD16(dp->dir + DIR_ModTime + 2);    /* Date */
 }
 
 #endif /* FF_FS_MINIMIZE <= 1 || FF_FS_RPATH >= 2 */
@@ -3088,7 +3088,7 @@ static BYTE check_fs (  /* 0:FAT, 1:exFAT, 2:Valid BS but not FAT, 3:Not a BS, 4
     fs->wflag = 0; fs->winsect = 0xFFFFFFFF;        /* Invaidate window */
     if (move_window(fs, sect) != FR_OK) return 4;   /* Load boot record */
 
-    if (ld_word(fs->win + BS_55AA) != 0xAA55) return 3; /* Check boot record signature (always here regardless of the sector size) */
+    if (ld_WORD16(fs->win + BS_55AA) != 0xAA55) return 3; /* Check boot record signature (always here regardless of the sector size) */
 
 #if FF_FS_EXFAT
     if (!mem_cmp(fs->win + BS_JmpBoot, "\xEB\x76\x90" "EXFAT   ", 11)) return 1;    /* Check if exFAT VBR */
@@ -3115,7 +3115,7 @@ static FRESULT find_volume (    /* FR_OK(0): successful, !=0: an error occurred 
     BYTE fmt, *pt;
     DSTATUS stat;
     DWORD bsect, fasize, tsect, sysect, nclst, szbfat, br[4];
-    WORD nrsv;
+    WORD16 nrsv;
     UINT i;
 
 
@@ -3178,7 +3178,7 @@ static FRESULT find_volume (    /* FR_OK(0): successful, !=0: an error occurred 
         for (i = BPB_ZeroedEx; i < BPB_ZeroedEx + 53 && fs->win[i] == 0; i++) ; /* Check zero filler */
         if (i < BPB_ZeroedEx + 53) return FR_NO_FILESYSTEM;
 
-        if (ld_word(fs->win + BPB_FSVerEx) != 0x100) return FR_NO_FILESYSTEM;   /* Check exFAT version (must be version 1.0) */
+        if (ld_WORD16(fs->win + BPB_FSVerEx) != 0x100) return FR_NO_FILESYSTEM;   /* Check exFAT version (must be version 1.0) */
 
         if (1 << fs->win[BPB_BytsPerSecEx] != SS(fs)) { /* (BPB_BytsPerSecEx must be equal to the physical sector size) */
             return FR_NO_FILESYSTEM;
@@ -3234,9 +3234,9 @@ static FRESULT find_volume (    /* FR_OK(0): successful, !=0: an error occurred 
     } else
 #endif  /* FF_FS_EXFAT */
     {
-        if (ld_word(fs->win + BPB_BytsPerSec) != SS(fs)) return FR_NO_FILESYSTEM;   /* (BPB_BytsPerSec must be equal to the physical sector size) */
+        if (ld_WORD16(fs->win + BPB_BytsPerSec) != SS(fs)) return FR_NO_FILESYSTEM;   /* (BPB_BytsPerSec must be equal to the physical sector size) */
 
-        fasize = ld_word(fs->win + BPB_FATSz16);        /* Number of sectors per FAT */
+        fasize = ld_WORD16(fs->win + BPB_FATSz16);        /* Number of sectors per FAT */
         if (fasize == 0) fasize = ld_dword(fs->win + BPB_FATSz32);
         fs->fsize = fasize;
 
@@ -3247,13 +3247,13 @@ static FRESULT find_volume (    /* FR_OK(0): successful, !=0: an error occurred 
         fs->csize = fs->win[BPB_SecPerClus];            /* Cluster size */
         if (fs->csize == 0 || (fs->csize & (fs->csize - 1))) return FR_NO_FILESYSTEM;   /* (Must be power of 2) */
 
-        fs->n_rootdir = ld_word(fs->win + BPB_RootEntCnt);  /* Number of root directory entries */
+        fs->n_rootdir = ld_WORD16(fs->win + BPB_RootEntCnt);  /* Number of root directory entries */
         if (fs->n_rootdir % (SS(fs) / SZDIRE)) return FR_NO_FILESYSTEM; /* (Must be sector aligned) */
 
-        tsect = ld_word(fs->win + BPB_TotSec16);        /* Number of sectors on the volume */
+        tsect = ld_WORD16(fs->win + BPB_TotSec16);        /* Number of sectors on the volume */
         if (tsect == 0) tsect = ld_dword(fs->win + BPB_TotSec32);
 
-        nrsv = ld_word(fs->win + BPB_RsvdSecCnt);       /* Number of reserved sectors */
+        nrsv = ld_WORD16(fs->win + BPB_RsvdSecCnt);       /* Number of reserved sectors */
         if (nrsv == 0) return FR_NO_FILESYSTEM;         /* (Must not be 0) */
 
         /* Determine the FAT sub type */
@@ -3273,7 +3273,7 @@ static FRESULT find_volume (    /* FR_OK(0): successful, !=0: an error occurred 
         fs->fatbase = bsect + nrsv;                     /* FAT start sector */
         fs->database = bsect + sysect;                  /* Data start sector */
         if (fmt == FS_FAT32) {
-            if (ld_word(fs->win + BPB_FSVer32) != 0) return FR_NO_FILESYSTEM;   /* (Must be FAT32 revision 0.0) */
+            if (ld_WORD16(fs->win + BPB_FSVer32) != 0) return FR_NO_FILESYSTEM;   /* (Must be FAT32 revision 0.0) */
             if (fs->n_rootdir != 0) return FR_NO_FILESYSTEM;    /* (BPB_RootEntCnt must be 0) */
             fs->dirbase = ld_dword(fs->win + BPB_RootClus32);   /* Root directory start cluster */
             szbfat = fs->n_fatent * 4;                  /* (Needed FAT size) */
@@ -3291,11 +3291,11 @@ static FRESULT find_volume (    /* FR_OK(0): successful, !=0: an error occurred 
         fs->fsi_flag = 0x80;
 #if (FF_FS_NOFSINFO & 3) != 3
         if (fmt == FS_FAT32             /* Allow to update FSInfo only if BPB_FSInfo32 == 1 */
-            && ld_word(fs->win + BPB_FSInfo32) == 1
+            && ld_WORD16(fs->win + BPB_FSInfo32) == 1
             && move_window(fs, bsect + 1) == FR_OK)
         {
             fs->fsi_flag = 0;
-            if (ld_word(fs->win + BS_55AA) == 0xAA55    /* Load FSInfo data if available */
+            if (ld_WORD16(fs->win + BS_55AA) == 0xAA55    /* Load FSInfo data if available */
                 && ld_dword(fs->win + FSI_LeadSig) == 0x41615252
                 && ld_dword(fs->win + FSI_StrucSig) == 0x61417272)
             {
@@ -3887,7 +3887,7 @@ FRESULT f_sync (
                     st_clust(fp->obj.fs, dir, fp->obj.sclust);      /* Update file allocation information  */
                     st_dword(dir + DIR_FileSize, (DWORD)fp->obj.objsize);   /* Update file size */
                     st_dword(dir + DIR_ModTime, tm);                /* Update modified time */
-                    st_word(dir + DIR_LstAccDate, 0);
+                    st_WORD16(dir + DIR_LstAccDate, 0);
                     fs->wflag = 1;
                     res = sync_fs(fs);                  /* Restore it to the directory */
                     fp->flag &= (BYTE)~FA_MODIFIED;
@@ -4538,7 +4538,7 @@ FRESULT f_getfree (
                     } while (clst);
                 } else
 #endif
-                {   /* FAT16/32: Scan WORD/DWORD FAT entries */
+                {   /* FAT16/32: Scan WORD16/DWORD FAT entries */
                     clst = fs->n_fatent;    /* Number of entries */
                     sect = fs->fatbase;     /* Top of the FAT */
                     i = 0;                  /* Offset in the sector */
@@ -4548,7 +4548,7 @@ FRESULT f_getfree (
                             if (res != FR_OK) break;
                         }
                         if (fs->fs_type == FS_FAT16) {
-                            if (ld_word(fs->win + i) == 0) nfree++;
+                            if (ld_WORD16(fs->win + i) == 0) nfree++;
                             i += 2;
                         } else {
                             if ((ld_dword(fs->win + i) & 0x0FFFFFFF) == 0) nfree++;
@@ -4830,7 +4830,7 @@ FRESULT f_rename (
 #if FF_FS_EXFAT
             if (fs->fs_type == FS_EXFAT) {  /* At exFAT volume */
                 BYTE nf, nn;
-                WORD nh;
+                WORD16 nh;
 
                 mem_cpy(buf, fs->dirbuf, SZDIRE * 2);   /* Save 85+C0 entry of old object */
                 mem_cpy(&djn, &djo, sizeof djo);
@@ -4842,10 +4842,10 @@ FRESULT f_rename (
                     res = dir_register(&djn);           /* Register the new entry */
                     if (res == FR_OK) {
                         nf = fs->dirbuf[XDIR_NumSec]; nn = fs->dirbuf[XDIR_NumName];
-                        nh = ld_word(fs->dirbuf + XDIR_NameHash);
+                        nh = ld_WORD16(fs->dirbuf + XDIR_NameHash);
                         mem_cpy(fs->dirbuf, buf, SZDIRE * 2);   /* Restore 85+C0 entry */
                         fs->dirbuf[XDIR_NumSec] = nf; fs->dirbuf[XDIR_NumName] = nn;
-                        st_word(fs->dirbuf + XDIR_NameHash, nh);
+                        st_WORD16(fs->dirbuf + XDIR_NameHash, nh);
                         if (!(fs->dirbuf[XDIR_Attr] & AM_DIR)) fs->dirbuf[XDIR_Attr] |= AM_ARC; /* Set archive attribute if it is a file */
 /* Start of critical section where an interruption can cause a cross-link */
                         res = store_xdir(&djn);
@@ -5031,7 +5031,7 @@ FRESULT f_getlabel (
                     WCHAR hs;
 
                     for (si = di = hs = 0; si < dj.dir[XDIR_NumLabel]; si++) {  /* Extract volume label from 83 entry */
-                        wc = ld_word(dj.dir + XDIR_Label + si * 2);
+                        wc = ld_WORD16(dj.dir + XDIR_Label + si * 2);
                         if (hs == 0 && IsSurrogate(wc)) {   /* Is the code a surrogate? */
                             hs = wc; continue;
                         }
@@ -5128,13 +5128,13 @@ FRESULT f_setlabel (
                 if (dc == 0xFFFFFFFF || di >= 10) { /* Wrong surrogate or buffer overflow */
                     dc = 0;
                 } else {
-                    st_word(dirvn + di * 2, (WCHAR)(dc >> 16)); di++;
+                    st_WORD16(dirvn + di * 2, (WCHAR)(dc >> 16)); di++;
                 }
             }
             if (dc == 0 || chk_chr(badchr + 7, (int)dc) || di >= 11) {  /* Check validity of the volume label */
                 LEAVE_FF(fs, FR_INVALID_NAME);
             }
-            st_word(dirvn + di * 2, (WCHAR)dc); di++;
+            st_WORD16(dirvn + di * 2, (WCHAR)dc); di++;
         }
     } else
 #endif
@@ -5390,10 +5390,10 @@ FRESULT f_mkfs (
 {
     const UINT n_fats = 1;      /* Number of FATs for FAT/FAT32 volume (1 or 2) */
     const UINT n_rootdir = 512; /* Number of root directory entries for FAT volume */
-    static const WORD cst[] = {1, 4, 16, 64, 256, 512, 0};  /* Cluster size boundary for FAT volume (4Ks unit) */
-    static const WORD cst32[] = {1, 2, 4, 8, 16, 32, 0};    /* Cluster size boundary for FAT32 volume (128Ks unit) */
+    static const WORD16 cst[] = {1, 4, 16, 64, 256, 512, 0};  /* Cluster size boundary for FAT volume (4Ks unit) */
+    static const WORD16 cst32[] = {1, 2, 4, 8, 16, 32, 0};    /* Cluster size boundary for FAT32 volume (128Ks unit) */
     BYTE fmt, sys, *buf, *pte, part; void *pdrv;
-    WORD ss;    /* Sector size */
+    WORD16 ss;    /* Sector size */
     DWORD szb_buf, sz_buf, sz_blk, n_clst, pau, sect, nsect, n;
     DWORD b_vol, b_fat, b_data;             /* Base LBA for volume, fat, data */
     DWORD sz_vol, sz_rsv, sz_fat, sz_dir;   /* Size for volume, fat, dir, data */
@@ -5441,7 +5441,7 @@ FRESULT f_mkfs (
     if (FF_MULTI_PARTITION && part != 0) {
         /* Get partition information from partition table in the MBR */
         if (disk_read(pdrv, buf, 0, 1) != RES_OK) LEAVE_MKFS(FR_DISK_ERR);  /* Load MBR */
-        if (ld_word(buf + BS_55AA) != 0xAA55) LEAVE_MKFS(FR_MKFS_ABORTED);  /* Check if MBR is valid */
+        if (ld_WORD16(buf + BS_55AA) != 0xAA55) LEAVE_MKFS(FR_MKFS_ABORTED);  /* Check if MBR is valid */
         pte = buf + (MBR_Table + (part - 1) * SZ_PTE);
         if (pte[PTE_System] == 0) LEAVE_MKFS(FR_MKFS_ABORTED);  /* No partition? */
         b_vol = ld_dword(pte + PTE_StLba);      /* Get volume start sector */
@@ -5604,20 +5604,20 @@ FRESULT f_mkfs (
             st_dword(buf + BPB_NumClusEx, n_clst);                  /* Number of clusters */
             st_dword(buf + BPB_RootClusEx, 2 + tbl[0] + tbl[1]);    /* Root dir cluster # */
             st_dword(buf + BPB_VolIDEx, GET_FATTIME());             /* VSN */
-            st_word(buf + BPB_FSVerEx, 0x100);                      /* Filesystem version (1.00) */
+            st_WORD16(buf + BPB_FSVerEx, 0x100);                      /* Filesystem version (1.00) */
             for (buf[BPB_BytsPerSecEx] = 0, i = ss; i >>= 1; buf[BPB_BytsPerSecEx]++) ; /* Log2 of sector size [byte] */
             for (buf[BPB_SecPerClusEx] = 0, i = au; i >>= 1; buf[BPB_SecPerClusEx]++) ; /* Log2 of cluster size [sector] */
             buf[BPB_NumFATsEx] = 1;                 /* Number of FATs */
             buf[BPB_DrvNumEx] = 0x80;               /* Drive number (for int13) */
-            st_word(buf + BS_BootCodeEx, 0xFEEB);   /* Boot code (x86) */
-            st_word(buf + BS_55AA, 0xAA55);         /* Signature (placed here regardless of sector size) */
+            st_WORD16(buf + BS_BootCodeEx, 0xFEEB);   /* Boot code (x86) */
+            st_WORD16(buf + BS_55AA, 0xAA55);         /* Signature (placed here regardless of sector size) */
             for (i = sum = 0; i < ss; i++) {        /* VBR checksum */
                 if (i != BPB_VolFlagEx && i != BPB_VolFlagEx + 1 && i != BPB_PercInUseEx) sum = xsum32(buf[i], sum);
             }
             if (disk_write(pdrv, buf, sect++, 1) != RES_OK) LEAVE_MKFS(FR_DISK_ERR);
             /* Extended bootstrap record (+1..+8) */
             mem_set(buf, 0, ss);
-            st_word(buf + ss - 2, 0xAA55);  /* Signature (placed at end of sector) */
+            st_WORD16(buf + ss - 2, 0xAA55);  /* Signature (placed at end of sector) */
             for (j = 1; j < 9; j++) {
                 for (i = 0; i < ss; sum = xsum32(buf[i++], sum)) ;  /* VBR checksum */
                 if (disk_write(pdrv, buf, sect++, 1) != RES_OK) LEAVE_MKFS(FR_DISK_ERR);
@@ -5714,37 +5714,37 @@ FRESULT f_mkfs (
         /* Create FAT VBR */
         mem_set(buf, 0, ss);
         mem_cpy(buf + BS_JmpBoot, "\xEB\xFE\x90" "MSDOS5.0", 11);/* Boot jump code (x86), OEM name */
-        st_word(buf + BPB_BytsPerSec, ss);              /* Sector size [byte] */
+        st_WORD16(buf + BPB_BytsPerSec, ss);              /* Sector size [byte] */
         buf[BPB_SecPerClus] = (BYTE)pau;                /* Cluster size [sector] */
-        st_word(buf + BPB_RsvdSecCnt, (WORD)sz_rsv);    /* Size of reserved area */
+        st_WORD16(buf + BPB_RsvdSecCnt, (WORD16)sz_rsv);    /* Size of reserved area */
         buf[BPB_NumFATs] = (BYTE)n_fats;                /* Number of FATs */
-        st_word(buf + BPB_RootEntCnt, (WORD)((fmt == FS_FAT32) ? 0 : n_rootdir));   /* Number of root directory entries */
+        st_WORD16(buf + BPB_RootEntCnt, (WORD16)((fmt == FS_FAT32) ? 0 : n_rootdir));   /* Number of root directory entries */
         if (sz_vol < 0x10000) {
-            st_word(buf + BPB_TotSec16, (WORD)sz_vol);  /* Volume size in 16-bit LBA */
+            st_WORD16(buf + BPB_TotSec16, (WORD16)sz_vol);  /* Volume size in 16-bit LBA */
         } else {
             st_dword(buf + BPB_TotSec32, sz_vol);       /* Volume size in 32-bit LBA */
         }
         buf[BPB_Media] = 0xF8;                          /* Media descriptor byte */
-        st_word(buf + BPB_SecPerTrk, 63);               /* Number of sectors per track (for int13) */
-        st_word(buf + BPB_NumHeads, 255);               /* Number of heads (for int13) */
+        st_WORD16(buf + BPB_SecPerTrk, 63);               /* Number of sectors per track (for int13) */
+        st_WORD16(buf + BPB_NumHeads, 255);               /* Number of heads (for int13) */
         st_dword(buf + BPB_HiddSec, b_vol);             /* Volume offset in the physical drive [sector] */
         if (fmt == FS_FAT32) {
             st_dword(buf + BS_VolID32, GET_FATTIME());  /* VSN */
             st_dword(buf + BPB_FATSz32, sz_fat);        /* FAT size [sector] */
             st_dword(buf + BPB_RootClus32, 2);          /* Root directory cluster # (2) */
-            st_word(buf + BPB_FSInfo32, 1);             /* Offset of FSINFO sector (VBR + 1) */
-            st_word(buf + BPB_BkBootSec32, 6);          /* Offset of backup VBR (VBR + 6) */
+            st_WORD16(buf + BPB_FSInfo32, 1);             /* Offset of FSINFO sector (VBR + 1) */
+            st_WORD16(buf + BPB_BkBootSec32, 6);          /* Offset of backup VBR (VBR + 6) */
             buf[BS_DrvNum32] = 0x80;                    /* Drive number (for int13) */
             buf[BS_BootSig32] = 0x29;                   /* Extended boot signature */
             mem_cpy(buf + BS_VolLab32, "NO NAME    " "FAT32   ", 19);   /* Volume label, FAT signature */
         } else {
             st_dword(buf + BS_VolID, GET_FATTIME());    /* VSN */
-            st_word(buf + BPB_FATSz16, (WORD)sz_fat);   /* FAT size [sector] */
+            st_WORD16(buf + BPB_FATSz16, (WORD16)sz_fat);   /* FAT size [sector] */
             buf[BS_DrvNum] = 0x80;                      /* Drive number (for int13) */
             buf[BS_BootSig] = 0x29;                     /* Extended boot signature */
             mem_cpy(buf + BS_VolLab, "NO NAME    " "FAT     ", 19); /* Volume label, FAT signature */
         }
-        st_word(buf + BS_55AA, 0xAA55);                 /* Signature (offset is fixed here regardless of sector size) */
+        st_WORD16(buf + BS_55AA, 0xAA55);                 /* Signature (offset is fixed here regardless of sector size) */
         if (disk_write(pdrv, buf, b_vol, 1) != RES_OK) LEAVE_MKFS(FR_DISK_ERR); /* Write it to the VBR sector */
 
         /* Create FSINFO record if needed */
@@ -5755,7 +5755,7 @@ FRESULT f_mkfs (
             st_dword(buf + FSI_StrucSig, 0x61417272);
             st_dword(buf + FSI_Free_Count, n_clst - 1); /* Number of free clusters */
             st_dword(buf + FSI_Nxt_Free, 2);            /* Last allocated cluster# */
-            st_word(buf + BS_55AA, 0xAA55);
+            st_WORD16(buf + BS_55AA, 0xAA55);
             disk_write(pdrv, buf, b_vol + 7, 1);        /* Write backup FSINFO (VBR + 7) */
             disk_write(pdrv, buf, b_vol + 1, 1);        /* Write original FSINFO (VBR + 1) */
         }
@@ -5813,7 +5813,7 @@ FRESULT f_mkfs (
     } else {                                /* Created as a new single partition */
         if (!(opt & FM_SFD)) {  /* Create partition table if in FDISK format */
             mem_set(buf, 0, ss);
-            st_word(buf + BS_55AA, 0xAA55);     /* MBR signature */
+            st_WORD16(buf + BS_55AA, 0xAA55);     /* MBR signature */
             pte = buf + MBR_Table;              /* Create partition table for single partition in the drive */
             pte[PTE_Boot] = 0;                  /* Boot indicator */
             pte[PTE_StHead] = 1;                /* Start head */
@@ -5904,7 +5904,7 @@ FRESULT f_fdisk (
         /* Next partition */
         b_cyl += p_cyl;
     }
-    st_word(p, 0xAA55);     /* MBR signature (always at offset 510) */
+    st_WORD16(p, 0xAA55);     /* MBR signature (always at offset 510) */
 
     /* Write it to the MBR */
     res = (disk_write(pdrv, buf, 0, 1) == RES_OK && disk_ioctl(pdrv, CTRL_SYNC, 0) == RES_OK) ? FR_OK : FR_DISK_ERR;
@@ -5922,10 +5922,10 @@ FRESULT f_fdisk (
 /*-----------------------------------------------------------------------*/
 
 FRESULT f_setcp (
-    WORD cp     /* Value to be set as active code page */
+    WORD16 cp     /* Value to be set as active code page */
 )
 {
-    static const WORD       validcp[] = {  437,   720,   737,   771,   775,   850,   852,   857,   860,   861,   862,   863,   864,   865,   866,   869,   932,   936,   949,   950, 0};
+    static const WORD16       validcp[] = {  437,   720,   737,   771,   775,   850,   852,   857,   860,   861,   862,   863,   864,   865,   866,   869,   932,   936,   949,   950, 0};
     static const BYTE* const tables[] = {Ct437, Ct720, Ct737, Ct771, Ct775, Ct850, Ct852, Ct857, Ct860, Ct861, Ct862, Ct863, Ct864, Ct865, Ct866, Ct869, Dc932, Dc936, Dc949, Dc950, 0};
     UINT i;
 

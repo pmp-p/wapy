@@ -247,7 +247,12 @@ STATIC mp_obj_t resource_stream(mp_obj_t package_in, mp_obj_t path_in) {
     vstr_add_strn(&path_buf, path, len);
 
     len = path_buf.len;
+#if __ARDUINO__
+    #pragma message "cannot link mp_find_frozen_str"
+    const char *data = NULL;
+#else
     const char *data = mp_find_frozen_str(path_buf.buf, &len);
+#endif
     if (data != NULL) {
         mp_obj_stringio_t *o = m_new_obj(mp_obj_stringio_t);
         o->base.type = &mp_type_bytesio;

@@ -49,7 +49,7 @@
 // detect untraced object still in use
 #define CLEAR_ON_SWEEP (0)
 
-#define WORDS_PER_BLOCK ((MICROPY_BYTES_PER_GC_BLOCK) / BYTES_PER_WORD)
+#define WORDS_PER_BLOCK ((MICROPY_BYTES_PER_GC_BLOCK) / MP_BYTES_PER_OBJ_WORD)
 #define BYTES_PER_BLOCK (MICROPY_BYTES_PER_GC_BLOCK)
 
 // ATB = allocation table byte
@@ -118,9 +118,9 @@ void gc_init(void *start, void *end) {
     // => T = A * (1 + BLOCKS_PER_ATB / BLOCKS_PER_FTB + BLOCKS_PER_ATB * BYTES_PER_BLOCK)
     size_t total_byte_len = (byte *)end - (byte *)start;
     #if MICROPY_ENABLE_FINALISER
-    MP_STATE_MEM(gc_alloc_table_byte_len) = total_byte_len * BITS_PER_BYTE / (BITS_PER_BYTE + BITS_PER_BYTE * BLOCKS_PER_ATB / BLOCKS_PER_FTB + BITS_PER_BYTE * BLOCKS_PER_ATB * BYTES_PER_BLOCK);
+    MP_STATE_MEM(gc_alloc_table_byte_len) = total_byte_len * MP_BITS_PER_BYTE / (MP_BITS_PER_BYTE + MP_BITS_PER_BYTE * BLOCKS_PER_ATB / BLOCKS_PER_FTB + MP_BITS_PER_BYTE * BLOCKS_PER_ATB * BYTES_PER_BLOCK);
     #else
-    MP_STATE_MEM(gc_alloc_table_byte_len) = total_byte_len / (1 + BITS_PER_BYTE / 2 * BYTES_PER_BLOCK);
+    MP_STATE_MEM(gc_alloc_table_byte_len) = total_byte_len / (1 + MP_BITS_PER_BYTE / 2 * BYTES_PER_BLOCK);
     #endif
 
     MP_STATE_MEM(gc_alloc_table_start) = (byte *)start;
@@ -132,7 +132,7 @@ void gc_init(void *start, void *end) {
 
     size_t gc_pool_block_len = MP_STATE_MEM(gc_alloc_table_byte_len) * BLOCKS_PER_ATB;
     MP_STATE_MEM(gc_pool_start) = (byte *)end - gc_pool_block_len * BYTES_PER_BLOCK;
-    MP_STATE_MEM(gc_pool_end) = end;
+    MP_STATE_MEM(gc_pool_end) = (byte *)end;
 
     #if MICROPY_ENABLE_FINALISER
     assert(MP_STATE_MEM(gc_pool_start) >= MP_STATE_MEM(gc_finaliser_table_start) + gc_finaliser_table_byte_len);
@@ -294,7 +294,7 @@ STATIC void gc_sweep(void) {
                 }
                 #endif
                 free_tail = 1;
-                DEBUG_printf("gc_sweep(%p)\n", PTR_FROM_BLOCK(block));
+                DEBUG_printf("gc_sweep(%p)\n", (void *)PTR_FROM_BLOCK(block));
                 #if MICROPY_PY_GC_COLLECT_RETVAL
                 MP_STATE_MEM(gc_collected)++;
                 #endif
@@ -375,7 +375,7 @@ void gc_info(gc_info_t *info) {
     GC_ENTER();
     info->total = MP_STATE_MEM(gc_pool_end) - MP_STATE_MEM(gc_pool_start);
     info->used = 0;
-    info->free = 0;
+    info->gc_free = 0;
     info->max_free = 0;
     info->num_1block = 0;
     info->num_2block = 0;
@@ -385,7 +385,7 @@ void gc_info(gc_info_t *info) {
         size_t kind = ATB_GET_KIND(block);
         switch (kind) {
             case AT_FREE:
-                info->free += 1;
+                info->gc_free += 1;
                 len_free += 1;
                 len = 0;
                 break;
@@ -431,7 +431,7 @@ void gc_info(gc_info_t *info) {
     }
 
     info->used *= BYTES_PER_BLOCK;
-    info->free *= BYTES_PER_BLOCK;
+    info->gc_free *= BYTES_PER_BLOCK;
     GC_EXIT();
 }
 
@@ -801,7 +801,7 @@ void gc_dump_info(void) {
     gc_info_t info;
     gc_info(&info);
     mp_printf(&mp_plat_print, "GC: total: %u, used: %u, free: %u\n",
-        (uint)info.total, (uint)info.used, (uint)info.free);
+        (uint)info.total, (uint)info.used, (uint)info.gc_free);
     mp_printf(&mp_plat_print, " No. of 1-blocks: %u, 2-blocks: %u, max blk sz: %u, max free sz: %u\n",
         (uint)info.num_1block, (uint)info.num_2block, (uint)info.max_block, (uint)info.max_free);
 }

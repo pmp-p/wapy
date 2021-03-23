@@ -32,6 +32,9 @@
 #include "py/gc.h"
 #include "py/mphal.h"
 
+// #include "lib/utils/interrupt_char.h" // for mp_hal_set_interrupt_char
+extern void mp_hal_set_interrupt_char(int c);
+
 // Various builtins specific to MicroPython runtime,
 // living in micropython module
 

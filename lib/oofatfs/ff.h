@@ -48,7 +48,7 @@ typedef unsigned __int64 QWORD;
 #include <stdint.h>
 typedef unsigned int    UINT;   /* int must be 16-bit or 32-bit */
 typedef unsigned char   BYTE;   /* char must be 8-bit */
-typedef uint16_t        WORD;   /* 16-bit unsigned integer */
+typedef uint16_t        WORD16;   /* 16-bit unsigned integer */
 typedef uint16_t        WCHAR;  /* 16-bit unsigned integer */
 typedef uint32_t        DWORD;  /* 32-bit unsigned integer */
 typedef uint64_t        QWORD;  /* 64-bit unsigned integer */
@@ -56,7 +56,7 @@ typedef uint64_t        QWORD;  /* 64-bit unsigned integer */
 #define FF_INTDEF 1
 typedef unsigned int    UINT;   /* int must be 16-bit or 32-bit */
 typedef unsigned char   BYTE;   /* char must be 8-bit */
-typedef unsigned short  WORD;   /* 16-bit unsigned integer */
+typedef unsigned short  WORD16;   /* 16-bit unsigned integer */
 typedef unsigned short  WCHAR;  /* 16-bit unsigned integer */
 typedef unsigned long   DWORD;  /* 32-bit unsigned integer */
 #endif
@@ -125,11 +125,11 @@ typedef struct {
     BYTE    n_fats;         /* Number of FATs (1 or 2) */
     BYTE    wflag;          /* win[] flag (b0:dirty) */
     BYTE    fsi_flag;       /* FSINFO flags (b7:disabled, b0:dirty) */
-    WORD    id;             /* Volume mount ID */
-    WORD    n_rootdir;      /* Number of root directory entries (FAT12/16) */
-    WORD    csize;          /* Cluster size [sectors] */
+    WORD16    id;             /* Volume mount ID */
+    WORD16    n_rootdir;      /* Number of root directory entries (FAT12/16) */
+    WORD16    csize;          /* Cluster size [sectors] */
 #if FF_MAX_SS != FF_MIN_SS
-    WORD    ssize;          /* Sector size (512, 1024, 2048 or 4096) */
+    WORD16    ssize;          /* Sector size (512, 1024, 2048 or 4096) */
 #endif
 #if FF_USE_LFN
     WCHAR*  lfnbuf;         /* LFN working buffer */
@@ -171,7 +171,7 @@ typedef struct {
 
 typedef struct {
     FATFS*  fs;             /* Pointer to the hosting volume of this object */
-    WORD    id;             /* Hosting volume mount ID */
+    WORD16    id;             /* Hosting volume mount ID */
     BYTE    attr;           /* Object attribute */
     BYTE    stat;           /* Object chain status (b1-0: =0:not contiguous, =2:contiguous, =3:fragmented in this session, b2:sub-directory stretched) */
     DWORD   sclust;         /* Object data start cluster (0:no cluster or root directory) */
@@ -236,8 +236,8 @@ typedef struct {
 
 typedef struct {
     FSIZE_t fsize;          /* File size */
-    WORD    fdate;          /* Modified date */
-    WORD    ftime;          /* Modified time */
+    WORD16    fdate;          /* Modified date */
+    WORD16    ftime;          /* Modified time */
     BYTE    fattrib;        /* File attribute */
 #if FF_USE_LFN
     TCHAR   altname[FF_SFN_BUF + 1];/* Altenative file name */
@@ -308,7 +308,7 @@ FRESULT f_mount (FATFS* fs);                                        /* Mount/Unm
 FRESULT f_umount (FATFS* fs);                                       /* Unmount a logical drive */
 FRESULT f_mkfs (FATFS *fs, BYTE opt, DWORD au, void* work, UINT len); /* Create a FAT volume */
 FRESULT f_fdisk (void *pdrv, const DWORD* szt, void* work);         /* Divide a physical drive into some partitions */
-FRESULT f_setcp (WORD cp);                                          /* Set current code page */
+FRESULT f_setcp (WORD16 cp);                                          /* Set current code page */
 
 #define f_eof(fp) ((int)((fp)->fptr == (fp)->obj.objsize))
 #define f_error(fp) ((fp)->err)
@@ -336,8 +336,8 @@ DWORD get_fattime (void);
 
 /* LFN support functions */
 #if FF_USE_LFN >= 1                     /* Code conversion (defined in unicode.c) */
-WCHAR ff_oem2uni (WCHAR oem, WORD cp);  /* OEM code to Unicode conversion */
-WCHAR ff_uni2oem (DWORD uni, WORD cp);  /* Unicode to OEM code conversion */
+WCHAR ff_oem2uni (WCHAR oem, WORD16 cp);  /* OEM code to Unicode conversion */
+WCHAR ff_uni2oem (DWORD uni, WORD16 cp);  /* Unicode to OEM code conversion */
 DWORD ff_wtoupper (DWORD uni);          /* Unicode upper-case conversion */
 #endif
 #if FF_USE_LFN == 3                     /* Dynamic memory allocation */

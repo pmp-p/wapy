@@ -576,7 +576,7 @@ void mp_lexer_to_next(mp_lexer_t *lex) {
         for (size_t i = 0; i < MP_ARRAY_SIZE(tok_kw); i++) {
             int cmp = strcmp(s, tok_kw[i]);
             if (cmp == 0) {
-                lex->tok_kind = MP_TOKEN_KW_FALSE + i;
+                lex->tok_kind = (mp_token_kind_t)(MP_TOKEN_KW_FALSE + i);
                 if (lex->tok_kind == MP_TOKEN_KW___DEBUG__) {
                     lex->tok_kind = (MP_STATE_VM(mp_optimise_value) == 0 ? MP_TOKEN_KW_TRUE : MP_TOKEN_KW_FALSE);
                 }
@@ -683,7 +683,7 @@ void mp_lexer_to_next(mp_lexer_t *lex) {
             }
 
             // set token kind
-            lex->tok_kind = tok_enc_kind[tok_enc_index];
+            lex->tok_kind = (mp_token_kind_t)tok_enc_kind[tok_enc_index];
 
             // compute bracket level for implicit line joining
             if (lex->tok_kind == MP_TOKEN_DEL_PAREN_OPEN || lex->tok_kind == MP_TOKEN_DEL_BRACKET_OPEN || lex->tok_kind == MP_TOKEN_DEL_BRACE_OPEN) {
