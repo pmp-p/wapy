@@ -1,4 +1,5 @@
-
+#include "../wapy/repl.h"
+#include "wapy/debug.h"
 
 typedef struct _repl_t {
     // This structure originally also held current REPL line,

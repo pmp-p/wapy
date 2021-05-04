@@ -31,7 +31,11 @@
 #include "py/obj.h"
 
 // these functions raise a SyntaxError if lex!=NULL, else a ValueError
+#ifdef __cplusplus
+mp_obj_t mp_parse_num_integer(const char *str, size_t len, int base, mp_lexer_t *lex);
+#else
 mp_obj_t mp_parse_num_integer(const char *restrict str, size_t len, int base, mp_lexer_t *lex);
+#endif
 mp_obj_t mp_parse_num_decimal(const char *str, size_t len, bool allow_imag, bool force_complex, mp_lexer_t *lex);
 
 #endif // MICROPY_INCLUDED_PY_PARSENUM_H

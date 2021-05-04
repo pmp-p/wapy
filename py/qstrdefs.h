@@ -63,3 +63,7 @@ Q(utf-8)
 #if MICROPY_ENABLE_PYSTACK
 Q(pystack exhausted)
 #endif
+
+Q(usys)
+Q(displayhook)
+

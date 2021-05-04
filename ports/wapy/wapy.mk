@@ -51,19 +51,19 @@ PY_CORE_O_BASENAME = $(addprefix py/,\
 	parsenum.o \
 	emitglue.o \
 	persistentcode.o \
-	../ports/wapy/runtime_no_nlr.o \
+	../wapy/py/runtime_no_nlr.o \
 	runtime_utils.o \
 	scheduler.o \
 	nativeglue.o \
 	pairheap.o \
 	ringbuf.o \
 	stackctrl.o \
-	../ports/wapy/argcheck_no_nlr.o \
+	../wapy/py/argcheck_no_nlr.o \
 	warning.o \
 	profile.o \
 	map.o \
 	obj.o \
-	../ports/wapy/objarray_no_nlr.o \
+	../wapy/py/objarray_no_nlr.o \
 	objattrtuple.o \
 	objbool.o \
 	objboundmeth.o \
@@ -71,18 +71,18 @@ PY_CORE_O_BASENAME = $(addprefix py/,\
 	objclosure.o \
 	objcomplex.o \
 	objdeque.o \
-	../ports/wapy/objdict_no_nlr.o \
+	../wapy/py/objdict_no_nlr.o \
 	objenumerate.o \
 	objexcept.o \
 	objfilter.o \
 	objfloat.o \
-	../ports/wapy/objfun_no_nlr.o \
+	../wapy/py/objfun_no_nlr.o \
 	objgenerator.o \
 	objgetitemiter.o \
 	objint.o \
 	objint_longlong.o \
 	objint_mpz.o \
-	../ports/wapy/objlist_no_nlr.o \
+	../wapy/py/objlist_no_nlr.o \
 	objmap.o \
 	objmodule.o \
 	objobject.o \
@@ -95,7 +95,7 @@ PY_CORE_O_BASENAME = $(addprefix py/,\
 	objset.o \
 	objsingleton.o \
 	objslice.o \
-	../ports/wapy/objstr_no_nlr.o \
+	../wapy/py/objstr_no_nlr.o \
 	objstrunicode.o \
 	objstringio.o \
 	objtuple.o \
@@ -105,11 +105,11 @@ PY_CORE_O_BASENAME = $(addprefix py/,\
 	sequence.o \
 	stream.o \
 	binary.o \
-	../ports/wapy/builtinimport_no_nlr.o \
+	../wapy/py/builtinimport_no_nlr.o \
 	builtinevex.o \
 	builtinhelp.o \
 	modarray.o \
-	../ports/wapy/modbuiltins_no_nlr.o \
+	../wapy/py/modbuiltins_no_nlr.o \
 	modcollections.o \
 	modgc.o \
 	modio.o \

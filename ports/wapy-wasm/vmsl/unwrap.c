@@ -12,15 +12,15 @@
 
 
 #if VMTRACE
-    #define VM_TRACE_QSTR(opc, opv) clog("      %i:%s=%i '%s'", __LINE__, opc, opv, qstr_str(CTX.qst))
-    #define VM_TRACE(opc, opv) clog("      %i:%s=%i", __LINE__, opc, opv)
+    #define VM_TRACE_QSTR(opc, opv) cdbg("      %i:%s=%i '%s'", __LINE__, opc, opv, qstr_str(CTX.qst))
+    #define VM_TRACE(opc, opv) cdbg("      %i:%s=%i", __LINE__, opc, opv)
 
     #define RAISE(o) do { \
  MP_STATE_THREAD(active_exception) = MP_OBJ_TO_PTR(o);\
- clog("%i@%s:exit on ex!", __LINE__, __FILE__);\
+ cdbg("%i@%s:exit on ex!", __LINE__, __FILE__);\
  goto exception_handler; } while (0)
 
-    #define RAISE_IF(arg) if (arg) { clog("%i@%s:exit on ex!", __LINE__, __FILE__); goto exception_handler; }
+    #define RAISE_IF(arg) if (arg) { cdbg("%i@%s:exit on ex!", __LINE__, __FILE__); goto exception_handler; }
 
 #else
     #define VM_TRACE_QSTR(opc, opv)
@@ -118,7 +118,7 @@ FRAME_ENTER()
 #if MICROPY_STACKLESS
 run_code_state_from_return: ;
 #endif
-FRAME_SETUP();  clog("~vm.c:258 VM(%d)run_code_state", ctx_current);
+FRAME_SETUP();  cdbg("~vm.c:258 VM(%d)run_code_state", ctx_current);
 //257
     // Pointers which are constant for particular invocation of mp_execute_bytecode()
     //mp_obj_t * /*const*/ fastn; mp_exc_stack_t * /*const*/ exc_stack;
@@ -135,7 +135,7 @@ VM_DISPATCH_loop:
 
     if ( CTX.vmloop_state == VM_RESUMING ) {
         //? restore what ?
-        clog("127:unwrap.c VM(%d)restored", ctx_current);
+        cdbg("127:unwrap.c VM(%d)restored", ctx_current);
         //CTX.ip = CTX.code_state->ip;
         //CTX.sp = CTX.code_state->sp;
         //obj_shared = CTX.obj_shared ;
@@ -143,7 +143,7 @@ VM_DISPATCH_loop:
     }
 
     if (GOTO_OUTER_VM_DISPATCH) {
-        clog("134:unwrap.c VM(%d)OUTER_DISPATCH for(){ ip:sp }", ctx_current); // loop to execute byte code
+        cdbg("134:unwrap.c VM(%d)OUTER_DISPATCH for(){ ip:sp }", ctx_current); // loop to execute byte code
         GOTO_OUTER_VM_DISPATCH = 0;
         // local variables [that were not visible to the exception handler]
         //static const byte *ip;
@@ -154,9 +154,9 @@ VM_DISPATCH_loop:
 
 #if VMTRACE
 if (MP_STATE_THREAD(active_exception) != NULL) {
-    clog("160:ERROR EXCEPTION ON ENTER[%d]", ctx_current);
+    cdbg("160:ERROR EXCEPTION ON ENTER[%d]", ctx_current);
 } else {
-    clog("162:unwrap.c VM(%d)DISPATCH->for()", ctx_current); // loop to execute byte code
+    cdbg("162:unwrap.c VM(%d)DISPATCH->for()", ctx_current); // loop to execute byte code
 }
 #endif
 
@@ -170,7 +170,7 @@ if (MP_STATE_THREAD(active_exception) != NULL) {
         // Injecting exc into yield from generator is a special case,
         // handled by MP_BC_YIELD_FROM itself
         if ( (CTX.inject_exc != MP_OBJ_NULL) && (*CTX.ip != MP_BC_YIELD_FROM) ) {
-clog("157:unwrap.c pending_exception to inject");
+cdbg("157:unwrap.c pending_exception to inject");
             mp_obj_t exc = CTX.inject_exc;
             CTX.inject_exc = MP_OBJ_NULL;
             exc = mp_make_raise_obj(exc);
@@ -209,23 +209,23 @@ if ( (SHOW_OS_LOOP>0) || (source_trace) {
 
         if (CTX.switch_break_for) {
 #if VMTRACE
-clog("      195:switch_break_for")
+cdbg("      195:switch_break_for")
 #endif
 
             if (CTX.vm_return_kind == MP_VM_RETURN_NORMAL) {
 #if VMTRACE
-clog("      200:switch_break_for/vm_return_kind return value is set")
+cdbg("      200:switch_break_for/vm_return_kind return value is set")
 #endif
                 RETVAL = *CTX.code_state->sp ;
 
             // an exception : returned exception is in state[0]
             } else if (CTX.vm_return_kind == MP_VM_RETURN_EXCEPTION) {
 #if VMTRACE
-clog("      208:switch_break_for/vm_return_kind exception value is set")
+cdbg("      208:switch_break_for/vm_return_kind exception value is set")
 #endif
                 RETVAL = CTX.code_state->state[0];
             } else {
-    clog("      212:switch_break_for/unrouted vm_return_kind");
+    cdbg("      212:switch_break_for/unrouted vm_return_kind");
             }
             break; // go to end of } // for loop
         }
@@ -281,11 +281,11 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
         continue;
 
 
-    exception_handler:
+    exception_handler:;
         // exception occurred
 #if VMTRACE
     assert( (MP_STATE_THREAD(active_exception)) != NULL);
-    clog("      508:loop[%i] exit on EX!", ctx_current );
+    cdbg("      508:loop[%i] exit on EX!", ctx_current );
 #endif
         // clear exception because we caught it
         the_exc = (mp_obj_base_t *)MP_STATE_THREAD(active_exception);
@@ -355,7 +355,7 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
             // TODO make a proper message for nested exception
             // at the moment we are just raising the very last exception (the one that caused the nested exception)
 
-            clog("// move up to previous exception handler"); // move up to previous exception handler
+            cdbg("// move up to previous exception handler"); // move up to previous exception handler
             VM_POP_EXC_BLOCK();
         }
 
@@ -371,7 +371,7 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
             VM_PUSH(MP_OBJ_FROM_PTR(the_exc));
             CTX.code_state->sp = sptr;
 #if VMTRACE
-    clog("      638: where's my EX handler ???");
+    cdbg("      638: where's my EX handler ???");
 #endif
 
             continue;
@@ -405,7 +405,7 @@ clog("      208:switch_break_for/vm_return_kind exception value is set")
             RETVAL = MP_OBJ_FROM_PTR(the_exc);
             FRAME_LEAVE();
             CTX.vm_return_kind = MP_VM_RETURN_EXCEPTION;
-            clog("667: return EX");
+            cdbg("667: return EX");
             break;
         }
 

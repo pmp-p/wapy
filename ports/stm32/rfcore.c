@@ -417,6 +417,12 @@ STATIC void tl_process_msg(volatile tl_list_node_t *head, unsigned int ch, parse
 
         // If this node is allocated from the memmgr event pool, then place it into the free buffer.
         if ((uint8_t *)cur >= ipcc_membuf_memmgr_evt_pool && (uint8_t *)cur < ipcc_membuf_memmgr_evt_pool + sizeof(ipcc_membuf_memmgr_evt_pool)) {
+            // Wait for C2 to indicate that it has finished using the free buffer,
+            // so that we can link the newly-freed memory in to this buffer.
+            // If waiting is needed then it is typically between 5 and 20 microseconds.
+            while (LL_C1_IPCC_IsActiveFlag_CHx(IPCC, IPCC_CH_MM)) {
+            }
+
             // Place memory back in free pool.
             tl_list_append(&ipcc_mem_memmgr_free_buf_queue, cur);
             added_to_free_queue = true;
@@ -434,10 +440,16 @@ STATIC void tl_process_msg(volatile tl_list_node_t *head, unsigned int ch, parse
 // Only call this when IRQs are disabled on this channel.
 STATIC void tl_check_msg(volatile tl_list_node_t *head, unsigned int ch, parse_hci_info_t *parse) {
     if (LL_C2_IPCC_IsActiveFlag_CHx(IPCC, ch)) {
+        // Process new data.
         tl_process_msg(head, ch, parse);
 
-        // Clear receive channel.
+        // Clear receive channel (allows RF core to send more data to us).
         LL_C1_IPCC_ClearFlag_CHx(IPCC, ch);
+
+        if (ch == IPCC_CH_BLE) {
+            // Renable IRQs for BLE now that we've cleared the flag.
+            LL_C1_IPCC_EnableReceiveChannel(IPCC, IPCC_CH_BLE);
+        }
     }
 }
 
@@ -495,17 +507,17 @@ STATIC int tl_ble_wait_resp(void) {
         }
     }
 
-    // C2 set IPCC flag.
+    // C2 set IPCC flag -- process the data, clear the flag, and re-enable IRQs.
     tl_check_msg(&ipcc_mem_ble_evt_queue, IPCC_CH_BLE, NULL);
     return 0;
 }
 
 // Synchronously send a BLE command.
 STATIC void tl_ble_hci_cmd_resp(uint16_t opcode, const uint8_t *buf, size_t len) {
+    // Poll for completion rather than wait for IRQ->scheduler.
     LL_C1_IPCC_DisableReceiveChannel(IPCC, IPCC_CH_BLE);
     tl_hci_cmd(ipcc_membuf_ble_cmd_buf, IPCC_CH_BLE, HCI_KIND_BT_CMD, opcode, buf, len);
     tl_ble_wait_resp();
-    LL_C1_IPCC_EnableReceiveChannel(IPCC, IPCC_CH_BLE);
 }
 
 /******************************************************************************/
@@ -542,30 +554,30 @@ static const struct {
     uint16_t AttMtu;
     uint16_t SlaveSca;
     uint8_t MasterSca;
-    uint8_t LsSource;               // 0=LSE 1=internal RO
+    uint8_t LsSource;
     uint32_t MaxConnEventLength;
     uint16_t HsStartupTime;
     uint8_t ViterbiEnable;
-    uint8_t LlOnly;                 // 0=LL+Host, 1=LL only
+    uint8_t LlOnly;
     uint8_t HwVersion;
 } ble_init_params = {
-    0,
-    0,
-    0, // NumAttrRecord
-    0, // NumAttrServ
-    0, // AttrValueArrSize
-    1, // NumOfLinks
-    1, // ExtendedPacketLengthEnable
-    0, // PrWriteListSize
-    0x79, // MblockCount
-    0, // AttMtu
-    0, // SlaveSca
-    0, // MasterSca
-    1, // LsSource
-    0xffffffff, // MaxConnEventLength
-    0x148, // HsStartupTime
-    0, // ViterbiEnable
-    1, // LlOnly
+    0, // pBleBufferAddress
+    0, // BleBufferSize
+    MICROPY_HW_RFCORE_BLE_NUM_GATT_ATTRIBUTES,
+    MICROPY_HW_RFCORE_BLE_NUM_GATT_SERVICES,
+    MICROPY_HW_RFCORE_BLE_ATT_VALUE_ARRAY_SIZE,
+    MICROPY_HW_RFCORE_BLE_NUM_LINK,
+    MICROPY_HW_RFCORE_BLE_DATA_LENGTH_EXTENSION,
+    MICROPY_HW_RFCORE_BLE_PREPARE_WRITE_LIST_SIZE,
+    MICROPY_HW_RFCORE_BLE_MBLOCK_COUNT,
+    MICROPY_HW_RFCORE_BLE_MAX_ATT_MTU,
+    MICROPY_HW_RFCORE_BLE_SLAVE_SCA,
+    MICROPY_HW_RFCORE_BLE_MASTER_SCA,
+    MICROPY_HW_RFCORE_BLE_LSE_SOURCE,
+    MICROPY_HW_RFCORE_BLE_MAX_CONN_EVENT_LENGTH,
+    MICROPY_HW_RFCORE_BLE_HSE_STARTUP_TIME,
+    MICROPY_HW_RFCORE_BLE_VITERBI_MODE,
+    MICROPY_HW_RFCORE_BLE_LL_ONLY,
     0, // HwVersion
 };
 
@@ -598,6 +610,24 @@ void rfcore_ble_hci_cmd(size_t len, const uint8_t *src) {
     tl_list_node_t *n;
     uint32_t ch;
     if (src[0] == HCI_KIND_BT_CMD) {
+        // The STM32WB has a problem when address resolution is enabled: under certain
+        // conditions the MCU can get into a state where it draws an additional 10mA
+        // or so and eventually ends up with a broken BLE RX path in the silicon.  A
+        // simple way to reproduce this is to enable address resolution (which is the
+        // default for NimBLE) and start the device advertising.  If there is enough
+        // BLE activity in the vicinity then the device will at some point enter the
+        // bad state and, if left long enough, will have permanent BLE RX damage.
+        //
+        // STMicroelectronics are aware of this issue.  The only known workaround at
+        // this stage is to not enable address resolution.  We do that here by
+        // intercepting any command that enables address resolution and convert it
+        // into a command that disables address resolution.
+        //
+        // OGF=0x08 OCF=0x002d HCI_LE_Set_Address_Resolution_Enable
+        if (len == 5 && memcmp(src + 1, "\x2d\x20\x01\x01", 4) == 0) {
+            src = (const uint8_t *)"\x01\x2d\x20\x01\x00";
+        }
+
         n = (tl_list_node_t *)&ipcc_membuf_ble_cmd_buf[0];
         ch = IPCC_CH_BLE;
     } else if (src[0] == HCI_KIND_BT_ACL) {
@@ -632,7 +662,7 @@ void rfcore_ble_hci_cmd(size_t len, const uint8_t *src) {
 
 void rfcore_ble_check_msg(int (*cb)(void *, const uint8_t *, size_t), void *env) {
     parse_hci_info_t parse = { cb, env, false };
-    tl_process_msg(&ipcc_mem_ble_evt_queue, IPCC_CH_BLE, &parse);
+    tl_check_msg(&ipcc_mem_ble_evt_queue, IPCC_CH_BLE, &parse);
 
     // Intercept HCI_Reset events and reconfigure the controller following the reset
     if (parse.was_hci_reset_evt) {
@@ -679,7 +709,8 @@ void IPCC_C1_RX_IRQHandler(void) {
     DEBUG_printf("IPCC_C1_RX_IRQHandler\n");
 
     if (LL_C2_IPCC_IsActiveFlag_CHx(IPCC, IPCC_CH_BLE)) {
-        LL_C1_IPCC_ClearFlag_CHx(IPCC, IPCC_CH_BLE);
+        // Disable this IRQ until the incoming data is processed (in tl_check_msg).
+        LL_C1_IPCC_DisableReceiveChannel(IPCC, IPCC_CH_BLE);
 
         #if MICROPY_PY_BLUETOOTH
         // Queue up the scheduler to process UART data and run events.

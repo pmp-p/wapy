@@ -36,6 +36,17 @@ NOGIL:
 THE USER POINT OF VIEW:
     https://danluu.com/input-lag/
 
+Lower the better
+---------------------
+import time;t0=time.time(); len([el**2 for el in range (100_000)]);time.time() -t0
+
+JsLinux-x86  7.40
+JsLinux-rv64 6.00
+CheerpX      0.50
+Pyodide      0.07
+WaPy         0.05
+Native       0.03
+
 
 BOOKMARKS:
 
@@ -75,6 +86,8 @@ transpile/compile :
 
     http://gambitscheme.org/wiki/index.php/Main_Page
 
+
+    https://github.com/kisonecat/web2js/tree/master/pascal
 
 jit:
     http://llvmlite.pydata.org/en/latest/
@@ -288,7 +301,7 @@ char **copy_argv(int argc, char *argv[]) {
 
 
 
-#include "../wapy/upython.c"
+//#include "../wapy/upython.c"
 
 #include "vmsl/vmreg.h"
 
@@ -343,29 +356,10 @@ volatile int gil_divisor = MICROPY_PY_THREAD_GIL_VM_DIVISOR;
 #endif
 
 
-// can't be in loop body because of EM_ASM
-void Py_Init() {
-
-    wPy_Initialize();
-    wPy_NewInterpreter();
-
-    EM_ASM( {
-        vm.aio.plink.MAXSIZE = $0;
-        vm.aio.plink.shm = $1;
-        vm.aio.plink.io_port_kbd = $2;
-        vm.aio.plink.MP_IO_SIZE = $3;
-        console.log("aio.plink.shm=" + vm.aio.plink.shm+" +" + vm.aio.plink.MAXSIZE);
-        console.log("aio.plink.io_port_kbd=" + vm.aio.plink.io_port_kbd+" +"+ vm.aio.plink.MP_IO_SIZE);
-        window.setTimeout( vm.script.init_repl, 1000 );
-    }, IO_KBD, shm_ptr(), &io_stdin[IO_KBD], MP_IO_SIZE);
-
-    IO_CODE_DONE;
-
-}
 
 
-static bool def_PyRun_SimpleString_is_repl = false ;
-static int async_loop = 1;
+//static bool def_PyRun_SimpleString_is_repl = false ;
+//static int async_loop = 1;
 static int async_state;
 
 
@@ -395,19 +389,28 @@ static inline mp_map_elem_t *mp_map_cached_lookup(mp_map_t *map, qstr qst, uint8
 extern int pyexec_repl_repl_restart(int ret);
 extern int pyexec_friendly_repl_process_char(int c);
 
-int
+
+#define EMSCRIPTEN_LOL (1)
+
+#if EMSCRIPTEN_LOL
+    #define HOST_RETURN(value)  return
+    void
+#else
+    #define HOST_RETURN(value)  return value
+    int
+#endif
 main_iteration(void) {
     if (VMOP <= VMOP_INIT) {
         crash_point = &&VM_stackmess;
         #include "vmsl/vmwarmup.c"
-        return 0;
+        HOST_RETURN(0);
     }
 
     #define cc stdout
     #include "../wapy/vmsl/vm_loop.c"
     #undef cc
-    return 0;
 
+    HOST_RETURN(0);
 } // main_iteration
 
 /*
@@ -435,9 +438,17 @@ import(const char * LIB_NAME) {
     return lib_handle;
 }
 
+void
+pouet() {
+   fprintf(stdout,"wapy-wasm 1 (emsdk) main\n");
+   fprintf(stderr,"wapy-wasm 2 (emsdk) main\n");
+    emscripten_cancel_main_loop();
+
+}
 
 int
 main(int argc, char *argv[]) {
+
 
     g_argc = argc;
     g_argv = copy_argv(argc, argv);
@@ -446,7 +457,7 @@ main(int argc, char *argv[]) {
     //void *lib_wapy = import( "libwapy.so");
     //void *lib_sdl2 = import( "libsdl2.so");
 
-    emscripten_set_main_loop( (em_callback_func)(void*)main_iteration, 0, 1);
+    emscripten_set_main_loop( main_iteration, 0, 1);
     return 0;
 }
 

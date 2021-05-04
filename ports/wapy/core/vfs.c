@@ -13,10 +13,10 @@
 #include "lib/utils/pyexec.h"
 #include "py/mphal.h"
 
-#include "../upython.h"
+#include "wapy/debug.h"
 
 
-#if !MICROPY_VFS
+#if 0 //  !MICROPY_VFS
 // FIXME:
 extern mp_import_stat_t
 wasm_find_module(const char *modname);
@@ -35,8 +35,7 @@ mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
     FILE *file = fopen(filename,"r");
     if (!file) {
-        //printf("404: fopen(%s)\n", filename);
-        clog("404: fopen(%s)\n", filename);
+        cdbg("404: fopen(%s)\n", filename);
         return NULL;
     }
     fseek(file, 0, SEEK_END);

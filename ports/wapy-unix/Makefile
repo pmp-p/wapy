@@ -247,9 +247,9 @@ include $(TOP)/py/mkrules.mk
 
 .PHONY: test test_full
 
-test: $(PROG) $(TOP)/tests/run-tests
+test: $(PROG) $(TOP)/tests/run-tests.py
 	$(eval DIRNAME=ports/$(notdir $(CURDIR)))
-	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(PROG) ./run-tests
+	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(PROG) ./run-tests.py
 
 test_full: $(PROG) $(TOP)/tests/run-tests
 	$(eval DIRNAME=ports/$(notdir $(CURDIR)))

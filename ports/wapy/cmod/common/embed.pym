@@ -3,15 +3,16 @@
 // glue code will do its best to do the conversion or init.
 //
 
-#ifndef wa_clock_gettime
-    #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
-    #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
-    static struct timespec t_timespec;
-    static struct timeval t_timeval;
-#else
-    extern struct timespec t_timespec;
-    extern struct timeval t_timeval;
-#endif
+#include <time.h>
+//#include <sys/time.h>
+
+
+extern struct timespec t_timespec;
+extern struct timeval t_timeval;
+
+extern int wasx_clock_gettime(clockid_t clockid, struct timespec *ts);
+
+
 
 
 #if defined(__EMSCRIPTEN__) || defined(__WASI__)
@@ -40,10 +41,6 @@
 
 #include "py/lexer.h"
 #include "py/compile.h"
-
-#include <time.h>
-#include <sys/time.h>
-
 
 #include "py/smallint.h"
 
@@ -246,13 +243,13 @@ def os_hook() ->void:
 //    https://vstinner.github.io/python37-pep-564-nanoseconds.html
 
 def time_ns() -> int:
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    wasx_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
     unsigned long long ul = t_timespec.tv_sec * 1000000000 + t_timespec.tv_nsec ;
     return mp_obj_new_int_from_ull(ul)
 
 // upy
 def time_ms() -> int:
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    wasx_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
     unsigned long long ul = t_timespec.tv_sec * 1000 + t_timespec.tv_nsec / 1000000 ;
     return mp_obj_new_int_from_ull(ul);
 

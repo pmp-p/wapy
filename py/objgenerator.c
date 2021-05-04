@@ -28,9 +28,14 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#if NO_NLR
+#include "wapy/py/runtime_no_nlr.h"
+#else
 #include "py/runtime.h"
-#include "py/bc.h"
+#endif
+
 #include "py/objstr.h"
+#include "py/bc.h"
 #include "py/objgenerator.h"
 #include "py/objfun.h"
 #include "py/stackctrl.h"
@@ -40,15 +45,6 @@ const mp_obj_exception_t mp_const_GeneratorExit_obj = {{&mp_type_GeneratorExit},
 
 /******************************************************************************/
 /* generator wrapper                                                          */
-
-typedef struct _mp_obj_gen_instance_t {
-    mp_obj_base_t base;
-    // mp_const_none: Not-running, no exception.
-    // MP_OBJ_NULL: Running, no exception.
-    // other: Not running, pending exception.
-    mp_obj_t pend_exc;
-    mp_code_state_t code_state;
-} mp_obj_gen_instance_t;
 
 STATIC mp_obj_t gen_wrap_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     // A generating function is just a bytecode function with type mp_type_gen_wrap

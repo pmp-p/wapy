@@ -27,13 +27,13 @@
 #include <stdio.h>
 
 #include "py/runtime.h"
-
+#include "inttypes.h"
 #if MICROPY_ENABLE_PYSTACK
 
 void mp_pystack_init(void *start, void *end) {
-    MP_STATE_THREAD(pystack_start) = start;
-    MP_STATE_THREAD(pystack_end) = end;
-    MP_STATE_THREAD(pystack_cur) = start;
+    MP_STATE_THREAD(pystack_start) = (uint8_t *)start;
+    MP_STATE_THREAD(pystack_end) = (uint8_t *)end;
+    MP_STATE_THREAD(pystack_cur) = (uint8_t *)start;
 }
 
 void *mp_pystack_alloc(size_t n_bytes) {
@@ -44,7 +44,7 @@ void *mp_pystack_alloc(size_t n_bytes) {
     if (MP_STATE_THREAD(pystack_cur) + n_bytes > MP_STATE_THREAD(pystack_end)) {
         // out of memory in the pystack
 #if NO_NLR
-    fprintf(stderr,"mp_pystack_alloc '%p' + '%ld' > '%p'\n", MP_STATE_THREAD(pystack_cur) , (size_t)n_bytes , MP_STATE_THREAD(pystack_end) );
+    fprintf(stderr,"mp_pystack_alloc '%p' + '%" PRIdPTR "' > '%p'\n", MP_STATE_THREAD(pystack_cur) , (intptr_t)n_bytes , MP_STATE_THREAD(pystack_end) );
         mp_raise_o(mp_obj_new_exception_arg1(&mp_type_RuntimeError,
             MP_OBJ_NEW_QSTR(MP_QSTR_pystack_space_exhausted)));
         return NULL;

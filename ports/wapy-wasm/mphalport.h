@@ -11,7 +11,7 @@
 #endif
 
 
-static inline void mp_hal_set_interrupt_char(char c) {}
+//static inline void mp_hal_set_interrupt_char(char c) {}
 
 // TODO: wasm does not sleep
 /*

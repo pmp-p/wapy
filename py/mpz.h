@@ -150,4 +150,53 @@ mp_float_t mpz_as_float(const mpz_t *z);
 #endif
 size_t mpz_as_str_inpl(const mpz_t *z, unsigned int base, const char *prefix, char base_char, char comma, char *str);
 
+
+#if MICROPY_LONGINT_IMPL == MICROPY_LONGINT_IMPL_MPZ
+
+#define DIG_SIZE (MPZ_DIG_SIZE)
+#define DIG_MASK ((MPZ_LONG_1 << MPZ_DIG_SIZE) - 1)
+#define DIG_MSB  (MPZ_LONG_1 << (DIG_SIZE - 1))
+#define DIG_BASE (MPZ_LONG_1 << DIG_SIZE)
+
+#if MICROPY_PY_SYS_MAXSIZE
+// Export value for sys.maxsize
+// *FORMAT-OFF*
+
+extern const mpz_dig_t maxsize_dig[];
+/*
+STATIC const mpz_dig_t maxsize_dig[] = {
+    #define NUM_DIG 1
+    (MP_SSIZE_MAX >> MPZ_DIG_SIZE * 0) & DIG_MASK,
+    #if (MP_SSIZE_MAX >> MPZ_DIG_SIZE * 0) > DIG_MASK
+     #undef NUM_DIG
+     #define NUM_DIG 2
+     (MP_SSIZE_MAX >> MPZ_DIG_SIZE * 1) & DIG_MASK,
+     #if (MP_SSIZE_MAX >> MPZ_DIG_SIZE * 1) > DIG_MASK
+      #undef NUM_DIG
+      #define NUM_DIG 3
+      (MP_SSIZE_MAX >> MPZ_DIG_SIZE * 2) & DIG_MASK,
+      #if (MP_SSIZE_MAX >> MPZ_DIG_SIZE * 2) > DIG_MASK
+       #undef NUM_DIG
+       #define NUM_DIG 4
+       (MP_SSIZE_MAX >> MPZ_DIG_SIZE * 3) & DIG_MASK,
+       #if (MP_SSIZE_MAX >> MPZ_DIG_SIZE * 3) > DIG_MASK
+        #error cannot encode MP_SSIZE_MAX as mpz
+       #endif
+      #endif
+     #endif
+    #endif
+};
+*/
+
+// *FORMAT-ON*
+
+#ifndef NUM_DIG
+//    #error "NUM_DIG"
+#endif
+
+#endif  // MICROPY_PY_SYS_MAXSIZE
+
+#endif // MICROPY_LONGINT_IMPL == MICROPY_LONGINT_IMPL_MPZ
+
+
 #endif // MICROPY_INCLUDED_PY_MPZ_H

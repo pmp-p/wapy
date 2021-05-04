@@ -31,17 +31,12 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 
-#if defined(__EMSCRIPTEN__)
-    #include <sys/time.h>
-    #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
-    #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
-#endif
-
-
+extern int wasx_clock_gettime(clockid_t clockid, struct timespec *ts);
+extern int wasx_gettimeofday(struct timeval *tv, const struct timezone *tz);
 extern struct timespec t_timespec;
 extern struct timeval t_timeval;
-
 
 
 #include <math.h>
@@ -87,7 +82,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_clock_obj, mod_time_clock);
 
 STATIC mp_obj_t mod_time_time(void) {
 
-    wa_gettimeofday(&t_timeval, NULL);
+    wasx_gettimeofday(&t_timeval, NULL);
 
 #if MICROPY_PY_BUILTINS_FLOAT
     mp_float_t val = t_timeval.tv_sec + (mp_float_t)t_timeval.tv_usec / 1000000;
@@ -100,7 +95,7 @@ STATIC mp_obj_t mod_time_time(void) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_obj, mod_time_time);
 
 STATIC mp_obj_t mod_time_time_ns(void) {
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    wasx_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
     return mp_obj_new_int_from_ull( t_timespec.tv_sec * 1000000000ULL + t_timespec.tv_nsec );
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_ns_obj, mod_time_time_ns);

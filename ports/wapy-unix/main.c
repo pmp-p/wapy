@@ -52,6 +52,14 @@
 #include "genhdr/mpversion.h"
 #include "input.h"
 
+
+
+#include "../wapy-hal/unix.c"
+
+
+
+
+mp_state_ctx_t mp_state_ctx;
 // Command line options, with their defaults
 STATIC bool compile_only = false;
 STATIC uint emit_opt = MP_EMIT_OPT_NONE;
@@ -186,6 +194,9 @@ STATIC char *strjoin(const char *s1, int sep_char, const char *s2) {
     return s;
 }
 #endif
+
+
+
 
 STATIC int do_repl(void) {
     mp_hal_stdout_tx_str("MicroPython " MICROPY_GIT_TAG " on " MICROPY_BUILD_DATE "; "
@@ -426,7 +437,7 @@ STATIC void pre_process_options(int argc, char **argv) {
                         goto invalid_arg;
                     }
                     if (word_adjust) {
-                        heap_size = heap_size * BYTES_PER_WORD / 4;
+                        heap_size = heap_size * (sizeof(void *)) / 4;
                     }
                     // If requested size too small, we'll crash anyway
                     if (heap_size < 700) {
@@ -467,6 +478,7 @@ STATIC void set_sys_argv(char *argv[], int argc, int start_arg) {
 MP_NOINLINE int main_(int argc, char **argv);
 
 int main(int argc, char **argv) {
+    fd_logger =  fdopen(2, "w"); // "r+");
     #if MICROPY_PY_THREAD
     mp_thread_init();
     #endif
@@ -476,7 +488,9 @@ int main(int argc, char **argv) {
     // this function. main_() itself may have other functions inlined (with
     // their own stack variables), that's why we need this main/main_ split.
     mp_stack_ctrl_init();
-    return main_(argc, argv);
+    int ret = main_(argc, argv);
+    fclose(fd_logger);
+    return ret;
 }
 
 MP_NOINLINE int main_(int argc, char **argv) {
@@ -494,7 +508,7 @@ MP_NOINLINE int main_(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
     #endif
 
-    mp_stack_set_limit(40000 * (BYTES_PER_WORD / 4));
+    mp_stack_set_limit(40000 * (sizeof(void *) / 4));
 
     pre_process_options(argc, argv);
 
@@ -759,20 +773,6 @@ MP_NOINLINE int main_(int argc, char **argv) {
     //printf("total bytes = %d\n", m_get_total_bytes_allocated());
     return ret & 0xff;
 }
-
-#if !MICROPY_VFS
-uint mp_import_stat(const char *path) {
-    struct stat st;
-    if (stat(path, &st) == 0) {
-        if (S_ISDIR(st.st_mode)) {
-            return MP_IMPORT_STAT_DIR;
-        } else if (S_ISREG(st.st_mode)) {
-            return MP_IMPORT_STAT_FILE;
-        }
-    }
-    return MP_IMPORT_STAT_NO_EXIST;
-}
-#endif
 
 void nlr_jump_fail(void *val) {
     fprintf(stderr, "FATAL: uncaught NLR %p\n", val);

@@ -99,7 +99,7 @@ mp_uint_t qstr_compute_hash(const byte *data, size_t len) {
     }
     return hash;
 }
-
+#pragma message "error: initialization of flexible array member is not allowed"
 const qstr_pool_t mp_qstr_const_pool = {
     NULL,               // no previous pool
     0,                  // no previous pool

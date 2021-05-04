@@ -68,7 +68,7 @@ STATIC void sighandler(int signum) {
 }
 #endif
 
-void mp_hal_set_interrupt_char(char c) {
+void mp_hal_set_interrupt_char(int c) {
     // configure terminal settings to (not) let ctrl-C through
     if (c == CHAR_CTRL_C) {
         #ifndef _WIN32

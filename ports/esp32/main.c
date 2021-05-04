@@ -37,10 +37,11 @@
 #include "esp_task.h"
 #include "soc/cpu.h"
 #include "esp_log.h"
-#if MICROPY_ESP_IDF_4
+
+#if CONFIG_IDF_TARGET_ESP32
 #include "esp32/spiram.h"
-#else
-#include "esp_spiram.h"
+#elif CONFIG_IDF_TARGET_ESP32S2
+#include "esp32s2/spiram.h"
 #endif
 
 #include "py/stackctrl.h"
@@ -54,6 +55,7 @@
 #include "lib/mp-readline/readline.h"
 #include "lib/utils/pyexec.h"
 #include "uart.h"
+#include "usb.h"
 #include "modmachine.h"
 #include "modnetwork.h"
 #include "mpthreadport.h"
@@ -76,7 +78,12 @@ void mp_task(void *pvParameter) {
     #if MICROPY_PY_THREAD
     mp_thread_init(pxTaskGetStackStart(NULL), MP_TASK_STACK_SIZE / sizeof(uintptr_t));
     #endif
+    #if CONFIG_USB_ENABLED
+    usb_init();
+    #else
     uart_init();
+    #endif
+    machine_init();
 
     // TODO: CONFIG_SPIRAM_SUPPORT is for 3.3 compatibility, remove after move to 4.0.
     #if CONFIG_ESP32_SPIRAM_SUPPORT || CONFIG_SPIRAM_SUPPORT
@@ -122,7 +129,10 @@ soft_reset:
     pyexec_frozen_module("_boot.py");
     pyexec_file_if_exists("boot.py");
     if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
-        pyexec_file_if_exists("main.py");
+        int ret = pyexec_file_if_exists("main.py");
+        if (ret & PYEXEC_FORCED_EXIT) {
+            goto soft_reset_exit;
+        }
     }
 
     for (;;) {
@@ -138,6 +148,10 @@ soft_reset:
             }
         }
     }
+
+soft_reset_exit:
+
+soft_reset_exit:
 
     #if MICROPY_BLUETOOTH_NIMBLE
     mp_bluetooth_deinit();
@@ -155,6 +169,7 @@ soft_reset:
 
     // deinitialise peripherals
     machine_pins_deinit();
+    machine_deinit();
     usocket_events_deinit();
 
     mp_deinit();

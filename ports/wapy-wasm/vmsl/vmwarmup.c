@@ -33,7 +33,7 @@ if (VMOP < VMOP_INIT) {
 
     fprintf(stdout,"running __main__ on pid=%d\r\n\r\n", ctx_current);
     #if __EMSCRIPTEN__
-        return 0;
+        HOST_RETURN(0);
     #endif
 }
 
@@ -59,8 +59,8 @@ if (VMOP < VMOP_WARMUP) {
 
 #if __EMSCRIPTEN__
     emscripten_cancel_main_loop();
-    emscripten_set_main_loop( main_iteration, 0, 1);
-    return 0;
+    emscripten_set_main_loop( (em_callback_func)main_iteration, 0, 1);
+    HOST_RETURN(0);
 #else
     #pragma message "WASI startup"
 #endif

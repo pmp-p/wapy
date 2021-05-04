@@ -1,3 +1,6 @@
+#include "vmsl/vmreg.h"
+
+
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
@@ -6,7 +9,7 @@
 
 
 
-#ifndef VM_REG_H
+#ifndef WAPY_INCLUDED_VM_REG_H
     //TODO sys max recursion handling.
     #define SYS_MAX_RECURSION 32
     #define MAX_BRANCHING 128
@@ -37,7 +40,7 @@
 
 
 
-    #define clog(...) { fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
+    #define cdbg(...) { fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
 
     struct mp_registers {
         int sub_id ;
@@ -99,7 +102,7 @@ static struct mp_registers mpi_ctx[SYS_MAX_RECURSION];
 static void* crash_point = JMP_NONE;
 
 void *crash(const char *panic){
-    clog("%s", panic);
+    cdbg("%s", panic);
     VMOP = VMOP_CRASH;
     return crash_point;
 
@@ -118,12 +121,12 @@ void *crash(const char *panic){
 
 
 void ctx_free(){
-    clog("CTX %d freed(free) for %d", ctx_current, CTX.parent);
+    cdbg("CTX %d freed(free) for %d", ctx_current, CTX.parent);
     CTX_STATE = VM_IDLE;
 }
 
 void ctx_abort(){
-    clog("CTX %d freed(abort) for %d", ctx_next, ctx_current);
+    cdbg("CTX %d freed(abort) for %d", ctx_next, ctx_current);
     NEXT_STATE = VM_IDLE;
 }
 
@@ -165,7 +168,7 @@ void ctx_get_next(int copy) {
         fprintf(stderr,"FATAL: SYS_MAX_RECURSION reached");
     #if CTX_DEBUG
     else
-        clog("CTX reservation %d",ctx);
+        cdbg("CTX reservation %d",ctx);
     #endif
     //track
     CTX.childcare = ctx ;
@@ -177,7 +180,7 @@ void ctx_get_next(int copy) {
 
     if (copy) {
         if ((ctx_current > 2) && (CTX.code_state == NULL))
-            clog(" ======== no code_state for slot %i->%i ============", ctx_current, ctx_next);
+            cdbg(" ======== no code_state for slot %i->%i ============", ctx_current, ctx_next);
 
         NEXT.self_in = CTX.self_in;
         NEXT.self_fun = CTX.self_fun;
@@ -200,14 +203,14 @@ void ctx_switch(){
     NEXT_STATE  = VM_RUNNING;
     ctx_current = ctx_next;
     #if CTX_DEBUG
-    clog("CTX %d locked for %d",ctx_current,CTX.parent);
+    cdbg("CTX %d locked for %d",ctx_current,CTX.parent);
     #endif
 }
 
 void* ctx_branch(void* jump_entry,int vmop, void *jump_back, const char *jto, const char *jback, const char* context, int defer) {
     VMOP = vmop;
     zigzag(jump_entry, jump_back, TYPE_JUMP);
-    clog("    ZZ > %s(...) %s -> %s  @%d",context, jto, jback, ctx_current);
+    cdbg("    ZZ > %s(...) %s -> %s  @%d",context, jto, jback, ctx_current);
     if (!defer)
         JUMPED_IN = 1 ;
     return jump_entry;
@@ -225,7 +228,7 @@ void* ctx_branch(void* jump_entry,int vmop, void *jump_back, const char *jto, co
 void* ctx_call(void* jump_entry, void *jump_back, const char *jt_origin,const char *context, int defer) {
     VMOP = VMOP_CALL;
     zigzag(jump_entry, jump_back, TYPE_JUMP);
-    clog("    CC > %s->%s(...) @%d", context, jt_origin, ctx_current);
+    cdbg("    CC > %s->%s(...) @%d", context, jt_origin, ctx_current);
     if (!defer)
         JUMPED_IN = 1 ;
     return jump_entry;
@@ -249,7 +252,7 @@ void* ctx_sub(void* jump_entry, void* jump_back, const char* jto, const char* jb
     ctx_switch();
 
     zigzag(jump_entry, jump_back, TYPE_SUB);
-    clog("    Begin[%d:%d] %s(...) %s -> %s  %d->%d", ctx_current, CTX.sub_id, context, jto, jback,  CTX.parent, ctx_current);
+    cdbg("    Begin[%d:%d] %s(...) %s -> %s  %d->%d", ctx_current, CTX.sub_id, context, jto, jback,  CTX.parent, ctx_current);
     JUMPED_IN = 1 ;
     return jump_entry;
 }
@@ -278,7 +281,7 @@ void* ctx_come_from() {
         return crash("ERROR: jumping back from upper branch not allowed, maybe ctx_get_next missing for GOSUB ?");
     } else
         point_ptr--;
-    clog("<<< ZZ[%d]",ctx_current);
+    cdbg("<<< ZZ[%d]",ctx_current);
     // go up one level of branching ( or if 0 reach root )
     CTX.pointer = ptr_back;
     return return_point;
@@ -299,7 +302,7 @@ void* ctx_return(){
 
     // possibly return in upper branch ?
     if (point_ptr!=CTX.pointer) {
-        clog("ERROR not on leaf branch");
+        cdbg("ERROR not on leaf branch");
         emscripten_cancel_main_loop();
     } else {
         point_ptr -= 1;

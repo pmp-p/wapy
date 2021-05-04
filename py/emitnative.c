@@ -211,6 +211,7 @@ struct _emit_t {
     int pass;
 
     bool do_viper_types;
+    bool prelude_offset_uses_u16_encoding;
 
     mp_uint_t local_vtype_alloc;
     vtype_kind_t *local_vtype;
@@ -336,6 +337,18 @@ STATIC void emit_native_mov_reg_qstr_obj(emit_t *emit, int reg_dest, qstr qst) {
 #define emit_native_mov_state_imm_via(emit, local_num, imm, reg_temp) \
     do { \
         ASM_MOV_REG_IMM((emit)->as, (reg_temp), (imm)); \
+        emit_native_mov_state_reg((emit), (local_num), (reg_temp)); \
+    } while (false)
+
+#define emit_native_mov_state_imm_fix_u16_via(emit, local_num, imm, reg_temp) \
+    do { \
+        ASM_MOV_REG_IMM_FIX_U16((emit)->as, (reg_temp), (imm)); \
+        emit_native_mov_state_reg((emit), (local_num), (reg_temp)); \
+    } while (false)
+
+#define emit_native_mov_state_imm_fix_word_via(emit, local_num, imm, reg_temp) \
+    do { \
+        ASM_MOV_REG_IMM_FIX_WORD((emit)->as, (reg_temp), (imm)); \
         emit_native_mov_state_reg((emit), (local_num), (reg_temp)); \
     } while (false)
 
@@ -549,16 +562,27 @@ STATIC void emit_native_start_pass(emit_t *emit, pass_kind_t pass, scope_t *scop
             ASM_MOV_LOCAL_REG(emit->as, LOCAL_IDX_FUN_OBJ(emit), REG_PARENT_ARG_1);
 
             // Set code_state.ip (offset from start of this function to prelude info)
+            int code_state_ip_local = emit->code_state_start + OFFSETOF_CODE_STATE_IP;
             #if N_PRELUDE_AS_BYTES_OBJ
             // Prelude is a bytes object in const_table; store ip = prelude->data - fun_bc->bytecode
             ASM_LOAD_REG_REG_OFFSET(emit->as, REG_LOCAL_3, REG_LOCAL_3, emit->scope->num_pos_args + emit->scope->num_kwonly_args + 1);
             ASM_LOAD_REG_REG_OFFSET(emit->as, REG_LOCAL_3, REG_LOCAL_3, offsetof(mp_obj_str_t, data) / sizeof(uintptr_t));
             ASM_LOAD_REG_REG_OFFSET(emit->as, REG_PARENT_ARG_1, REG_PARENT_ARG_1, OFFSETOF_OBJ_FUN_BC_BYTECODE);
             ASM_SUB_REG_REG(emit->as, REG_LOCAL_3, REG_PARENT_ARG_1);
-            emit_native_mov_state_reg(emit, emit->code_state_start + OFFSETOF_CODE_STATE_IP, REG_LOCAL_3);
+            emit_native_mov_state_reg(emit, code_state_ip_local, REG_LOCAL_3);
             #else
-            // TODO this encoding may change size in the final pass, need to make it fixed
-            emit_native_mov_state_imm_via(emit, emit->code_state_start + OFFSETOF_CODE_STATE_IP, emit->prelude_offset, REG_PARENT_ARG_1);
+            if (emit->pass == MP_PASS_CODE_SIZE) {
+                // Commit to the encoding size based on the value of prelude_offset in this pass.
+                // By using 32768 as the cut-off it is highly unlikely that prelude_offset will
+                // grow beyond 65535 by the end of thiss pass, and so require the larger encoding.
+                emit->prelude_offset_uses_u16_encoding = emit->prelude_offset < 32768;
+            }
+            if (emit->prelude_offset_uses_u16_encoding) {
+                assert(emit->prelude_offset <= 65535);
+                emit_native_mov_state_imm_fix_u16_via(emit, code_state_ip_local, emit->prelude_offset, REG_PARENT_ARG_1);
+            } else {
+                emit_native_mov_state_imm_fix_word_via(emit, code_state_ip_local, emit->prelude_offset, REG_PARENT_ARG_1);
+            }
             #endif
 
             // Set code_state.n_state (only works on little endian targets due to n_state being uint16_t)
@@ -841,11 +865,7 @@ STATIC vtype_kind_t load_reg_stack_imm(emit_t *emit, int reg_dest, const stack_i
         } else if (si->vtype == VTYPE_PTR_NONE) {
             emit_native_mov_reg_const(emit, reg_dest, MP_F_CONST_NONE_OBJ);
         } else {
-#if NO_NLR
-            mp_raise_NotImplementedError_o(MP_ERROR_TEXT("conversion to object"));
-#else
             mp_raise_NotImplementedError(MP_ERROR_TEXT("conversion to object"));
-#endif
         }
         return VTYPE_PYOBJ;
     }
@@ -1108,16 +1128,13 @@ STATIC void emit_native_leave_exc_stack(emit_t *emit, bool start_of_handler) {
     }
     ASM_MOV_LOCAL_REG(emit->as, LOCAL_IDX_EXC_HANDLER_PC(emit), REG_RET);
 }
-#if NO_NLR
-#pragma message "TODO"
-#else
+
 STATIC exc_stack_entry_t *emit_native_pop_exc_stack(emit_t *emit) {
     assert(emit->exc_stack_size > 0);
     exc_stack_entry_t *e = &emit->exc_stack[--emit->exc_stack_size];
     assert(e->is_active == false);
     return e;
 }
-#endif
 
 STATIC void emit_load_reg_with_ptr(emit_t *emit, int reg, mp_uint_t ptr, size_t table_off) {
     if (!emit->do_viper_types) {
@@ -1173,9 +1190,6 @@ STATIC void emit_native_label_assign(emit_t *emit, mp_uint_t l) {
 }
 
 STATIC void emit_native_global_exc_entry(emit_t *emit) {
-#if NO_NLR
-#pragma message "TODO"
-#else
     // Note: 4 labels are reserved for this function, starting at *emit->label_slot
 
     emit->exit_label = *emit->label_slot;
@@ -1282,13 +1296,9 @@ STATIC void emit_native_global_exc_entry(emit_t *emit) {
             emit_call(emit, MP_F_NATIVE_RAISE);
         }
     }
-#endif
 }
 
 STATIC void emit_native_global_exc_exit(emit_t *emit) {
-#if NO_NLR
-#pragma message "TODO"
-#else
     // Label for end of function
     emit_native_label_assign(emit, emit->exit_label);
 
@@ -1321,7 +1331,6 @@ STATIC void emit_native_global_exc_exit(emit_t *emit) {
     }
 
     ASM_EXIT(emit->as);
-#endif
 }
 
 STATIC void emit_native_import_name(emit_t *emit, qstr qst) {
@@ -2211,9 +2220,6 @@ STATIC void emit_native_with_cleanup(emit_t *emit, mp_uint_t label) {
 }
 
 STATIC void emit_native_end_finally(emit_t *emit) {
-#if NO_NLR
-#pragma message "TODO"
-#else
     // logic:
     //   exc = pop_stack
     //   if exc == None: pass
@@ -2237,7 +2243,6 @@ STATIC void emit_native_end_finally(emit_t *emit) {
     }
 
     emit_post(emit);
-#endif
 }
 
 STATIC void emit_native_get_iter(emit_t *emit, bool use_stack) {
@@ -2449,6 +2454,7 @@ STATIC void emit_native_binary_op(emit_t *emit, mp_binary_op_t op) {
             asm_x86_setcc_r8(emit->as, ops[op_idx], REG_RET);
             #elif N_THUMB
             asm_thumb_cmp_rlo_rlo(emit->as, REG_ARG_2, reg_rhs);
+            #if MICROPY_EMIT_THUMB_ARMV7M
             static uint16_t ops[6 + 6] = {
                 // unsigned
                 ASM_THUMB_OP_ITE_CC,
@@ -2468,6 +2474,28 @@ STATIC void emit_native_binary_op(emit_t *emit, mp_binary_op_t op) {
             asm_thumb_op16(emit->as, ops[op_idx]);
             asm_thumb_mov_rlo_i8(emit->as, REG_RET, 1);
             asm_thumb_mov_rlo_i8(emit->as, REG_RET, 0);
+            #else
+            static uint16_t ops[6 + 6] = {
+                // unsigned
+                ASM_THUMB_CC_CC,
+                ASM_THUMB_CC_HI,
+                ASM_THUMB_CC_EQ,
+                ASM_THUMB_CC_LS,
+                ASM_THUMB_CC_CS,
+                ASM_THUMB_CC_NE,
+                // signed
+                ASM_THUMB_CC_LT,
+                ASM_THUMB_CC_GT,
+                ASM_THUMB_CC_EQ,
+                ASM_THUMB_CC_LE,
+                ASM_THUMB_CC_GE,
+                ASM_THUMB_CC_NE,
+            };
+            asm_thumb_bcc_rel9(emit->as, ops[op_idx], 6);
+            asm_thumb_mov_rlo_i8(emit->as, REG_RET, 0);
+            asm_thumb_b_rel12(emit->as, 4);
+            asm_thumb_mov_rlo_i8(emit->as, REG_RET, 1);
+            #endif
             #elif N_ARM
             asm_arm_cmp_reg_reg(emit->as, REG_ARG_2, reg_rhs);
             static uint ccs[6 + 6] = {
@@ -2717,12 +2745,7 @@ STATIC void emit_native_call_function(emit_t *emit, mp_uint_t n_positional, mp_u
                 break;
             default:
                 // this can happen when casting a cast: int(int)
-#if NO_NLR
-                mp_raise_NotImplementedError_o(MP_ERROR_TEXT("casting"));
-                return;
-#else
                 mp_raise_NotImplementedError(MP_ERROR_TEXT("casting"));
-#endif
         }
     } else {
         assert(vtype_fun == VTYPE_PYOBJ);
@@ -2810,9 +2833,6 @@ STATIC void emit_native_return_value(emit_t *emit) {
 }
 
 STATIC void emit_native_raise_varargs(emit_t *emit, mp_uint_t n_args) {
-#if NO_NLR
-#pragma message "TODO"
-#else
     (void)n_args;
     assert(n_args == 1);
     vtype_kind_t vtype_exc;
@@ -2822,21 +2842,13 @@ STATIC void emit_native_raise_varargs(emit_t *emit, mp_uint_t n_args) {
     }
     // TODO probably make this 1 call to the runtime (which could even call convert, native_raise(obj, type))
     emit_call(emit, MP_F_NATIVE_RAISE);
-#endif
 }
 
 STATIC void emit_native_yield(emit_t *emit, int kind) {
-#if NO_NLR
-#pragma message "TODO"
-#else
     // Note: 1 (yield) or 3 (yield from) labels are reserved for this function, starting at *emit->label_slot
 
     if (emit->do_viper_types) {
-#if NO_NLR
-        mp_raise_NotImplementedError_o(MP_ERROR_TEXT("native yield"));
-#else
         mp_raise_NotImplementedError(MP_ERROR_TEXT("native yield"));
-#endif
     }
     emit->scope->scope_flags |= MP_SCOPE_FLAG_GENERATOR;
 
@@ -2913,7 +2925,6 @@ STATIC void emit_native_yield(emit_t *emit, int kind) {
         emit_native_adjust_stack_size(emit, 1); // ret_value
         emit_fold_stack_top(emit, REG_ARG_1);
     }
-#endif
 }
 
 STATIC void emit_native_start_except_handler(emit_t *emit) {

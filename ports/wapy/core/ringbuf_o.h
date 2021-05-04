@@ -5,23 +5,23 @@
   January 17, 2015.
   Released into the public domain.
 */
+
+
 #ifndef RINGBUF_O_H
 #define RINGBUF_O_H
 
 #if __ARDUINO__
-    #include "Arduino.h"
-    #define RB_ATOMIC_START ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    #define RB_ATOMIC_END }
+    #if defined(__WASI__)
+    #else
+/*
+        #include "Arduino.h"
+        #define RB_ATOMIC_START ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        #define RB_ATOMIC_END }
+*/
+    #endif
 #else
     #define RB_ATOMIC_START
     #define RB_ATOMIC_END
-#endif
-
-
-#ifndef __cplusplus
-    #ifndef bool
-    #define bool uint8_t
-    #endif
 #endif
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -48,7 +48,7 @@
 
     #else
         #if __ARDUINO__
-            #error ("This library only supports AVR and ESP8266 Boards.")
+            #pragma message ("This library only supports AVR and ESP8266 Boards.")
         #endif
     #endif
 
@@ -56,7 +56,6 @@
 
 
 typedef struct rbo_t rbo_t;
-
 
 
 #ifdef __cplusplus
@@ -74,8 +73,8 @@ int rbo_incr_start(rbo_t *self);
 int rbo_append(rbo_t *self, const void *object);
 void *rbo_peek(rbo_t *self, unsigned int num);
 void *rbo_pop(rbo_t *self, void *object);
-bool rbo_is_full(rbo_t *self);
-bool rbo_is_empty(rbo_t *self);
+uint8_t rbo_is_full(rbo_t *self);
+uint8_t rbo_is_empty(rbo_t *self);
 unsigned int rbo_count(rbo_t *self);
 
 #ifdef __cplusplus
@@ -92,8 +91,8 @@ public:
     rbo_tC(int size, int len) { buf = rbo_t_new(size, len); }
     ~rbo_tC() { rbo_delete(buf); }
 
-    bool isFull() { return rbo_is_full(buf); }
-    bool isEmpty() { return rbo_is_empty(buf); }
+    uint8_t isFull() { return rbo_is_full(buf); }
+    uint8_t isEmpty() { return rbo_is_empty(buf); }
     unsigned int numElements() { return rbo_count(buf); }
 
     unsigned int add(const void *object) { return rbo_append(buf, object); }
@@ -101,7 +100,7 @@ public:
     void *pull(void *object) { return rbo_pop(buf, object); }
 
     // Use this to check if memory allocation failed
-    bool allocFailed() { return !buf; }
+    uint8_t allocFailed() { return !buf; }
 
 private:
     rbo_t *buf;

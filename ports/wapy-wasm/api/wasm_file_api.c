@@ -2,7 +2,16 @@
 #include <string.h>
 #include "py/mpconfig.h"
 
-#ifdef __EMSCRIPTEN__
+#if __ARDUINO__
+int
+wasm_file_open(const char *url) {
+    fprintf(stderr,"10:wasm_file_open[%s]\n", url);
+    return 0;
+}
+
+#else
+
+#if __EMSCRIPTEN__
 #include "emscripten.h"
 #endif
 
@@ -31,3 +40,4 @@ wasm_file_open(const char *url) {
     return 0;
 }
 
+#endif

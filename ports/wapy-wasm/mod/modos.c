@@ -24,6 +24,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#ifndef __ARDUINO__
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -246,9 +247,18 @@ STATIC const mp_rom_map_elem_t mp_module_os_globals_table[] = {
     #endif
 };
 
+#else
+
+STATIC const mp_rom_map_elem_t mp_module_os_globals_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_uos) },
+};
+
+#endif
+
 STATIC MP_DEFINE_CONST_DICT(mp_module_os_globals, mp_module_os_globals_table);
 
 const mp_obj_module_t mp_module_os = {
     .base = { &mp_type_module },
     .globals = (mp_obj_dict_t*)&mp_module_os_globals,
 };
+

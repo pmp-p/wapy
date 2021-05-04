@@ -273,7 +273,11 @@
 
 #define MICROPY_PY_SYS_STDIO_BUFFER (1)
 #define MICROPY_PY_SYS_STDFILES     (1)
+#if __EMSCRIPTEN__
 #define MICROPY_PY_OS_DUPTERM       (1) // <==== or js console will get C stdout too ( C-OUT [spam] )
+#else
+#define MICROPY_PY_OS_DUPTERM       (0)
+#endif
 
 
 #define MICROPY_PY_THREAD           (0)
@@ -335,7 +339,7 @@
 #define UINT_FMT "%u"
 #define INT_FMT "%d"
 typedef int mp_int_t; // must be pointer size
-typedef unsigned mp_uint_t; // must be pointer size
+typedef unsigned int mp_uint_t; // must be pointer size
 
 typedef long mp_off_t;
 

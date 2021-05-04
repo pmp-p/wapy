@@ -25,7 +25,8 @@
  */
 #ifndef MICROPY_INCLUDED_PY_READER_H
 #define MICROPY_INCLUDED_PY_READER_H
-
+#include <stdint.h>
+#include <stdbool.h>
 #include "py/obj.h"
 
 // the readbyte function must return the next byte in the input stream

@@ -447,7 +447,9 @@ typedef enum _mp_map_lookup_kind_t {
 } mp_map_lookup_kind_t;
 
 static inline bool mp_map_slot_is_filled(const mp_map_t *map, size_t pos) {
+#ifndef __ROM__
     assert(pos < map->alloc);
+#endif
     return (map)->table[pos].key != MP_OBJ_NULL && (map)->table[pos].key != MP_OBJ_SENTINEL;
 }
 

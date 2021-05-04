@@ -28,3 +28,17 @@ wasm_find_module(const char *modname) {
     return MP_IMPORT_STAT_NO_EXIST;
 }
 
+#if !MICROPY_VFS
+uint mp_import_stat(const char *path) {
+    struct stat st;
+    if (stat(path, &st) == 0) {
+        if (S_ISDIR(st.st_mode)) {
+            return MP_IMPORT_STAT_DIR;
+        } else if (S_ISREG(st.st_mode)) {
+            return MP_IMPORT_STAT_FILE;
+        }
+    }
+    return MP_IMPORT_STAT_NO_EXIST;
+}
+#endif
+

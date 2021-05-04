@@ -111,7 +111,7 @@ STATIC void match_span_helper(size_t n_args, const mp_obj_t *args, mp_obj_t span
     if (n_args == 2) {
         no = mp_obj_get_int(args[1]);
         if (no < 0 || no >= self->num_matches) {
-            mp_raise_or_return(mp_obj_new_exception_arg1(&mp_type_IndexError, args[1]), 1);
+            mp_raise_or_return_value(mp_obj_new_exception_arg1(&mp_type_IndexError, args[1]), 1);
         }
     }
 

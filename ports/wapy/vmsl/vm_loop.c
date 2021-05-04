@@ -1,3 +1,4 @@
+// vm_loop.c
     static size_t iolen;
 
     if (VMOP>= VMOP_PAUSE) {
@@ -12,7 +13,7 @@
             }
 
         } else {
-            clog("syscall/pause -> io flush");
+            cdbg("syscall/pause -> io flush");
             // else just jump to flush Outputs
         }
         goto VM_syscall;
@@ -20,7 +21,7 @@
 
 // TODO: is it usefull ?
     if ( (ENTRY_POINT != JMP_NONE)  && !JUMPED_IN) {
-        clog("re-enter-on-entry %d => %d\n", ctx_current, CTX.pointer);
+        cdbg("re-enter-on-entry %d => %d\n", ctx_current, CTX.pointer);
         void* jump_entry;
         jump_entry = ENTRY_POINT;
         // Never to re-enter as this point. can only use the previous exit point.
@@ -87,7 +88,7 @@
 
             if (RETVAL == MP_OBJ_NULL) {
                 if (MP_STATE_THREAD(active_exception) != NULL) {
-                    clog("64: RT Exception");
+                    cdbg("64: RT Exception");
                     goto VM_exhandler;
                 }
             }
@@ -171,7 +172,7 @@ def_PyRun_SimpleString: {
     mp_obj_t exret = MP_OBJ_NULL;
 
     if (lex == NULL) {
-        clog("113:syntax error");
+        cdbg("113:syntax error");
         //handle_uncaught_exception();
     } else {
         qstr source_name = lex->source_name;
@@ -211,7 +212,7 @@ def_PyRun_SimpleString: {
                     exret = SUBVAL; //CTX.sub_value;
                     // <<<
                 } else {
-                    clog("151: native call %p %p ?", *type->call , fun_bc_call);
+                    cdbg("151: native call %p %p ?", *type->call , fun_bc_call);
                     exret = type->call(CTX.self_in, CTX.n_args, CTX.n_kw, CTX.args);
                 }
 
@@ -225,7 +226,7 @@ def_PyRun_SimpleString: {
 
             if ( exret != MP_OBJ_NULL ) {
                 if (MP_STATE_VM(mp_pending_exception) != MP_OBJ_NULL) {
-                    clog("645: PENDING EXCEPTION CLEARED AND RAISED");
+                    cdbg("645: PENDING EXCEPTION CLEARED AND RAISED");
                     mp_obj_t obj = MP_STATE_VM(mp_pending_exception);
                     MP_STATE_VM(mp_pending_exception) = MP_OBJ_NULL;
                     mp_raise_o(obj);
@@ -236,7 +237,7 @@ def_PyRun_SimpleString: {
 
         // ex check
         if (MP_STATE_THREAD(active_exception) != NULL) {
-            clog("178: uncaught exception");
+            cdbg("178: uncaught exception");
         }
 
     }
@@ -324,15 +325,15 @@ def_mp_call_function_n_kw: {
             RETVAL = SUBVAL; //CTX.sub_value;
             // <<<
         } else {
-            clog("      899: native call %p %p", *type->call , &fun_bc_call);
+            cdbg("      899: native call %p %p", *type->call , &fun_bc_call);
 #if VMTRACE
-clog("      899: native call");
+cdbg("      899: native call");
 #endif
             RETVAL = type->call(CTX.self_in, CTX.n_args, CTX.n_kw, CTX.args);
         }
 
     } else {
-        clog("919:def_mp_call_function_n_kw ex!");
+        cdbg("919:def_mp_call_function_n_kw ex!");
         mp_raise_o(
             mp_obj_new_exception_msg_varg(
                 &mp_type_TypeError,"'%s' object isn't callable", mp_obj_get_type_str(CTX.self_in)
@@ -370,7 +371,7 @@ def_func_bc_call: {
     RETVAL = MP_OBJ_NULL;
 
     if (MP_STACK_CHECK()) {
-        clog("974:def_func_bc_call: MP_STACK_CHECK ex!");
+        cdbg("974:def_func_bc_call: MP_STACK_CHECK ex!");
         goto def_func_bc_call_ret;
     }
 
@@ -411,7 +412,7 @@ def_func_bc_call: {
     CTX.code_state = mp_pystack_alloc(sizeof(mp_code_state_t) + CTX.state_size);
 
     if (!CTX.code_state) {
-        clog("908:def_func_bc_call: MP_PYSTACK_ALLOC ex!");
+        cdbg("908:def_func_bc_call: MP_PYSTACK_ALLOC ex!");
         goto def_func_bc_call_ret;
     }
 
@@ -420,7 +421,7 @@ def_func_bc_call: {
     CTX.code_state->ip = 0;
     CTX.code_state->n_state = CTX.n_state;
 
-    clog("917:TODO: can we save old_globals before this call ?");
+    cdbg("917:TODO: can we save old_globals before this call ?");
 
     mp_obj_t ret = mp_setup_code_state(CTX.code_state, CTX.n_args, CTX.n_kw, CTX.args);
 
@@ -429,7 +430,7 @@ def_func_bc_call: {
 
 
     if ( ret == MP_OBJ_NULL) {
-        clog("999:def_func_bc_call: INIT_CODESTATE ex!");
+        cdbg("999:def_func_bc_call: INIT_CODESTATE ex!");
         mp_nonlocal_free(CTX.code_state, sizeof(mp_code_state_t));
         goto def_func_bc_call_ret;
     }
@@ -441,7 +442,7 @@ def_func_bc_call: {
 
 
     if (VMFLAGS_IF>0) { // FIXED !
-        clog("132:unwrap.c ALLOWINT def_func_bc_call->def_mp_execute_bytecode");
+        cdbg("132:unwrap.c ALLOWINT def_func_bc_call->def_mp_execute_bytecode");
 
         // ip sp would not be set on NEXT
         NEXT.ip = NEXT.code_state->ip;
@@ -451,7 +452,7 @@ def_func_bc_call: {
         CTX.vm_return_kind = CTX.sub_vm_return_kind;
 
     } else {
-        clog("136:unwrap.c NOINTERRUPT");
+        cdbg("136:unwrap.c NOINTERRUPT");
         ctx_abort(); //128
         CTX.vm_return_kind = mp_execute_bytecode(CTX.code_state, CTX.inject_exc);
         if (CTX.vm_return_kind == MP_VM_RETURN_NORMAL) {
@@ -460,7 +461,7 @@ def_func_bc_call: {
             if(CTX.vm_return_kind == MP_VM_RETURN_EXCEPTION)
                 CTX.sub_value= CTX.code_state->state[0];
             else
-                clog("1031:unwrap.c unrouted .vm_return_kind")
+                cdbg("1031:unwrap.c unrouted .vm_return_kind")
         }
 
     }
@@ -480,7 +481,7 @@ def_func_bc_call: {
         if(CTX.vm_return_kind == MP_VM_RETURN_EXCEPTION)
             RETVAL = mp_raise_o(CTX.sub_value);
         else
-            clog("1050:unwrap.c unrouted .sub_vm_return_kind")
+            cdbg("1050:unwrap.c unrouted .sub_vm_return_kind")
     }
 
 
@@ -491,7 +492,6 @@ def_func_bc_call_ret:
 
 #include "vmsl/unwrap.c"
 
-
 //==================================================================
 // VM_syscall_verbose:;
 //    puts("-syscall-");
@@ -499,13 +499,13 @@ def_func_bc_call_ret:
 VM_exhandler:;
     // IO_CODE_DONE; follows
     if (MP_STATE_THREAD(active_exception) != NULL) {
-        clog("501: uncaught exception")
+        cdbg("501: uncaught exception")
         //mp_hal_set_interrupt_char(-1);
         mp_handle_pending(false);
         if (uncaught_exception_handler()) {
-            clog("651:SystemExit");
+            cdbg("651:SystemExit");
         } else {
-            clog("653: exception done");
+            cdbg("653: exception done");
         }
         async_loop = 0;
     }
@@ -523,6 +523,7 @@ VM_syscall:;
 // TODO: flush all at once
     // STDOUT flush before eventually filling it again
 
+/*
 #if defined(__EMSCRIPTEN__)
 
     // use json  { "channel" : "hexdata" }\n
@@ -557,7 +558,7 @@ VM_syscall:;
     }
 
 #endif
-
+*/
 
 
 

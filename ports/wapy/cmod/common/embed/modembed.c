@@ -43,6 +43,7 @@ null_pointer_exception(void) {
     fprintf(stderr, "59: null pointer exception in function pointer call\n");
 }
 
+
 mp_obj_t
 PyBytes_FromString(char *string){
     vstr_t vstr;
@@ -62,15 +63,16 @@ const char *nullbytes = "";
 // glue code will do its best to do the conversion or init.
 //
 
-#ifndef wa_clock_gettime
-    #define wa_clock_gettime(clockid, timespec) clock_gettime(clockid, timespec)
-    #define wa_gettimeofday(timeval, tmz) gettimeofday(timeval, tmz)
-    static struct timespec t_timespec;
-    static struct timeval t_timeval;
-#else
-    extern struct timespec t_timespec;
-    extern struct timeval t_timeval;
-#endif
+#include <time.h>
+//#include <sys/time.h>
+
+
+extern struct timespec t_timespec;
+extern struct timeval t_timeval;
+
+extern int wasx_clock_gettime(clockid_t clockid, struct timespec *ts);
+
+
 
 
 #if defined(__EMSCRIPTEN__) || defined(__WASI__)
@@ -99,10 +101,6 @@ const char *nullbytes = "";
 
 #include "py/lexer.h"
 #include "py/compile.h"
-
-#include <time.h>
-#include <sys/time.h>
-
 
 #include "py/smallint.h"
 
@@ -518,7 +516,7 @@ embed_time_ns(size_t argc, const mp_obj_t *argv) {
     long __creturn__ = 0;
 
     // ------- method body (try/finally) -----
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    wasx_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
     unsigned long long ul = t_timespec.tv_sec * 1000000000 + t_timespec.tv_nsec;
     { __creturn__ = (long)mp_obj_new_int_from_ull(ul); goto lreturn__; };
 lreturn__: return mp_obj_new_int(__creturn__);
@@ -533,7 +531,7 @@ embed_time_ms(size_t argc, const mp_obj_t *argv) {
     long __creturn__ = 0;
 
     // ------- method body (try/finally) -----
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    wasx_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
     unsigned long long ul = t_timespec.tv_sec * 1000 + t_timespec.tv_nsec / 1000000;
     { __creturn__ = (long)mp_obj_new_int_from_ull(ul); goto lreturn__; };
 lreturn__: return mp_obj_new_int(__creturn__);

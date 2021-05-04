@@ -854,22 +854,8 @@ def freeze_mpy(base_qstrs, raw_codes):
         print("#endif")
         print()
 
-    print("#if MICROPY_PY_BUILTINS_FLOAT")
-    print("typedef struct _mp_obj_float_t {")
-    print("    mp_obj_base_t base;")
-    print("    mp_float_t value;")
-    print("} mp_obj_float_t;")
-    print("#endif")
-    print()
-
-    print("#if MICROPY_PY_BUILTINS_COMPLEX")
-    print("typedef struct _mp_obj_complex_t {")
-    print("    mp_obj_base_t base;")
-    print("    mp_float_t real;")
-    print("    mp_float_t imag;")
-    print("} mp_obj_complex_t;")
-    print("#endif")
-    print()
+    print('#include "py/objfloat.h"')
+    print('#include "py/objcomplex.h"')
 
     if len(new) > 0:
         print("enum {")
@@ -915,6 +901,28 @@ def freeze_mpy(base_qstrs, raw_codes):
     for rc in raw_codes:
         print("    &raw_code_%s," % rc.escaped_name)
     print("};")
+
+    # If a port defines MICROPY_FROZEN_LIST_ITEM then list all modules wrapped in that macro.
+    print("#ifdef MICROPY_FROZEN_LIST_ITEM")
+    for rc in raw_codes:
+        module_name = rc.source_file.str
+        if module_name.endswith("/__init__.py"):
+            short_name = module_name[: -len("/__init__.py")]
+        else:
+            short_name = module_name[: -len(".py")]
+        print('MICROPY_FROZEN_LIST_ITEM("%s", "%s")' % (short_name, module_name))
+    print("#endif")
+
+    # If a port defines MICROPY_FROZEN_LIST_ITEM then list all modules wrapped in that macro.
+    print("#ifdef MICROPY_FROZEN_LIST_ITEM")
+    for rc in raw_codes:
+        module_name = rc.source_file.str
+        if module_name.endswith("/__init__.py"):
+            short_name = module_name[: -len("/__init__.py")]
+        else:
+            short_name = module_name[: -len(".py")]
+        print('MICROPY_FROZEN_LIST_ITEM("%s", "%s")' % (short_name, module_name))
+    print("#endif")
 
 
 def merge_mpy(raw_codes, output_file):

@@ -33,7 +33,11 @@
 #include "py/objtype.h"
 #include "py/objint.h"
 #include "py/objstr.h"
+#if NO_NLR
+#include "wapy/py/runtime_no_nlr.h"
+#else
 #include "py/runtime.h"
+#endif
 #include "py/stackctrl.h"
 #include "py/stream.h" // for mp_obj_print
 
@@ -745,7 +749,11 @@ mp_obj_t mp_obj_subscr(mp_obj_t base, mp_obj_t index, mp_obj_t value) {
         #endif
     } else {
         #if MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE
-            mp_raise_TypeError_o(MP_ERROR_TEXT("object doesn't support item assignment"));
+            #if NO_NLR
+                mp_raise_TypeError_o(MP_ERROR_TEXT("object doesn't support item assignment"));
+            #else
+                mp_raise_TypeError(MP_ERROR_TEXT("object doesn't support item assignment"));
+            #endif
         #else
             mp_raise_or_return(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
                 MP_ERROR_TEXT("'%s' object doesn't support item assignment"), mp_obj_get_type_str(base)));

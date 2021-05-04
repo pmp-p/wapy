@@ -43,7 +43,7 @@ deep_recursion_error:
                 goto run_code_state;
             }
         } else
-            clog("35:MP_BC_CALL_FUNCTION not mp_type_fun_bc");
+            cdbg("35:MP_BC_CALL_FUNCTION not mp_type_fun_bc");
         #endif //MICROPY_STACKLESS
     //1058
 
@@ -92,7 +92,7 @@ deep_recursion_error:
 
         if (!*CTX.sp) {
             ctx_abort(); // 39
-            clog("47:MP_BC_CALL_FUNCTION NPE");
+            cdbg("47:MP_BC_CALL_FUNCTION NPE");
             mp_obj_t obj = mp_obj_new_exception_msg(&mp_type_RuntimeError, "Invalid Function Name->Pointer mapping called");
             mp_raise_o(obj);
             RAISE_IF_NULL(VM_SET_TOP(MP_OBJ_NULL));
@@ -103,18 +103,18 @@ deep_recursion_error:
 
         if ( strlen(fn)>1 ) {
 #if DEBUG_BC
-    clog("      99:MP_BC_CALL_FUNCTION [%s %zu '%s']",mp_obj_get_type_str(*CTX.sp), mp_obj_fun_get_name(*CTX.sp), fn);
+    cdbg("      99:MP_BC_CALL_FUNCTION [%s %zu '%s']",mp_obj_get_type_str(*CTX.sp), mp_obj_fun_get_name(*CTX.sp), fn);
 #endif
             GOSUB(def_mp_call_function_n_kw, fn );
         } else {
 #if DEBUG_BC
-    clog("      102:MP_BC_CALL_FUNCTION [%s %zu]",mp_obj_get_type_str(*CTX.sp), mp_obj_fun_get_name(*CTX.sp));
+    cdbg("      102:MP_BC_CALL_FUNCTION [%s %zu]",mp_obj_get_type_str(*CTX.sp), mp_obj_fun_get_name(*CTX.sp));
 #endif
                 GOSUB(def_mp_call_function_n_kw, mp_obj_get_type_str(NEXT.self_in) );
         }
 
         if (MP_STATE_THREAD(active_exception) != NULL) {
-            clog("120:MP_BC_CALL_FUNCTION[%s]/exit on EX!", fn);
+            cdbg("120:MP_BC_CALL_FUNCTION[%s]/exit on EX!", fn);
         }
 
         RAISE_IF_NULL(VM_SET_TOP(SUBVAL));

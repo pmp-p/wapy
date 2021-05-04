@@ -39,8 +39,9 @@
 #if MICROPY_LONGINT_IMPL == MICROPY_LONGINT_IMPL_LONGLONG
 
 #if MICROPY_PY_SYS_MAXSIZE
-// Export value for sys.maxsize
-const mp_obj_int_t mp_sys_maxsize_obj = {{&mp_type_int}, MP_SSIZE_MAX};
+// Export value for sys.maxsize, this definition conflicts with the one in objint_mpz.c
+extern const mp_obj_int_t mp_sys_maxsize_obj; //= {{&mp_type_int}, MP_SSIZE_MAX};
+#error "mp_sys_maxsize_obj"
 #endif
 
 mp_obj_t mp_obj_int_from_bytes_impl(bool big_endian, size_t len, const byte *buf) {

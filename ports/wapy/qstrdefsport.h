@@ -27,6 +27,7 @@ Q(heap_lock)
 Q(heap_unlock)
 Q(ld)
 Q(unref)
+Q(ffi)
 Q(ptr)
 Q(use)
 Q(srv)
@@ -45,6 +46,8 @@ Q(crt)
 Q(set_x)
 Q(set_z)
 Q(set_text)
+Q(fileno)
+Q(readlines)
 
 
 

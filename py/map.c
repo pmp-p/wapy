@@ -31,7 +31,11 @@
 
 #include "py/mpconfig.h"
 #include "py/misc.h"
+#if NO_NLR
+#include "wapy/py/runtime_no_nlr.h"
+#else
 #include "py/runtime.h"
+#endif
 
 #if MICROPY_DEBUG_VERBOSE // print debugging info
 #define DEBUG_PRINT (1)
@@ -132,7 +136,7 @@ STATIC int mp_map_rehash(mp_map_t *map) {
 }
 
 #else
-#error "please use no_nlr"
+#if 0
 STATIC void mp_map_rehash(mp_map_t *map) {
     size_t old_alloc = map->alloc;
     size_t new_alloc = get_hash_alloc_greater_or_equal_to(map->alloc + 1);
@@ -156,6 +160,28 @@ STATIC void mp_map_rehash(mp_map_t *map) {
     }
     m_del(mp_map_elem_t, old_table, old_alloc);
 }
+#else
+// 01/01/2021
+STATIC void mp_map_rehash(mp_map_t *map) {
+    size_t old_alloc = map->alloc;
+    size_t new_alloc = get_hash_alloc_greater_or_equal_to(map->alloc + 1);
+    DEBUG_printf("mp_map_rehash(%p): " UINT_FMT " -> " UINT_FMT "\n", map, old_alloc, new_alloc);
+    mp_map_elem_t *old_table = map->table;
+    mp_map_elem_t *new_table = m_new0(mp_map_elem_t, new_alloc);
+    // If we reach this point, table resizing succeeded, now we can edit the old map.
+    map->alloc = new_alloc;
+    map->used = 0;
+    map->all_keys_are_qstrs = 1;
+    map->table = new_table;
+    for (size_t i = 0; i < old_alloc; i++) {
+        if (old_table[i].key != MP_OBJ_NULL && old_table[i].key != MP_OBJ_SENTINEL) {
+            mp_map_lookup(map, old_table[i].key, MP_MAP_LOOKUP_ADD_IF_NOT_FOUND)->value = old_table[i].value;
+        }
+    }
+    m_del(mp_map_elem_t, old_table, old_alloc);
+}
+#endif
+
 #endif
 // MP_MAP_LOOKUP behaviour:
 //  - returns NULL if not found, else the slot it was found in with key,value non-null

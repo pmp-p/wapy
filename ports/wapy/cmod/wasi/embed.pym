@@ -18,9 +18,8 @@ static int show_os_loop(int state) {
 extern struct timespec t_timespec;
 extern struct timeval t_timeval;
 
-#if defined(__WASI__)
-    extern FILE *fd_logger;
-#endif
+extern FILE *fd_logger;
+
 
 #include "py/emitglue.h"
 
@@ -28,21 +27,19 @@ extern struct timeval t_timeval;
 #include "py/compile.h"
 
 #include <time.h>
-
 //#include <sys/time.h>
-//#include <dlfcn.h>
+extern int wasx_clock_gettime(clockid_t clockid, struct timespec *ts);
 
 #include "py/smallint.h"
 
 char * cstr ;
 size_t cstr_max=0;
 
+
 #define WAPY_VALUE (1)
 extern int VMFLAGS_IF;
 extern int show_os_loop(int state);
 extern int state_os_loop(int state);
-//extern unsigned long long TV_NS ;
-
 
 extern mp_lexer_t* mp_lexer_new_from_file(const char *filename);
 
@@ -280,13 +277,13 @@ def os_hook() ->void:
 // https://www.python.org/dev/peps/pep-0564/
 //    https://vstinner.github.io/python37-pep-564-nanoseconds.html
 def time_ns() -> int:
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    wasx_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
     unsigned long long ul = t_timespec.tv_sec * 1000000000 + t_timespec.tv_nsec ;
     return mp_obj_new_int_from_ull(ul)
 
 // upy
 def time_ms() -> int:
-    wa_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
+    wasx_clock_gettime(CLOCK_MONOTONIC, &t_timespec);
     unsigned long long ul = t_timespec.tv_sec * 1000 + t_timespec.tv_nsec / 1000000 ;
     return mp_obj_new_int_from_ull(ul);
 

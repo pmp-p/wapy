@@ -381,6 +381,10 @@ void mp_warning(const char *category, const char *msg, ...);
 #define mp_warning(...)
 #endif
 
+#if NO_NLR
+#warning "this header should not be used when building no nlr"
+#endif
+
 // NO_NLR compat
 #define mp_raise_or_return(exc) nlr_raise(exc)
 #define mp_raise_or_return_value(exc, retval) nlr_raise(exc)

@@ -26,10 +26,8 @@
 #ifndef MICROPY_INCLUDED_PY_GC_H
 #define MICROPY_INCLUDED_PY_GC_H
 
-#include <stdint.h>
-
-#include "py/mpconfig.h"
-#include "py/misc.h"
+#include <stdbool.h>
+#include <stddef.h>
 
 void gc_init(void *start, void *end);
 
@@ -60,7 +58,7 @@ void *gc_realloc(void *ptr, size_t n_bytes, bool allow_move);
 typedef struct _gc_info_t {
     size_t total;
     size_t used;
-    size_t free;
+    size_t gc_free;
     size_t max_free;
     size_t num_1block;
     size_t num_2block;

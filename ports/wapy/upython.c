@@ -2,15 +2,6 @@
 // core/main.c
 // core/vfs.c
 
-#define HEAP_SIZE 64 * 1024 * 1024
-
-// TODO: use a circular buffer for everything io related
-#define MP_IO_SHM_SIZE 65535
-
-#define MP_IO_SIZE 512
-
-#define IO_KBD ( MP_IO_SHM_SIZE - (1 * MP_IO_SIZE) )
-
 
 #if MICROPY_ENABLE_PYSTACK
 //#define MP_STACK_SIZE 16384
@@ -20,51 +11,34 @@ static mp_obj_t pystack[MP_STACK_SIZE];
 
 static char *stack_top;
 
-#include "../wapy/upython.h"
-
-#include "../wapy/core/ringbuf_o.h"
-#include "../wapy/core/ringbuf_b.h"
-
-
 
 struct wPyInterpreterState i_main;
 
 struct wPyThreadState i_state;
 
-RBB_T(out_rbb, 2048);
 
 
+//EMSCRIPTEN_KEEPALIVE
 
-EMSCRIPTEN_KEEPALIVE int
+int
 show_os_loop(int state) {
     int last = SHOW_OS_LOOP;
     if (state >= 0) {
         SHOW_OS_LOOP = state;
         if (state > 0) {
 
-            fprintf(
-#if defined(__WASI__)
-                fd_logger,
-#else
-                stdout,
-#endif
-"------------- showing os loop / starting repl --------------\n");
+            fprintf(fd_logger,"------------- showing os loop / starting repl --------------\n");
             //repl_started = 1;
         } else {
             if (last != state)
-                fprintf(
-#if defined(__WASI__)
-                    fd_logger,
-#else
-                    stdout,
-#endif
-"------------- hiding os loop --------------\n");
+                fprintf(fd_logger,"------------- hiding os loop --------------\n");
         }
     }
     return (last > 0);
 }
 
-EMSCRIPTEN_KEEPALIVE int
+//EMSCRIPTEN_KEEPALIVE
+int
 state_os_loop(int state) {
     static int last_state = -666;
 
@@ -79,14 +53,6 @@ state_os_loop(int state) {
     return last_state;
 }
 
-// ----
-
-
-// should check null
-char *
-shm_ptr() {
-    return &i_main.shm_stdio[0];
-}
 
 char *
 shm_get_ptr(int major, int minor) {
@@ -96,6 +62,13 @@ shm_get_ptr(int major, int minor) {
             return &i_main.shm_stdio[IO_KBD];
     }
     return NULL;
+}
+
+
+// should check null
+char *
+shm_ptr() {
+    return &i_main.shm_stdio[0];
 }
 
 
@@ -189,7 +162,7 @@ gc_collect(void) {
 
     stack_ptr_val = (uintptr_t) __builtin_frame_address(0);
 
-    clog("gc_collect_start");
+    cdbg("gc_collect_start");
 
     gc_collect_start();
 
@@ -199,7 +172,7 @@ gc_collect(void) {
 
     size_t len = ((uintptr_t) stack_initial - bottom) / sizeof(uintptr_t);
 
-    clog("gc_collect stack_initial=%p bottom=%zu len=%zu", stack_initial, bottom, len);
+    cdbg("gc_collect stack_initial=%p bottom=%zu len=%zu", stack_initial, bottom, len);
 
 //343
 
@@ -213,7 +186,7 @@ gc_collect(void) {
     mp_unix_mark_exec();
 #endif
 
-    clog("gc_collect_end");
+    cdbg("gc_collect_end");
     gc_collect_end();
 }
 
@@ -256,13 +229,6 @@ pyeval(const char *src, mp_parse_input_kind_t input_kind) {
     return 0;
 }
 
-#if defined(__EMSCRIPTEN__) || defined(__WASI__)
-    #include "../wapy-wasm/wasm_mphal.c"
-#endif
-
-#if __ANDROID__
-    #include "../wapy-unix/aosp_mphal.c"
-#endif
 
 int
 PyRun_IO_CODE() {

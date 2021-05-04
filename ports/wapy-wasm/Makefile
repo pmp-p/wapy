@@ -59,7 +59,7 @@ ifdef EMSCRIPTEN
 	LD_SHARED += $(OG) --source-map-base http://localhost:8000/
 
 	# make clang++ Act like 'emcc' but for preprocessing use
-	CPP = ${EMSCRIPTEN}/../bin/clang -E -undef -D__CPP__ -D__EMSCRIPTEN__
+	CPP = ${EMSCRIPTEN}/../bin/clang -E -Wno-\#pragma-messages -undef -D__CPP__ -D__EMSCRIPTEN__
 	CPP += --sysroot $(EMSCRIPTEN)/system
 	CPP += -include $(BUILD)/clang_predefs.h
 	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(JSFLAGS) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))

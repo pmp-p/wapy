@@ -76,8 +76,8 @@ enum {
 
 // Define an array of actions corresponding to each rule
 STATIC const uint8_t rule_act_table[] = {
-#define or(n)                   (RULE_ACT_OR | n)
-#define and(n)                  (RULE_ACT_AND | n)
+#define C_or(n)                   (RULE_ACT_OR | n)
+#define C_and(n)                  (RULE_ACT_AND | n)
 #define and_ident(n)            (RULE_ACT_AND | n | RULE_ACT_ALLOW_IDENT)
 #define and_blank(n)            (RULE_ACT_AND | n | RULE_ACT_ADD_BLANK)
 #define one_or_more             (RULE_ACT_LIST | 2)
@@ -98,8 +98,8 @@ STATIC const uint8_t rule_act_table[] = {
 #undef DEF_RULE
 #undef DEF_RULE_NC
 
-#undef or
-#undef and
+#undef C_or
+#undef C_and
 #undef and_ident
 #undef and_blank
 #undef one_or_more
@@ -454,7 +454,7 @@ STATIC void push_result_node(parser_t *parser, mp_parse_node_t pn) {
 }
 
 STATIC mp_parse_node_t make_node_const_object(parser_t *parser, size_t src_line, mp_obj_t obj) {
-    mp_parse_node_struct_t *pn = parser_alloc(parser, sizeof(mp_parse_node_struct_t) + sizeof(mp_obj_t));
+    mp_parse_node_struct_t *pn = (mp_parse_node_struct_t *)parser_alloc(parser, sizeof(mp_parse_node_struct_t) + sizeof(mp_obj_t));
 #if NO_NLR
     if (pn == NULL) {
         return MP_PARSE_NODE_NULL;
@@ -698,13 +698,13 @@ STATIC bool fold_constants(parser_t *parser, uint8_t rule_id, size_t num_args) {
         if (!mp_parse_node_get_int_maybe(pn, &arg0)) {
             return false;
         }
-        mp_token_kind_t tok = MP_PARSE_NODE_LEAF_ARG(peek_result(parser, 1));
+        mp_token_kind_t tok = (mp_token_kind_t)MP_PARSE_NODE_LEAF_ARG(peek_result(parser, 1));
         mp_unary_op_t op;
         if (tok == MP_TOKEN_OP_TILDE) {
             op = MP_UNARY_OP_INVERT;
         } else {
             assert(tok == MP_TOKEN_OP_PLUS || tok == MP_TOKEN_OP_MINUS); // should be
-            op = MP_UNARY_OP_POSITIVE + (tok - MP_TOKEN_OP_PLUS);
+            op = (mp_unary_op_t)( MP_UNARY_OP_POSITIVE + (tok - MP_TOKEN_OP_PLUS) );
         }
         arg0 = mp_unary_op(op, arg0);
 
@@ -835,7 +835,7 @@ STATIC void push_result_rule(parser_t *parser, size_t src_line, uint8_t rule_id,
     }
     #endif
 
-    mp_parse_node_struct_t *pn = parser_alloc(parser, sizeof(mp_parse_node_struct_t) + sizeof(mp_parse_node_t) * num_args);
+    mp_parse_node_struct_t *pn = (mp_parse_node_struct_t *)parser_alloc(parser, sizeof(mp_parse_node_struct_t) + sizeof(mp_parse_node_t) * num_args);
 #if NO_NLR
     if (pn == NULL) {
         return;
@@ -969,7 +969,7 @@ mp_parse_tree_t mp_parse(mp_lexer_t *lex, mp_parse_input_kind_t input_kind) {
                 for (; i < n; ++i) {
                     if ((rule_arg[i] & RULE_ARG_KIND_MASK) == RULE_ARG_TOK) {
                         // need to match a token
-                        mp_token_kind_t tok_kind = rule_arg[i] & RULE_ARG_ARG_MASK;
+                        mp_token_kind_t tok_kind = (mp_token_kind_t)(rule_arg[i] & RULE_ARG_ARG_MASK);
                         if (lex->tok_kind == tok_kind) {
                             // matched token
                             if (tok_kind == MP_TOKEN_NAME) {
@@ -1021,7 +1021,7 @@ mp_parse_tree_t mp_parse(mp_lexer_t *lex, mp_parse_input_kind_t input_kind) {
                 for (size_t x = n; x > 0;) {
                     --x;
                     if ((rule_arg[x] & RULE_ARG_KIND_MASK) == RULE_ARG_TOK) {
-                        mp_token_kind_t tok_kind = rule_arg[x] & RULE_ARG_ARG_MASK;
+                        mp_token_kind_t tok_kind = (mp_token_kind_t)(rule_arg[x] & RULE_ARG_ARG_MASK);
                         if (tok_kind == MP_TOKEN_NAME) {
                             // only tokens which were names are pushed to stack
                             i += 1;

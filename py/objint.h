@@ -26,8 +26,8 @@
 #ifndef MICROPY_INCLUDED_PY_OBJINT_H
 #define MICROPY_INCLUDED_PY_OBJINT_H
 
-#include "py/mpz.h"
 #include "py/obj.h"
+#include "py/mpz.h"
 
 typedef struct _mp_obj_int_t {
     mp_obj_base_t base;
@@ -39,6 +39,7 @@ typedef struct _mp_obj_int_t {
 } mp_obj_int_t;
 
 extern const mp_obj_int_t mp_sys_maxsize_obj;
+
 
 #if MICROPY_PY_BUILTINS_FLOAT
 mp_float_t mp_obj_int_as_float_impl(mp_obj_t self_in);

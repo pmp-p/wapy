@@ -1,23 +1,14 @@
+#ifndef WAPY_INCLUDED_VM_REG_H
+
 #include "py/obj.h"
 #include "py/runtime.h"
+#include "emscripten.h"
 
 //#include "lib/bipbuffer/bipbuffer.h"
 //#include "lib/bipbuffer/bipbuffer.c"
 
-
-typedef struct _mp_obj_closure_t {
-    mp_obj_base_t base;
-    mp_obj_t fun;
-    size_t n_closed;
-    mp_obj_t closed[];
-} mp_obj_closure_t;
-
-
-typedef struct _mp_obj_gen_instance_t {
-    mp_obj_base_t base;
-    mp_obj_dict_t *globals;
-    mp_code_state_t code_state;
-} mp_obj_gen_instance_t;
+#include "py/objclosure.h"
+#include "py/objgenerator.h"
 
 #include "vmsl/vmconf.h"
 
@@ -213,5 +204,6 @@ async_def(gen2, int, {
 
 // ------------------------------------------------------------------------
 
+#define WAPY_INCLUDED_VM_REG_H 1
 
-#define VM_REG_H 1
+#endif

@@ -20,11 +20,11 @@ VM_ENTRY(MP_BC_FOR_ITER): {
 
     if (type->iternext != NULL) {
 
-        clog(">>>  BC_FOR_ITER:gen_instance_iternext\n"  );
+        cdbg(">>>  BC_FOR_ITER:gen_instance_iternext\n"  );
         RETVAL = type->iternext(NEXT.self_in);
 
         if ( (void*)*type->iternext == &gen_instance_iternext ) {
-            clog(">>> BC_FOR_ITER:type->iternext\n"  );
+            cdbg(">>> BC_FOR_ITER:type->iternext\n"  );
 #if 0
             static mp_vm_return_kind_t mpsl_obj_gen_resume;
 
@@ -52,10 +52,10 @@ VM_ENTRY(MP_BC_FOR_ITER): {
 
 
 #endif
-            clog("<<< BC_FOR_ITER:type->iternext_return\n");
+            cdbg("<<< BC_FOR_ITER:type->iternext_return\n");
         }
 
-        clog("<<< BC_FOR_ITER:gen_instance_iternext_return\n"  );
+        cdbg("<<< BC_FOR_ITER:gen_instance_iternext_return\n"  );
 
     } else {
         // check for __next__ method
@@ -63,9 +63,9 @@ VM_ENTRY(MP_BC_FOR_ITER): {
         mp_load_method_maybe(NEXT.self_in, MP_QSTR___next__, dest);
         if (dest[0] != MP_OBJ_NULL) {
             // __next__ exists, call it and return its result
-clog(">>> BC_FOR_ITER:mp_call_method_n_kw\n");
+cdbg(">>> BC_FOR_ITER:mp_call_method_n_kw\n");
             RETVAL = mp_call_method_n_kw(0, 0, dest);
-clog("<<< BC_FOR_ITER:mp_call_method_n_kw_return\n");
+cdbg("<<< BC_FOR_ITER:mp_call_method_n_kw_return\n");
         } else {
             mp_raise_o(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
                     "'%s' object isn't an iterator", mp_obj_get_type_str(NEXT.self_in)));

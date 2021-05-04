@@ -85,10 +85,10 @@
 //406
         VM_ENTRY(MP_BC_LOAD_GLOBAL): {
             VM_DECODE_QSTR;
-if (MP_STATE_THREAD(active_exception) != NULL) clog("EXEXEXEXEXEXEXEXEXEXEXEXEXEXEXEXE 1");
+if (MP_STATE_THREAD(active_exception) != NULL) cdbg("EXEXEXEXEXEXEXEXEXEXEXEXEXEXEXEXE 1");
             VM_TRACE_QSTR("MP_BC_LOAD_GLOBAL", MP_BC_LOAD_GLOBAL);
             VM_PUSH(mp_load_global(CTX.qst));
-if (MP_STATE_THREAD(active_exception) != NULL) clog("EXEXEXEXEXEXEXEXEXEXEXEXEXEXEXEXE 2");
+if (MP_STATE_THREAD(active_exception) != NULL) cdbg("EXEXEXEXEXEXEXEXEXEXEXEXEXEXEXEXE 2");
             RAISE_IF_NULL(VM_TOP());
 
             continue; //? DISPATCH() ?
@@ -369,7 +369,7 @@ if (MP_STATE_THREAD(active_exception) != NULL) clog("EXEXEXEXEXEXEXEXEXEXEXEXEXE
                 CTX.sp[2] = mp_const_none;
                 CTX.sp -= 2;
 #pragma message "740: unhandled mp_call_method_n_kw in MP_BC_WITH_CLEANUP"
-clog("      740: mp_call_method_n_kw");
+cdbg("      740: mp_call_method_n_kw");
                 RAISE_IF_NULL( mp_call_method_n_kw(3, 0, CTX.sp) );
                 VM_SET_TOP(mp_const_none);
             } else if (mp_obj_is_small_int(VM_TOP())) {
@@ -383,7 +383,7 @@ clog("      740: mp_call_method_n_kw");
                 CTX.sp[0] = mp_const_none;
                 CTX.sp[1] = mp_const_none;
 #pragma message "753: unhandled mp_call_method_n_kw in MP_BC_WITH_CLEANUP"
-clog("      753: mp_call_method_n_kw");
+cdbg("      753: mp_call_method_n_kw");
                 mp_call_method_n_kw(3, 0, CTX.sp - 3);
                 CTX.sp[-3] = data;
                 CTX.sp[-2] = cause;
@@ -397,7 +397,7 @@ clog("      753: mp_call_method_n_kw");
                 CTX.sp[2] = mp_const_none;
                 CTX.sp -= 2;
 #pragma message "766: unhandled mp_call_method_n_kw in MP_BC_WITH_CLEANUP"
-clog("      766: mp_call_method_n_kw");
+cdbg("      766: mp_call_method_n_kw");
                 mp_obj_t ret_value = mp_call_method_n_kw(3, 0, CTX.sp);
                 if (mp_obj_is_true(ret_value)) {
                     // We need to silence/swallow the exception.  This is done
@@ -416,7 +416,7 @@ clog("      766: mp_call_method_n_kw");
 //741 *************************************************************************************
         VM_ENTRY(MP_BC_UNWIND_JUMP): {
 #if VMTRACE
-    clog("      399:MP_BC_UNWIND_JUMP=%i",MP_BC_UNWIND_JUMP);
+    cdbg("      399:MP_BC_UNWIND_JUMP=%i",MP_BC_UNWIND_JUMP);
 #endif
             VM_DECODE_SLABEL;
             VM_PUSH((mp_obj_t)(mp_uint_t)(uintptr_t)(CTX.ip + CTX.slab)); // push destination ip for jump
@@ -463,12 +463,12 @@ unwind_jump:;
         }
 //784
         VM_ENTRY(MP_BC_SETUP_EXCEPT):
-clog("      833:vmswitch.c EXCEPT");
+cdbg("      833:vmswitch.c EXCEPT");
 
         VM_ENTRY(MP_BC_SETUP_FINALLY): {
 
 #if VMTRACE
-clog("      451:MP_BC_SETUP_FINALLY=%i",MP_BC_SETUP_FINALLY);
+cdbg("      451:MP_BC_SETUP_FINALLY=%i",MP_BC_SETUP_FINALLY);
 #endif
             #if SELECTIVE_EXC_IP
                 VM_PUSH_EXC_BLOCK((CTX.code_state->ip[-1] == MP_BC_SETUP_FINALLY) ? 1 : 0);
@@ -480,7 +480,7 @@ clog("      451:MP_BC_SETUP_FINALLY=%i",MP_BC_SETUP_FINALLY);
 //795
         VM_ENTRY(MP_BC_END_FINALLY): {
 #if VMTRACE
-clog("      463:MP_BC_END_FINALLY=%i",MP_BC_END_FINALLY);
+cdbg("      463:MP_BC_END_FINALLY=%i",MP_BC_END_FINALLY);
 #endif
             // if VM_TOP is None, just pops it and continues
             // if VM_TOP is an integer, finishes coroutine and returns control to caller
@@ -684,14 +684,14 @@ deep_recursion_error:
 
 unwind_return:
 #if VMTRACE
-    clog("      652:MP_BC_RETURN_VALUE=%i",MP_BC_RETURN_VALUE);
+    cdbg("      652:MP_BC_RETURN_VALUE=%i",MP_BC_RETURN_VALUE);
 #endif
             // Search for and execute finally handlers that aren't already active
             while (CTX.exc_sp >= CTX.exc_stack) {
                 if (MP_TAGPTR_TAG1(CTX.exc_sp->val_sp)) {
                         if (CTX.exc_sp->handler > CTX.ip) {
 #if VMTRACE
-    clog("      682:Found a finally handler that isn't active.");
+    cdbg("      682:Found a finally handler that isn't active.");
 #endif
                         // Getting here the stack looks like:
                         //     (..., X, [iter0, iter1, ...,] ret_val)
@@ -717,7 +717,7 @@ unwind_return:
 
                     } else {
 #if VMTRACE
-    clog("      697:Found a finally handler that is already active; cancel it.");
+    cdbg("      697:Found a finally handler that is already active; cancel it.");
 #endif
                         VM_CANCEL_ACTIVE_FINALLY(CTX.sp);
                     }
@@ -795,15 +795,15 @@ unwind_return:
             if (CTX.inject_exc != MP_OBJ_NULL) {
                 t_exc = CTX.inject_exc;
                 CTX.inject_exc = MP_OBJ_NULL;
-clog("1320:vmswitch.c mp_resume + exc");
+cdbg("1320:vmswitch.c mp_resume + exc");
                 ret_kind = mp_resume(VM_TOP(), MP_OBJ_NULL, t_exc, &ret_value);
             } else {
-clog("1323:vmswitch.c mp_resume");
+cdbg("1323:vmswitch.c mp_resume");
                 ret_kind = mp_resume(VM_TOP(), send_value, MP_OBJ_NULL, &ret_value);
             }
 
             if (ret_kind == MP_VM_RETURN_YIELD) {
-clog("1178:vmswitch.c  yield from\n");
+cdbg("1178:vmswitch.c  yield from\n");
                 CTX.ip--;
                 VM_PUSH(ret_value);
                 //goto yield;
@@ -894,7 +894,7 @@ VM_return(MP_VM_RETURN_YIELD);
 
 /*
         VM_ENTRY(MP_BC_RAISE_VARARGS): {
-clog("mpsl:998 MP_BC_RAISE_VARARGS\n");
+cdbg("mpsl:998 MP_BC_RAISE_VARARGS\n");
 
             mp_uint_t unum = *CTX.ip;
             mp_obj_t obj;
@@ -930,7 +930,7 @@ clog("mpsl:998 MP_BC_RAISE_VARARGS\n");
 //ENTRY_DEFAULT:
         default: {
 #if VM_TRACE
-    clog("      928:ENTRY_DEFAULT");
+    cdbg("      928:ENTRY_DEFAULT");
 #endif
             //if (CTX.ip[-1] < MP_BC_LOAD_CONST_SMALL_INT_MULTI + 64) {
             if (CTX.ip[-1] < MP_BC_LOAD_CONST_SMALL_INT_MULTI + MP_BC_LOAD_CONST_SMALL_INT_MULTI_NUM) {
@@ -963,7 +963,7 @@ clog("mpsl:998 MP_BC_RAISE_VARARGS\n");
                 continue;
             }  // no continuation
 
-            clog("1453:FATAL OPCODE N/I");
+            cdbg("1453:FATAL OPCODE N/I");
             mp_obj_t obj = mp_obj_new_exception_msg(&mp_type_NotImplementedError, "opcode");
             CTX.code_state->state[0] = obj;
 

@@ -27,9 +27,9 @@ typedef struct rbo_t {
 
   //public:
   // Returns true if full
-  bool (*isFull) (rbo_t*);
+  uint8_t (*isFull) (rbo_t*);
   // Returns true if empty
-  bool (*isEmpty) (rbo_t*);
+  uint8_t (*isEmpty) (rbo_t*);
   // Returns number of elemnts in buffer
   unsigned int (*numElements)(rbo_t*);
   // Add Event, Returns index where added in buffer, -1 on full buffer
@@ -191,9 +191,9 @@ rbo_count(rbo_t *self) {
 }
 
 // Returns true if buffer is full
-bool
+uint8_t
 rbo_is_full(rbo_t *self) {
-  bool ret;
+  uint8_t ret;
 
   // Perform all atomic opertaions
   RB_ATOMIC_START
@@ -206,9 +206,9 @@ rbo_is_full(rbo_t *self) {
 }
 
 // Returns true if buffer is empty
-bool
+uint8_t
 rbo_is_empty(rbo_t *self) {
-  bool ret;
+  uint8_t ret;
 
   // Perform all atomic opertaions
   RB_ATOMIC_START

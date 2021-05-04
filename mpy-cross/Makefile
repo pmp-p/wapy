@@ -49,6 +49,7 @@ include ../ports/wapy/wapy.mk
 # source files
 SRC_C = \
 	main.c \
+	ports/wapy/debug.c \
 	gccollect.c \
 	lib/utils/gchelper_generic.c \
 

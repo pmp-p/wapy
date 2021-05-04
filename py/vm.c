@@ -37,12 +37,15 @@
 #include "py/profile.h"
 
 // *FORMAT-OFF*
-#if WAPY
-#include "../wapy/upython.h"
-#endif
+#include "wapy/debug.h"
 
 #if 0
-#define TRACE(ip) printf("sp=%d ", (int)(sp - &code_state->state[0] + 1)); mp_bytecode_print2(&mp_plat_print, ip, 1, code_state->fun_bc->const_table);
+#if MICROPY_PY_THREAD
+#define TRACE_PREFIX mp_printf(&mp_plat_print, "ts=%p sp=%d ", mp_thread_get_state(), (int)(sp - &code_state->state[0] + 1))
+#else
+#define TRACE_PREFIX mp_printf(&mp_plat_print, "sp=%d ", (int)(sp - &code_state->state[0] + 1))
+#endif
+#define TRACE(ip) TRACE_PREFIX; mp_bytecode_print2(&mp_plat_print, ip, 1, code_state->fun_bc->const_table);
 #else
 #define TRACE(ip)
 #endif
@@ -113,7 +116,7 @@
 #define POP_EXC_BLOCK() \
     exc_sp--; /* pop back to previous exception handler */ \
     CLEAR_SYS_EXC_INFO() /* just clear sys.exc_info(), not compliant, but it shouldn't be used in 1st place */
-
+//        assert(sp[-1] == mp_const_none || mp_obj_is_exception_instance(sp[-1]));
 #define CANCEL_ACTIVE_FINALLY(sp) do { \
     if (mp_obj_is_small_int(sp[-1])) { \
         /* Stack: (..., prev_dest_ip, prev_cause, dest_ip) */ \
@@ -121,7 +124,6 @@
         sp[-2] = sp[0]; \
         sp -= 2; \
     } else { \
-        assert(sp[-1] == mp_const_none || mp_obj_is_exception_instance(sp[-1])); \
         /* Stack: (..., None/exception, dest_ip) */ \
         /* Silence the finally's exception value (may be None or an exception) */ \
         sp[-1] = sp[0]; \
@@ -301,7 +303,7 @@ if (VMFLAGS_IF>0) {
     if (the_line != source_line) {
         source_line = the_line;
         if (strcmp(qstr_str(source_file),"pythons/aio/plink.py"))
-            cdbg("247:vm.c NOINT src/%s#%lu but VMFLAGS_IF set", qstr_str(source_file), source_line);
+            cdbg("247:vm.c NOINT src/%s#%" PRIuPTR " but VMFLAGS_IF set", qstr_str(source_file), (uintptr_t) source_line);
     }
 }
 #else
@@ -1548,12 +1550,12 @@ pending_exception_check:
 
 #if !NO_NLR
         } else {
-exception_handler:
+exception_handler:;
             // exception occurred
 #else
         }
         {
-exception_handler:
+exception_handler:;
             // exception occurred
             assert(MP_STATE_THREAD(active_exception) != NULL);
 

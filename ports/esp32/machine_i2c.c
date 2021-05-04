@@ -34,8 +34,13 @@
 
 #define I2C_0_DEFAULT_SCL (GPIO_NUM_18)
 #define I2C_0_DEFAULT_SDA (GPIO_NUM_19)
+#if CONFIG_IDF_TARGET_ESP32
 #define I2C_1_DEFAULT_SCL (GPIO_NUM_25)
 #define I2C_1_DEFAULT_SDA (GPIO_NUM_26)
+#else
+#define I2C_1_DEFAULT_SCL (GPIO_NUM_9)
+#define I2C_1_DEFAULT_SDA (GPIO_NUM_8)
+#endif
 
 #define I2C_DEFAULT_TIMEOUT_US (10000) // 10ms
 
@@ -120,7 +125,7 @@ mp_obj_t machine_hw_i2c_make_new(const mp_obj_type_t *type, size_t n_args, size_
     // Parse args
     enum { ARG_id, ARG_scl, ARG_sda, ARG_freq, ARG_timeout };
     static const mp_arg_t allowed_args[] = {
-        { MP_QSTR_id, MP_ARG_REQUIRED | MP_ARG_OBJ },
+        { MP_QSTR_id, MP_ARG_REQUIRED | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
         { MP_QSTR_scl, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
         { MP_QSTR_sda, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_obj = MP_OBJ_NULL} },
         { MP_QSTR_freq, MP_ARG_KW_ONLY | MP_ARG_INT, {.u_int = 400000} },

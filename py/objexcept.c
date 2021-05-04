@@ -38,6 +38,10 @@
 #include "py/gc.h"
 #include "py/mperrno.h"
 
+#pragma message "missing fwd decl of mp_vprintf"
+extern int mp_vprintf(const mp_print_t *print, const char *fmt, va_list args);
+
+
 #if MICROPY_ROM_TEXT_COMPRESSION && !defined(NO_QSTR)
 // Extract the MP_MAX_UNCOMPRESSED_TEXT_LEN macro from "genhdr/compressed.data.h".
 // Only need this if compression enabled and in a regular build (i.e. not during QSTR extraction).
@@ -439,7 +443,7 @@ STATIC void exc_add_strn(void *data, const char *str, size_t len) {
     memcpy(pr->buf + pr->len, str, len);
     pr->len += len;
 }
-
+mp_obj_t mp_obj_new_exception_msg_vlist(const mp_obj_type_t *exc_type, mp_rom_error_text_t fmt, va_list args);
 mp_obj_t mp_obj_new_exception_msg_varg(const mp_obj_type_t *exc_type, mp_rom_error_text_t fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -546,9 +550,10 @@ bool mp_obj_exception_match(mp_obj_t exc, mp_const_obj_t exc_type) {
 
 // traceback handling functions
 
+/* make sure self_in is an exception instance */
+// assert(mp_obj_is_exception_instance(self_in));
+
 #define GET_NATIVE_EXCEPTION(self, self_in) \
-    /* make sure self_in is an exception instance */ \
-    assert(mp_obj_is_exception_instance(self_in)); \
     mp_obj_exception_t *self; \
     if (mp_obj_is_native_exception_instance(self_in)) { \
         self = MP_OBJ_TO_PTR(self_in); \

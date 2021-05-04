@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
+#include <sys/types.h>
 #define MP_ASM_PASS_COMPUTE (1)
 #define MP_ASM_PASS_EMIT    (2)
 

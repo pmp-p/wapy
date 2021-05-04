@@ -28,7 +28,7 @@ include ../../py/mkenv.mk
 QSTR_DEFS = qstrdefsport.h
 
 
-CX = --target=wasm32-unknow-wasi -D__WASI__=1 -DNO_NLR=1
+CX = --sysroot=/data/git/wapy-pack/wasi-sdk/share/wasi-sysroot --target=wasm32-unknow-wasi -D__WASI__=1 -DNO_NLR=1
 
 CC ?= clang
 CC += $(CX)
@@ -80,10 +80,7 @@ include ../wapy/wapy.mk
 
 
 SRC_C = \
-	../wapy/core/vfs.c \
-	../wapy/core/ringbuf_b.c \
-        ../wapy/core/ringbuf_o.c \
-	../wapy/core/file.wapy.c \
+	../wapy/debug.c \
 	mod/modos.c \
 	mod/modtime.c \
 	mod/moduos_vfs.c \
@@ -169,7 +166,7 @@ COPT += $(JSFLAGS) $(WASM_FLAGS)
 
 lib-static: $(OBJ)
 	$(ECHO) "Linking static $(LIBPYTHON)"
-	$(Q)$(AR) rcs $(LIBPYTHON) $(OBJ)
+	llvm-ar rcs $(LIBPYTHON) $(OBJ)
 
 lib-shared: $(OBJ)
 	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"

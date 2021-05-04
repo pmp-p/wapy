@@ -33,12 +33,12 @@
 #include "py/binary.h"
 #include "py/objarray.h"
 #include "py/objstringio.h"
-#include "py/frozenmod.h"
 
 #if MICROPY_PY_IO
 
 extern const mp_obj_type_t mp_type_fileio;
 extern const mp_obj_type_t mp_type_textio;
+extern const char *mp_find_frozen_str(const char *str, size_t *len);
 
 #if MICROPY_PY_IO_IOBASE
 
@@ -211,7 +211,7 @@ STATIC const mp_stream_p_t bufwriter_stream_p = {
     .write = bufwriter_write,
 };
 
-STATIC const mp_obj_type_t bufwriter_type = {
+STATIC const mp_obj_type_t mp_type_bufwriter = {
     { &mp_type_type },
     .name = MP_QSTR_BufferedWriter,
     .make_new = bufwriter_make_new,
@@ -247,7 +247,12 @@ STATIC mp_obj_t resource_stream(mp_obj_t package_in, mp_obj_t path_in) {
     vstr_add_strn(&path_buf, path, len);
 
     len = path_buf.len;
+#if __ARDUINO__
+    #pragma message "cannot link mp_find_frozen_str"
+    const char *data = NULL;
+#else
     const char *data = mp_find_frozen_str(path_buf.buf, &len);
+#endif
     if (data != NULL) {
         mp_obj_stringio_t *o = m_new_obj(mp_obj_stringio_t);
         o->base.type = &mp_type_bytesio;
@@ -286,7 +291,7 @@ STATIC const mp_rom_map_elem_t mp_module_io_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_BytesIO), MP_ROM_PTR(&mp_type_bytesio) },
     #endif
     #if MICROPY_PY_IO_BUFFEREDWRITER
-    { MP_ROM_QSTR(MP_QSTR_BufferedWriter), MP_ROM_PTR(&bufwriter_type) },
+    { MP_ROM_QSTR(MP_QSTR_BufferedWriter), MP_ROM_PTR(&mp_type_bufwriter) },
     #endif
 };
 
